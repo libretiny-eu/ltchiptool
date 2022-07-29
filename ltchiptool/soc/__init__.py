@@ -15,4 +15,8 @@ def get_soc(family: Family) -> SocInterface:
         from .bk72xx import BK72XXMain
 
         return BK72XXMain()
+    if family.code == "ambz":
+        from .ambz import AmebaZMain
+
+        return AmebaZMain()
     raise NotImplementedError(f"Unsupported family - {family.name}")
