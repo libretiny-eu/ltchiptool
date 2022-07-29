@@ -1,0 +1,10 @@
+{
+  "name": "tool-ltchiptool",
+  "description": "Tools for working with LT-supported IoT chips",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/libretuya/ltchiptool"
+  },
+  "version": "0.1.0"
+}
