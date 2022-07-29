@@ -11,4 +11,8 @@ __all__ = [
 
 
 def get_soc(family: Family) -> SocInterface:
+    if family.parent_code == "bk72xx":
+        from .bk72xx import BK72XXMain
+
+        return BK72XXMain()
     raise NotImplementedError(f"Unsupported family - {family.name}")
