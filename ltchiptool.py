@@ -8,6 +8,7 @@ from click import Command, Context, MultiCommand
 
 COMMANDS = {
     "link2bin": "ltchiptool/cli/link2bin.py",
+    "elf2bin": "ltchiptool/cli/elf2bin.py",
     "uf2": "uf2tool/cli.py",
 }
 

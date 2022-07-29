@@ -19,12 +19,14 @@ from .fileio import (
 from .misc import sizeof, unpack_obj
 from .obj import get, has, merge_dicts
 from .slice import SliceLike, slice2int
+from .toolchain import Toolchain
 
 __all__ = [
     "BitInt",
     "CRC16",
     "RecursiveDict",
     "SliceLike",
+    "Toolchain",
     "bitcat",
     "bitcatraw",
     "chext",

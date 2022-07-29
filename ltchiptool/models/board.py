@@ -3,12 +3,13 @@
 import json
 from glob import glob
 from os.path import basename, isfile, join
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import click
 
 from ltchiptool.util import (
     RecursiveDict,
+    Toolchain,
     lt_find_path,
     lt_read_json,
     merge_dicts,
@@ -19,6 +20,8 @@ from .family import Family
 
 
 class Board(RecursiveDict):
+    _toolchain: Optional[Toolchain] = None
+
     def __init__(self, board: Union[str, dict]):
         if not isinstance(board, dict):
             if isfile(board):
@@ -59,6 +62,12 @@ class Board(RecursiveDict):
     @property
     def family(self) -> Family:
         return Family.get(short_name=self["build.family"])
+
+    @property
+    def toolchain(self):
+        if not self._toolchain:
+            self._toolchain = Toolchain(self["build.prefix"])
+        return self._toolchain
 
     def region(self, name: str) -> Tuple[int, int, int]:
         (start, length) = self[f"flash.{name}"].split("+")
