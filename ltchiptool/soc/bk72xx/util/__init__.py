@@ -2,10 +2,12 @@
 
 from .binary import BekenBinary
 from .crypto import BekenCrypto
+from .models import DataType
 from .rbl import RBL
 
 __all__ = [
     "BekenBinary",
     "BekenCrypto",
+    "DataType",
     "RBL",
 ]
