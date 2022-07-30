@@ -14,6 +14,10 @@ class BK72XXMain(SocInterface):
     def hello(self):
         print("Hello from BK72xx")
 
+    @property
+    def elf_has_dual_ota(self) -> bool:
+        return False
+
     def elf2bin(
         self, board: Board, input: str, ota_idx: int
     ) -> Dict[str, Optional[int]]:

@@ -11,6 +11,10 @@ class SocInterface(ABC):
     def hello(self):
         raise NotImplementedError()
 
+    @property
+    def elf_has_dual_ota(self) -> bool:
+        raise NotImplementedError()
+
     def elf2bin(
         self, board: Board, input: str, ota_idx: int
     ) -> Dict[str, Optional[int]]:

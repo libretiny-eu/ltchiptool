@@ -14,6 +14,10 @@ class AmebaZMain(SocInterface):
     def hello(self):
         print("Hello from AmebaZ")
 
+    @property
+    def elf_has_dual_ota(self) -> bool:
+        return True
+
     def elf2bin(
         self, board: Board, input: str, ota_idx: int
     ) -> Dict[str, Optional[int]]:
