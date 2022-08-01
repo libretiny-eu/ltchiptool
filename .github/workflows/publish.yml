@@ -1,0 +1,62 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  lint:
+    name: Run black
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+      - name: Install test dependencies
+        uses: BSFishy/pip-action@v1
+        with:
+          packages: |
+            black
+            isort
+      - name: Check code with black
+        run: black --check .
+      - name: Check code with isort
+        run: isort --profile black . --check-only
+
+  deploy:
+    name: Deploy to PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Install poetry
+      uses: Gr1N/setup-poetry@v7
+    - name: Build package
+      run: poetry build
+    - name: Publish to PyPI
+      run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+    # - name: Add GitHub release assets
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     files: |
+    #       dist/*.whl
+    #       dist/*.tar.gz
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload workflow artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ltchiptool
+        path: |
+          dist/*.whl
+          dist/*.tar.gz

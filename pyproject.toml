@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Tools for working with LT-supported IoT chips"
 authors = ["Kuba Szczodrzyński <kuba@szczodrzynski.pl>"]
 license = "MIT"
+packages = [
+    { include = "ltchiptool" },
+    { include = "uf2tool" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -14,6 +18,9 @@ colorama = "^0.4.5"
 black = "^22.6.0"
 isort = "^5.10.1"
 autoflake = "^1.4"
+
+[tool.poetry.scripts]
+ltchiptool = "ltchiptool.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

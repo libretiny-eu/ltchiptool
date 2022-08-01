@@ -22,7 +22,7 @@ class ChipToolCLI(MultiCommand):
         if cmd_name not in COMMANDS:
             return None
         ns = {}
-        fn = join(dirname(__file__), COMMANDS[cmd_name])
+        fn = join(dirname(__file__), "..", "..", COMMANDS[cmd_name])
         with open(fn) as f:
             code = compile(f.read(), fn, "exec")
             eval(code, ns, ns)
@@ -35,7 +35,7 @@ def cli(ctx: Context):
     ctx.ensure_object(dict)
 
 
-if __name__ == "__main__":
+def main():
     try:
         cli()
     except Exception as e:
