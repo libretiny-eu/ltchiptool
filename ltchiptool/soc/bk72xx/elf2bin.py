@@ -1,14 +1,15 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from datetime import datetime
+from io import SEEK_SET
 from os import stat
 from os.path import basename
 from typing import Dict, Optional
 
 from ltchiptool.models import Board
-from ltchiptool.util import chext, chname, isnewer
+from ltchiptool.util import chext, chname, isnewer, str2enum
 
-from .util import RBL, BekenBinary, DataType
+from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
 
 
 def calc_offset(addr: int) -> int:
@@ -22,6 +23,11 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     mcu = board["build.mcu"]
     coeffs = board["build.bkcrypt_coeffs"] or ("0" * 32)
     rbl_size = board["build.bkrbl_size_app"]
+    ota_encryption = board["build.bkota.encryption"]
+    ota_compression = board["build.bkota.compression"]
+    ota_key = board["build.bkota.key"]
+    ota_iv = board["build.bkota.iv"]
+    _, ota_size, _ = board.region("download")
     version = datetime.now().strftime("%y.%m.%d")
 
     nmap = toolchain.nm(input)
@@ -91,9 +97,28 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     result[out_crc] = None
     result[out_rblh] = rbl_offs
 
+    # write OTA package
+    rbl = RBL(
+        name="app",
+        version=f"{version}-{mcu}",
+        encryption=str2enum(OTAEncryption, ota_encryption) or OTAEncryption.NONE,
+        compression=str2enum(OTACompression, ota_compression) or OTACompression.NONE,
+    )
+    out_ota = chname(input, f"{mcu}_app_ota.rbl")
+    print(f"|   |-- {basename(out_ota)}")
+    # seek back to start
+    raw.seek(0, SEEK_SET)
+    ota_gen = bk.ota_package(raw, rbl, key=ota_key, iv=ota_iv)
+    ota = open(out_ota, "wb")
+    for data in ota_gen:
+        ota.write(data)
+    if rbl.data_size > ota_size:
+        print(f"OTA size too large: {rbl.data_size} > {ota_size} (0x{ota_size:X})")
+
     # close all files
     raw.close()
     out.close()
     crc.close()
     rblh.close()
+    ota.close()
     return result

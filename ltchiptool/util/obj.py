@@ -1,4 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
+from enum import Enum
+from typing import Type
 
 
 def merge_dicts(d1, d2):
@@ -34,3 +36,12 @@ def has(data: dict, path: str) -> bool:
         return path in data
     key, _, path = path.partition(".")
     return has(data.get(key, None), path)
+
+
+def str2enum(cls: Type[Enum], key: str):
+    if not key:
+        return None
+    try:
+        return next(e for e in cls if e.name.lower() == key.lower())
+    except StopIteration:
+        return None

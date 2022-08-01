@@ -17,7 +17,7 @@ from .fileio import (
     writetext,
 )
 from .misc import sizeof, unpack_obj
-from .obj import get, has, merge_dicts
+from .obj import get, has, merge_dicts, str2enum
 from .slice import SliceLike, slice2int
 from .toolchain import Toolchain
 
@@ -41,6 +41,7 @@ __all__ = [
     "readjson",
     "readtext",
     "slice2int",
+    "str2enum",
     "unpack_obj",
     "writebin",
     "writejson",
