@@ -2,12 +2,14 @@
 
 from .binary import BekenBinary
 from .crypto import BekenCrypto
-from .models import DataType
+from .models import DataType, OTACompression, OTAEncryption
 from .rbl import RBL
 
 __all__ = [
     "BekenBinary",
     "BekenCrypto",
+    "OTACompression",
     "DataType",
+    "OTAEncryption",
     "RBL",
 ]

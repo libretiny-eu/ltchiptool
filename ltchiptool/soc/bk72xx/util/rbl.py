@@ -8,12 +8,13 @@ from typing import Union
 
 from ltchiptool.util.intbin import inttole32, letoint, pad_data
 
-from .models import OTAAlgorithm
+from .models import OTACompression, OTAEncryption
 
 
 @dataclass
 class RBL:
-    ota_algo: OTAAlgorithm = OTAAlgorithm.NONE
+    encryption: OTAEncryption = OTAEncryption.NONE
+    compression: OTACompression = OTACompression.NONE
     timestamp: float = field(default_factory=time)
     name: Union[str, bytes] = "app"
     version: Union[str, bytes] = "1.00"
@@ -46,10 +47,11 @@ class RBL:
         if isinstance(self.sn, str):
             self.sn = self.sn.encode()
         # based on https://github.com/khalednassar/bk7231tools/blob/main/bk7231tools/analysis/rbl.py
-        struct = Struct("<4sII16s24s24sIIII")  # without header CRC
+        struct = Struct("<4sbbxxI16s24s24sIIII")  # without header CRC
         rbl = struct.pack(
             b"RBL\x00",
-            self.ota_algo,
+            self.encryption,
+            self.compression,
             int(self.timestamp),
             pad_data(self.name, 16, 0x00),
             pad_data(self.version, 24, 0x00),
@@ -70,9 +72,10 @@ class RBL:
             raise ValueError(
                 f"Invalid RBL CRC (expected {crc_expected:X}, found {crc_found:X})"
             )
-        struct = Struct("<II16s24s24sIIII")  # without magic and header CRC
+        struct = Struct("<bbxxI16s24s24sIIII")  # without magic and header CRC
         rbl = cls(*struct.unpack(data[4:]))
-        rbl.ota_algo = OTAAlgorithm(rbl.ota_algo)
+        rbl.encryption = OTAEncryption(rbl.encryption)
+        rbl.compression = OTACompression(rbl.compression)
         rbl.name = rbl.name.partition(b"\x00")[0].decode()
         rbl.version = rbl.version.partition(b"\x00")[0].decode()
         rbl.sn = rbl.sn.partition(b"\x00")[0].decode()

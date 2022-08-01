@@ -1,7 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-10.
 
+import gzip
+from binascii import crc32
 from io import FileIO
 from typing import Union
+
+from Cryptodome.Cipher import AES
 
 from ltchiptool.util import CRC16, BitInt
 from ltchiptool.util.intbin import (
@@ -19,7 +23,7 @@ from ltchiptool.util.intbin import (
 )
 
 from .crypto import BekenCrypto
-from .models import DataGenerator, DataType
+from .models import DataGenerator, DataType, OTACompression, OTAEncryption
 from .rbl import RBL
 
 
@@ -128,3 +132,74 @@ class BekenBinary:
 
         # yield RBL with CRC16
         yield from self.crc(rbl.serialize(), type_rbl)
+
+    def ota_package(
+        self,
+        f: FileIO,
+        rbl: RBL,
+        key: Union[bytes, str] = None,
+        iv: Union[bytes, str] = None,
+    ) -> ByteGenerator:
+        if rbl.encryption == OTAEncryption.AES256 and not (key and iv):
+            raise ValueError("Encryption without keys requested")
+        if isinstance(key, str):
+            key = key.encode("utf-8")
+        if isinstance(iv, str):
+            iv = iv.encode("utf-8")
+        data = f.read()
+
+        # calculate FNV1A hash using raw firmware data
+        rbl.raw_size = len(data)
+        rbl.update(data)
+
+        if rbl.compression == OTACompression.GZIP:
+            data = gzip.compress(data, compresslevel=9)
+        elif rbl.compression != OTACompression.NONE:
+            raise ValueError("Unsupported compression algorithm")
+
+        if rbl.encryption == OTAEncryption.AES256:
+            padding = pad_up(len(data), 16)
+            data += bytes([padding] * padding)
+            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            data = aes.encrypt(data)
+        elif rbl.encryption != OTAEncryption.NONE:
+            raise ValueError("Unsupported encryption algorithm")
+
+        # calculate CRC using compressed & encrypted firmware data
+        rbl.data_size = len(data)
+        rbl.data_crc = crc32(data)
+        yield rbl.serialize()
+        yield data
+
+    def ota_unpackage(
+        self,
+        f: FileIO,
+        rbl: RBL,
+        key: Union[bytes, str] = None,
+        iv: Union[bytes, str] = None,
+    ) -> ByteGenerator:
+        if rbl.encryption == OTAEncryption.AES256 and not (key and iv):
+            raise ValueError("Decryption without keys requested")
+        if isinstance(key, str):
+            key = key.encode("utf-8")
+        if isinstance(iv, str):
+            iv = iv.encode("utf-8")
+        data = f.read()
+
+        if rbl.encryption == OTAEncryption.AES256:
+            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            data = aes.decrypt(data)
+            # trim AES padding
+            padding_bytes = data[-1:]
+            padding_size = padding_bytes[0]
+            if padding_size and padding_bytes * padding_size == data[-padding_size:]:
+                data = data[0:-padding_size]
+        elif rbl.encryption != OTAEncryption.NONE:
+            raise ValueError("Unsupported encryption algorithm")
+
+        if rbl.compression == OTACompression.GZIP:
+            data = gzip.decompress(data)
+        elif rbl.compression != OTACompression.NONE:
+            raise ValueError("Unsupported compression algorithm")
+
+        yield data

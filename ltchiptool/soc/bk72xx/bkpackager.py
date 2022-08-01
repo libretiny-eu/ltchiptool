@@ -11,7 +11,7 @@ from os import stat
 from time import time
 from typing import Union
 
-from util import RBL, BekenBinary
+from util import RBL, BekenBinary, OTACompression, OTAEncryption
 
 from ltchiptool.util.intbin import ByteGenerator, fileiter
 
@@ -27,6 +27,25 @@ def add_common_args(parser):
     parser.add_argument("input", type=FileType("rb"), help="Input file")
     parser.add_argument("output", type=FileType("wb"), help="Output file")
     parser.add_argument("addr", type=auto_int, help="Memory address (dec/hex)")
+
+
+def add_package_args(parser):
+    parser.add_argument(
+        "-n",
+        "--name",
+        type=str,
+        help="Firmware name (default: app)",
+        default="app",
+        required=False,
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        type=str,
+        help="Firmware version (default: 1.00)",
+        default="1.00",
+        required=False,
+    )
 
 
 if __name__ == "__main__":
@@ -53,22 +72,7 @@ if __name__ == "__main__":
     package.add_argument(
         "size", type=auto_int, help="RBL total size (excl. CRC) (dec/hex)"
     )
-    package.add_argument(
-        "-n",
-        "--name",
-        type=str,
-        help="Firmware name (default: app)",
-        default="app",
-        required=False,
-    )
-    package.add_argument(
-        "-v",
-        "--version",
-        type=str,
-        help="Firmware version (default: 1.00)",
-        default="1.00",
-        required=False,
-    )
+    add_package_args(package)
 
     unpackage = sub.add_parser(
         "unpackage", description="Unpackage a single RBL container"
@@ -81,8 +85,26 @@ if __name__ == "__main__":
         "size", type=auto_int, help="Container total size (incl. CRC) (dec/hex)"
     )
 
+    ota = sub.add_parser("ota", description="Package OTA firmware")
+    ota.add_argument("input", type=FileType("rb"), help="Input file")
+    ota.add_argument("output", type=FileType("wb"), help="Output file")
+    ota.add_argument(
+        "compress", type=str, help="Compression algorithm (none/quicklz/fastlz/gzip)"
+    )
+    ota.add_argument("encrypt", type=str, help="Encryption algorithm (none/aes256)")
+    ota.add_argument("--key", type=str, required=False, help="AES256 key (optional)")
+    ota.add_argument("--iv", type=str, required=False, help="AES256 IV (optional)")
+    add_package_args(ota)
+
+    deota = sub.add_parser("deota", description="Un-package OTA firmware")
+    deota.add_argument("input", type=FileType("rb"), help="Input file")
+    deota.add_argument("output", type=FileType("wb"), help="Output file")
+    deota.add_argument("--key", type=str, required=False, help="AES256 key (optional)")
+    deota.add_argument("--iv", type=str, required=False, help="AES256 IV (optional)")
+    add_package_args(deota)
+
     args = parser.parse_args()
-    bk = BekenBinary(args.coeffs)
+    bk = BekenBinary(args.coeffs if "ota" not in args.action else None)
     f: FileIO = args.input
     size = stat(args.input.name).st_size
     start = time()
@@ -132,6 +154,44 @@ if __name__ == "__main__":
         f.seek(0, SEEK_SET)
         crc_size = (rbl.data_size - 16) // 32 * 34
         gen = bk.crypt(args.addr, bk.uncrc(fileiter(f, 32, 0xFF, crc_size)))
+
+    algo_comp = {
+        "none": OTACompression.NONE,
+        "quicklz": OTACompression.QUICKLZ,
+        "fastlz": OTACompression.FASTLZ,
+        "gzip": OTACompression.GZIP,
+    }
+    algo_encr = {
+        "none": OTAEncryption.NONE,
+        "aes256": OTAEncryption.AES256,
+    }
+    if args.action == "ota":
+        if args.compress not in algo_comp:
+            raise ValueError("Invalid compression algorithm")
+        if args.encrypt not in algo_encr:
+            raise ValueError("Invalid encryption algorithm")
+        print(
+            f"OTA packaging '{f.name}' with compression '{args.compress}' and encryption '{args.encrypt}'"
+        )
+        rbl = RBL(
+            name=args.name,
+            version=args.version,
+            compression=algo_comp[args.compress],
+            encryption=algo_encr[args.encrypt],
+        )
+        gen = bk.ota_package(f, rbl, key=args.key, iv=args.iv)
+
+    if args.action == "deota":
+        print(f"OTA un-packaging '{f.name}'")
+        rbl = f.read(96)
+        rbl = RBL.deserialize(rbl)
+        print(
+            f" - found '{rbl.name}' ({rbl.version}),",
+            f"size {rbl.raw_size},",
+            f"compression {rbl.compression.name},",
+            f"encryption {rbl.encryption.name}",
+        )
+        gen = bk.ota_unpackage(f, rbl, key=args.key, iv=args.iv)
 
     if not gen:
         raise RuntimeError("gen is None")
