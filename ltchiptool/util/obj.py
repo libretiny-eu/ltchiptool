@@ -1,41 +1,56 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
+
 from enum import Enum
 from typing import Type
 
-
-def merge_dicts(d1, d2):
-    if d1 is not None and type(d1) != type(d2):
-        raise TypeError("d1 and d2 are different types")
-    if isinstance(d2, list):
-        if d1 is None:
-            d1 = []
-        d1.extend(merge_dicts(None, item) for item in d2)
-    elif isinstance(d2, dict):
-        if d1 is None:
-            d1 = {}
-        for key in d2:
-            d1[key] = merge_dicts(d1.get(key, None), d2[key])
-    else:
-        d1 = d2
-    return d1
+# The following helpers force using base dict class' methods.
+# Because RecursiveDict uses these helpers, this prevents it
+# from running into endless nested loops.
 
 
 def get(data: dict, path: str):
     if not isinstance(data, dict) or not path:
         return None
-    if "." not in path:
-        return data.get(path, None)
+    if dict.__contains__(data, path):
+        return dict.get(data, path, None)
     key, _, path = path.partition(".")
-    return get(data.get(key, None), path)
+    return get(dict.get(data, key, None), path)
+
+
+def pop(data: dict, path: str, default=None):
+    if not isinstance(data, dict) or not path:
+        return default
+    if dict.__contains__(data, path):
+        return dict.pop(data, path, default)
+    key, _, path = path.partition(".")
+    return pop(dict.get(data, key, None), path, default)
 
 
 def has(data: dict, path: str) -> bool:
     if not isinstance(data, dict) or not path:
         return False
-    if "." not in path:
-        return path in data
+    if dict.__contains__(data, path):
+        return True
     key, _, path = path.partition(".")
-    return has(data.get(key, None), path)
+    return has(dict.get(data, key, None), path)
+
+
+def set_(data: dict, path: str, value):
+    if not isinstance(data, dict) or not path:
+        return
+    # can't use __contains__ here, as we're setting,
+    # so it's obvious 'data' doesn't have the item
+    if "." not in path:
+        dict.__setitem__(data, path, value)
+    else:
+        key, _, path = path.partition(".")
+        # allow creation of parent objects
+        if key in data:
+            sub_data = dict.__getitem__(data, key)
+        else:
+            sub_data = {}
+            dict.__setitem__(data, key, sub_data)
+        set_(sub_data, path, value)
 
 
 def str2enum(cls: Type[Enum], key: str):

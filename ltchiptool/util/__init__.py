@@ -3,7 +3,7 @@
 from . import intbin
 from .bitint import BitInt, bitcat, bitcatraw
 from .crc16 import CRC16
-from .dict import RecursiveDict
+from .dict import RecursiveDict, merge_dicts
 from .env import lt_find_path, lt_read_json
 from .fileio import (
     chext,
@@ -17,7 +17,7 @@ from .fileio import (
     writetext,
 )
 from .misc import sizeof, unpack_obj
-from .obj import get, has, merge_dicts, str2enum
+from .obj import get, has, pop, set_, str2enum
 from .slice import SliceLike, slice2int
 from .toolchain import Toolchain
 
@@ -37,9 +37,11 @@ __all__ = [
     "lt_find_path",
     "lt_read_json",
     "merge_dicts",
+    "pop",
     "readbin",
     "readjson",
     "readtext",
+    "set_",
     "slice2int",
     "str2enum",
     "unpack_obj",
