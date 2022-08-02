@@ -391,3 +391,5 @@ pip-selfcheck.json
 *.axf
 *.rbl
 *.rblh
+*.bat
+*.ota
