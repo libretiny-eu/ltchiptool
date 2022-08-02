@@ -4,7 +4,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Dict, Optional, Tuple
 
-from ltchiptool.models import Board
+from ltchiptool import Board
 from ltchiptool.util.intbin import letoint
 from uf2tool.binpatch import binpatch_apply
 

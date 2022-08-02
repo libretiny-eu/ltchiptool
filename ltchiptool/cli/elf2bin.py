@@ -2,8 +2,8 @@
 
 import click
 
-from ltchiptool import get_soc
-from ltchiptool.models import Board, BoardParamType
+from ltchiptool import Board, SocInterface
+from ltchiptool.models import BoardParamType
 
 
 @click.command()
@@ -20,7 +20,7 @@ def cli(board: Board, input: str, ota_idx: int):
       INPUT    ELF input file
       OTA_IDX  OTA index of the input file
     """
-    soc = get_soc(board.family)
+    soc = SocInterface.get(board.family)
     files = soc.elf2bin(board, input, ota_idx)
     print("Generated files:")
     for name, offset in files.items():

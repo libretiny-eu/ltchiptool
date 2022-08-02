@@ -8,8 +8,8 @@ from typing import List, Optional, Tuple
 
 import click
 
-from ltchiptool import get_soc
-from ltchiptool.models import Board, BoardParamType
+from ltchiptool import Board, SocInterface
+from ltchiptool.models import BoardParamType
 from ltchiptool.util import chext, readtext
 
 
@@ -70,7 +70,7 @@ def cli(board: Board, ota1: str, ota2: str, args: Tuple[str]):
     except StopIteration:
         pass
 
-    soc = get_soc(board.family)
+    soc = SocInterface.get(board.family)
     toolchain = board.toolchain
 
     if soc.elf_has_dual_ota:

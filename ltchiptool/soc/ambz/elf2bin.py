@@ -3,7 +3,7 @@
 from os.path import basename
 from typing import IO, Dict, Optional
 
-from ltchiptool.models import Board
+from ltchiptool import Board
 from ltchiptool.util import chname, isnewer, readbin
 from ltchiptool.util.intbin import inttole32
 

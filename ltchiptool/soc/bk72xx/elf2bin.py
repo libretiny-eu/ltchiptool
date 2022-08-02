@@ -6,7 +6,7 @@ from os import stat
 from os.path import basename
 from typing import Dict, Optional
 
-from ltchiptool.models import Board
+from ltchiptool import Board
 from ltchiptool.util import chext, chname, isnewer, str2enum
 
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption

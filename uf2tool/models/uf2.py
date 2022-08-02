@@ -3,7 +3,7 @@
 from io import BytesIO, FileIO
 from typing import Dict, List
 
-from ltchiptool.models.family import Family
+from ltchiptool import Family
 from ltchiptool.util.intbin import align_down, align_up, intto8, inttole16, inttole32
 
 from .block import Block

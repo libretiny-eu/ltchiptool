@@ -2,9 +2,8 @@
 
 from typing import Dict, Optional
 
-from ltchiptool.models import Board
-from ltchiptool.soc import SocInterface
-from uf2tool.models import UploadContext
+from ltchiptool import Board, SocInterface
+from uf2tool import UploadContext
 
 from .elf2bin import elf2bin
 from .upload import upload

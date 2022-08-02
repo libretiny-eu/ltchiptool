@@ -3,7 +3,7 @@
 from io import BytesIO
 
 from ltchiptool.util.intbin import letoint
-from uf2tool.models import UploadContext
+from uf2tool import UploadContext
 
 from .util.rtltool import RTLXMD
 

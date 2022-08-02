@@ -3,7 +3,7 @@
 from math import ceil
 from typing import Dict
 
-from ltchiptool.models.family import Family
+from ltchiptool import Family
 from ltchiptool.util.intbin import align_up, intto8, inttole24, inttole32, letoint
 
 from .enums import Tag

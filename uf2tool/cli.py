@@ -8,8 +8,8 @@ from typing import Tuple
 
 import click
 
-from ltchiptool import SocInterface, get_soc
-from ltchiptool.models import Family, FamilyParamType
+from ltchiptool import Family, SocInterface
+from ltchiptool.models import FamilyParamType
 from ltchiptool.util import unpack_obj
 from uf2tool.models import UF2, Input, InputParamType, UploadContext
 from uf2tool.writer import UF2Writer
@@ -106,7 +106,7 @@ def upload(ctx, file: FileIO):
     ctx.obj["ctx"] = context
     ctx.obj["board"] = context.board
     ctx.obj["family"] = context.board.family
-    ctx.obj["soc"] = get_soc(context.board.family)
+    ctx.obj["soc"] = SocInterface.get(context.board.family)
 
 
 @upload.command("uart", help="Upload using UART protocol")

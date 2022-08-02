@@ -3,11 +3,23 @@
 from abc import ABC
 from typing import Dict, Optional
 
-from ltchiptool.models import Board
-from uf2tool.models import UploadContext
+from ltchiptool import Board, Family
+from uf2tool import UploadContext
 
 
 class SocInterface(ABC):
+    @classmethod
+    def get(cls, family: Family) -> "SocInterface":
+        # fmt: off
+        if family.parent_code == "bk72xx":
+            from .bk72xx import BK72XXMain
+            return BK72XXMain()
+        if family.code == "ambz":
+            from .ambz import AmebaZMain
+            return AmebaZMain()
+        # fmt: on
+        raise NotImplementedError(f"Unsupported family - {family.name}")
+
     def hello(self):
         raise NotImplementedError()
 

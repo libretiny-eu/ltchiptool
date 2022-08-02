@@ -2,7 +2,7 @@
 
 import sys
 
-from uf2tool.models import UploadContext
+from uf2tool import UploadContext
 
 
 # noinspection PyUnresolvedReferences

@@ -4,7 +4,7 @@ from binascii import crc32
 from io import FileIO
 from typing import Tuple
 
-from ltchiptool.models import Family
+from ltchiptool import Family
 
 from .binpatch import diff32_write
 from .models import UF2, Block, Input, Tag
