@@ -84,6 +84,7 @@ def dump(file: FileIO, output: str):
     prefix = f"image_{ctx.board_name}_{ctx.board.family.code}"
 
     for ota_idx in ota_idxs:
+        ctx.seq = 0
         for offset, data in ctx.collect(ota_idx).items():
             path = f"{prefix}_ota{ota_idx}_0x{offset:X}.bin"
             print(f"Writing to {path}")
