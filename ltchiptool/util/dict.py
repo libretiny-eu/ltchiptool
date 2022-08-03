@@ -2,11 +2,6 @@
 
 from .obj import get, has, pop, set_
 
-# Note: 'if "." not in key' is used, because callers
-# not using the "recursive" functionality may expect
-# KeyError to be thrown, while RecursiveDict normally
-# does not. This is an ugly hack, but works.
-
 
 class RecursiveDict(dict):
     def __init__(self, data: dict = None):
@@ -21,7 +16,7 @@ class RecursiveDict(dict):
 
     def __getitem__(self, key):
         if "." not in key:
-            return super().__getitem__(key)
+            return super().get(key, None)
         return get(self, key)
 
     def __setitem__(self, key, value):
@@ -31,8 +26,8 @@ class RecursiveDict(dict):
 
     def __delitem__(self, key):
         if "." not in key:
-            return super().__delitem__(key)
-        pop(self, key)
+            return super().pop(key, None)
+        return pop(self, key)
 
     def __contains__(self, key) -> bool:
         if "." not in key:
