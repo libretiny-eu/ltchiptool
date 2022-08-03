@@ -1,4 +1,4 @@
-#  Copyright (c) Kuba Szczodrzyński 2022-8-2.
+# Copyright (c) Kuba Szczodrzyński 2022-08-02.
 
 from .cli import main
 
