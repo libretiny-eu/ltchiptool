@@ -30,7 +30,10 @@ class Board(RecursiveDict):
         if not isinstance(board, dict):
             if isfile(board):
                 board = readjson(board)
-            board = lt_read_json(f"boards/{board}.json")
+            else:
+                source = board
+                board = lt_read_json(f"boards/{board}.json")
+                board["source"] = source
         if "_base" in board:
             base = board["_base"]
             if not isinstance(base, list):
@@ -64,6 +67,10 @@ class Board(RecursiveDict):
         return self["symbol"]
 
     @property
+    def vendor(self) -> str:
+        return self["vendor"]
+
+    @property
     def family(self) -> Family:
         return Family.get(short_name=self["build.family"])
 
@@ -72,6 +79,16 @@ class Board(RecursiveDict):
         if not self._toolchain:
             self._toolchain = Toolchain(self["build.prefix"])
         return self._toolchain
+
+    @property
+    def is_generic(self) -> bool:
+        return self.name.startswith("generic")
+
+    @property
+    def generic_name(self) -> Optional[str]:
+        if self.is_generic:
+            return self.name[8:]
+        return None
 
     def region(self, name: str) -> Tuple[int, int, int]:
         (start, length) = self[f"flash.{name}"].split("+")
