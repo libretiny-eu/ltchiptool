@@ -23,6 +23,10 @@ class Board(RecursiveDict):
     _toolchain: Optional[Toolchain] = None
 
     def __init__(self, board: Union[str, dict]):
+        super().__init__(Board.get_data(board))
+
+    @staticmethod
+    def get_data(board: Union[str, dict]) -> dict:
         if not isinstance(board, dict):
             if isfile(board):
                 board = readjson(board)
@@ -37,7 +41,7 @@ class Board(RecursiveDict):
                 merge_dicts(result, board_base)
             merge_dicts(result, board)
             board = result
-        super(Board, self).__init__(board)
+        return board
 
     @classmethod
     def get_list(cls) -> List[str]:
