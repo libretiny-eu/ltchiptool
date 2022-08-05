@@ -23,7 +23,7 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info);
  *
  * @param data pointer to tag header beginning
  * @param type [out] parsed tag type
- * @return uint8_t parsed tag data length (excl. header); 0 if invalid/last tag
+ * @return uint8_t parsed tag length (incl. header); 0 if invalid/last tag
  */
 uint8_t uf2_read_tag(const uint8_t *data, uf2_tag_type_t *type);
 

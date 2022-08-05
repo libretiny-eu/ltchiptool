@@ -31,8 +31,9 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		uint8_t len = uf2_read_tag(tags_start + tags_pos, &type);
 		if (!len)
 			break;
-		tags_pos += 4; // skip tag header
-		uint8_t *tag = tags_start + tags_pos;
+		// skip tag header
+		uint8_t *tag	= tags_start + tags_pos + 4;
+		uint8_t tag_len = len - 4;
 
 		char **str_dest = NULL; // char* to copy the tag into
 
@@ -71,15 +72,15 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 				break;
 			case UF2_TAG_BINPATCH:
 				ctx->binpatch	  = tag;
-				ctx->binpatch_len = len;
+				ctx->binpatch_len = tag_len;
 				break;
 			default:
 				break;
 		}
 
 		if (str_dest) {
-			*str_dest = (char *)zalloc(len + 1);
-			memcpy(*str_dest, tag, len);
+			*str_dest = (char *)zalloc(tag_len + 1);
+			memcpy(*str_dest, tag, tag_len);
 		}
 		// align position to 4 bytes
 		tags_pos += (((len - 1) / 4) + 1) * 4;
@@ -106,7 +107,7 @@ uint8_t uf2_read_tag(const uint8_t *data, uf2_tag_type_t *type) {
 	if (!tag_type)
 		return 0;
 	*type = tag_type >> 8; // remove tag length byte
-	return len - 4;
+	return len;
 }
 
 uf2_err_t uf2_update_parts(uf2_ota_t *ctx, char *part1, char *part2) {
