@@ -35,7 +35,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     app_addr = nmap["_vector_start"]
     app_offs = calc_offset(app_addr)
     app_size = int(rbl_size, 16)
-    rbl_offs = app_offs
+    rbl_offs = app_offs + int(app_size // 32 * 34) - 102
 
     # build output names
     out_rbl = chname(input, f"{mcu}_app_0x{app_offs:06X}.rbl")
@@ -54,7 +54,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     if all(map(lambda f: isnewer(f, fw_bin), outputs)):
         result[out_rbl] = app_offs
         result[out_crc] = None
-        result[out_rblh] = None
+        result[out_rblh] = rbl_offs
         result[out_ota] = None
         result[out_ug] = None
         return result
@@ -83,12 +83,10 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
             break
         out.write(data)
         crc.write(data)
-        rbl_offs += len(data)
 
     # skip PADDING_SIZE bytes for RBL header, write it to main output
     if data_type == DataType.PADDING_SIZE:
         out.write(b"\xff" * data)
-        rbl_offs += data
 
     # open RBL header output
     print(f"|   |-- {basename(out_rblh)}")
