@@ -6,6 +6,8 @@ from typing import List, Optional
 import click
 from click import Command, Context, MultiCommand
 
+from ..version import get_version
+
 COMMANDS = {
     "link2bin": "ltchiptool/cli/link2bin.py",
     "elf2bin": "ltchiptool/cli/elf2bin.py",
@@ -37,6 +39,7 @@ def cli(ctx: Context):
 
 def main():
     try:
+        print(f"ltchiptool v{get_version()}")
         cli()
     except Exception as e:
         click.secho(f"ERROR: {type(e).__name__}: {e}", fg="red")
