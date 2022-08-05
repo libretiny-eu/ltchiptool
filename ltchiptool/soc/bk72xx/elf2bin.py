@@ -1,13 +1,14 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from datetime import datetime
-from io import SEEK_SET
+from io import SEEK_SET, BytesIO
 from os import stat
 from os.path import basename
 from typing import Dict, Optional
 
 from ltchiptool import Board
 from ltchiptool.util import chext, chname, isnewer, str2enum
+from ltchiptool.util.intbin import inttobe32, pad_data
 
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
 
@@ -36,17 +37,26 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     app_size = int(rbl_size, 16)
     rbl_offs = app_offs
 
-    # build output name
-    output = chname(input, f"{mcu}_app_0x{app_offs:06X}.rbl")
+    # build output names
+    out_rbl = chname(input, f"{mcu}_app_0x{app_offs:06X}.rbl")
+    out_crc = chname(input, f"{mcu}_app_0x{app_offs:06X}.crc")
+    out_rblh = chname(input, f"{mcu}_app_0x{rbl_offs:06X}.rblh")
+    out_ota = chname(input, f"{mcu}_app.ota.rbl")
+    out_ug = chname(input, f"{mcu}_app.ota.ug.bin")
     fw_bin = chext(input, "bin")
+    outputs = [out_rbl, out_crc, out_rblh, out_ota, out_ug]
     # print graph element
-    print(f"|   |-- {basename(output)}")
+    print(f"|   |-- {basename(out_rbl)}")
     # objcopy ELF -> raw BIN
     toolchain.objcopy(input, fw_bin)
     result[fw_bin] = None
-    # return if images are up to date
-    if not isnewer(fw_bin, output):
-        result[output] = app_offs
+    # return if all outputs are up-to-date
+    if all(map(lambda f: isnewer(f, fw_bin), outputs)):
+        result[out_rbl] = app_offs
+        result[out_crc] = None
+        result[out_rblh] = None
+        result[out_ota] = None
+        result[out_ug] = None
         return result
 
     bk = BekenBinary(coeffs)
@@ -58,10 +68,9 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
 
     fw_size = stat(fw_bin).st_size
     raw = open(fw_bin, "rb")
-    out = open(output, "wb")
+    out = open(out_rbl, "wb")
 
     # open encrypted+CRC binary output
-    out_crc = chname(input, f"{mcu}_app_0x{app_offs:06X}.crc")
     print(f"|   |-- {basename(out_crc)}")
     crc = open(out_crc, "wb")
 
@@ -82,7 +91,6 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         rbl_offs += data
 
     # open RBL header output
-    out_rblh = chname(input, f"{mcu}_app_0x{rbl_offs:06X}.rblh")
     print(f"|   |-- {basename(out_rblh)}")
     rblh = open(out_rblh, "wb")
 
@@ -93,7 +101,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         out.write(data)
         rblh.write(data)
 
-    result[output] = app_offs
+    result[out_rbl] = app_offs
     result[out_crc] = None
     result[out_rblh] = rbl_offs
 
@@ -104,16 +112,33 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         encryption=str2enum(OTAEncryption, ota_encryption) or OTAEncryption.NONE,
         compression=str2enum(OTACompression, ota_compression) or OTACompression.NONE,
     )
-    out_ota = chname(input, f"{mcu}_app_ota.rbl")
     print(f"|   |-- {basename(out_ota)}")
     # seek back to start
     raw.seek(0, SEEK_SET)
     ota_gen = bk.ota_package(raw, rbl, key=ota_key, iv=ota_iv)
+    ota_data = BytesIO()
     ota = open(out_ota, "wb")
     for data in ota_gen:
         ota.write(data)
+        ota_data.write(data)
     if rbl.data_size > ota_size:
         print(f"OTA size too large: {rbl.data_size} > {ota_size} (0x{ota_size:X})")
+    result[out_ota] = None
+
+    # write Tuya OTA package (UG)
+    print(f"|   |-- {basename(out_ug)}")
+    with open(out_ug, "wb") as ug:
+        hdr = BytesIO()
+        ota_bin = ota_data.getvalue()
+        hdr.write(b"\x55\xAA\x55\xAA")
+        hdr.write(pad_data(version.encode(), 12, 0x00))
+        hdr.write(inttobe32(len(ota_bin)))
+        hdr.write(inttobe32(sum(ota_bin)))
+        ug.write(hdr.getvalue())
+        ug.write(inttobe32(sum(hdr.getvalue())))
+        ug.write(b"\xAA\x55\xAA\x55")
+        ug.write(ota_bin)
+    result[out_ug] = None
 
     # close all files
     raw.close()
