@@ -1,6 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
-from io import FileIO
+from io import SEEK_SET, FileIO
 from os import makedirs
 from os.path import join
 from time import time
@@ -12,6 +12,7 @@ from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util import unpack_obj
 from uf2tool.models import UF2, Input, InputParamType, UploadContext
+from uf2tool.upload import ESPHomeUploader
 from uf2tool.writer import UF2Writer
 
 
@@ -102,6 +103,7 @@ def upload(ctx, file: FileIO):
     print(
         f"|-- {context.fw_name} {context.fw_version} @ {context.build_date} -> {context.board_name}"
     )
+    ctx.obj["file"] = file
     ctx.obj["start"] = time()
     ctx.obj["uf2"] = uf2
     ctx.obj["ctx"] = context
@@ -115,7 +117,7 @@ def upload(ctx, file: FileIO):
 @click.option("-b", "--baud", help="Baudrate (board default)")
 @unpack_obj
 def upload_uart(soc: SocInterface, start: float, **kwargs):
-    print(f"|-- Using UART")
+    print("|-- Using UART")
     soc.upload_uart(**kwargs)
     duration = time() - start
     print(f"|-- Finished in {duration:.3f} s")
@@ -127,5 +129,31 @@ def upload_openocd():
 
 
 @upload.command("esphome", help="Upload via ESPHome OTA")
-def upload_esphome():
-    raise NotImplementedError()
+@click.argument("HOST")
+@click.option("-P", "--port", help="OTA port", default=8892, type=int)
+@click.option("-p", "--password", help="OTA password", default=None)
+@click.option("-v", "--verbose", help="Print debugging info", is_flag=True)
+@unpack_obj
+def upload_esphome(
+    uf2: UF2,
+    file: FileIO,
+    host: str,
+    port: int,
+    password: str,
+    verbose: bool,
+    start: float,
+    **kwargs,
+):
+    file.seek(0, SEEK_SET)
+    print(f"|-- Using ESPHome OTA ({host}:{port})")
+    esphome = ESPHomeUploader(
+        file=file,
+        md5=uf2.md5.digest(),
+        host=host,
+        port=port,
+        password=password,
+        debug=verbose,
+    )
+    esphome.upload()
+    duration = time() - start
+    print(f"|-- Finished in {duration:.3f} s")

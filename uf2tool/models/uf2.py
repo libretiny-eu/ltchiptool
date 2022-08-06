@@ -1,5 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-05-27.
 
+from hashlib import md5
 from io import BytesIO, FileIO
 from typing import Dict, List
 
@@ -18,8 +19,11 @@ class UF2:
     tags: Dict[Tag, bytes] = {}
     data: List[Block] = []
 
+    md5: md5
+
     def __init__(self, f: FileIO) -> None:
         self.f = f
+        self.md5 = md5()
 
     def store(
         self,
@@ -67,6 +71,7 @@ class UF2:
                 break
             block = Block()
             block.decode(data)
+            self.md5.update(data)
 
             if self.family and self.family != block.family:
                 raise ValueError(f"Mismatched family ({self.family} != {block.family})")
