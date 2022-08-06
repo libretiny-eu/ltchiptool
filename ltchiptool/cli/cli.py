@@ -14,6 +14,8 @@ COMMANDS = {
     "uf2": "uf2tool/cli.py",
 }
 
+FULL_TRACEBACK: bool = False
+
 
 class ChipToolCLI(MultiCommand):
     def list_commands(self, ctx: Context) -> List[str]:
@@ -31,22 +33,38 @@ class ChipToolCLI(MultiCommand):
         return ns["cli"]
 
 
-@click.command(cls=ChipToolCLI, help="Tools for working with LT-supported IoT chips")
+@click.command(
+    cls=ChipToolCLI,
+    help="Tools for working with LT-supported IoT chips",
+    context_settings=dict(help_option_names=["-h", "--help"]),
+)
+@click.option("--traceback", help="Print complete exception traceback", is_flag=True)
+@click.version_option(
+    get_version(), "--version", "-V", message="ltchiptool v%(version)s"
+)
 @click.pass_context
-def cli(ctx: Context):
+def cli(ctx: Context, traceback: bool):
+    global FULL_TRACEBACK
+    FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
+
+
+def tb_echo(tb):
+    filename = tb.tb_frame.f_code.co_filename
+    name = tb.tb_frame.f_code.co_name
+    line = tb.tb_lineno
+    click.secho(f' - File "{filename}", line {line}, in {name}', fg="red")
 
 
 def main():
     try:
-        print(f"ltchiptool v{get_version()}")
         cli()
     except Exception as e:
         click.secho(f"ERROR: {type(e).__name__}: {e}", fg="red")
         tb = e.__traceback__
         while tb.tb_next:
+            if FULL_TRACEBACK:
+                tb_echo(tb)
             tb = tb.tb_next
-        filename = tb.tb_frame.f_code.co_filename
-        name = tb.tb_frame.f_code.co_name
-        line = tb.tb_lineno
-        click.secho(f' - File "{filename}", line {line}, in {name}', fg="red")
+        tb_echo(tb)
+        exit(1)
