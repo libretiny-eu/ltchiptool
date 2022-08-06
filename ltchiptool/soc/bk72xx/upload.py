@@ -22,14 +22,21 @@ def import_bkserial() -> type:
 
 
 # noinspection PyUnusedLocal
-def upload(ctx: UploadContext, port: str, baud: int = None, **kwargs):
+def upload(
+    ctx: UploadContext,
+    port: str,
+    baud: int = None,
+    timeout: float = None,
+    **kwargs,
+):
     # noinspection PyPep8Naming
     BK7231Serial = import_bkserial()
 
     prefix = "|   |--"
-    print(prefix, f"Trying to link on {port} @ {ctx.baudrate}")
+    baudrate = baud or ctx.baudrate or 115200
+    print(prefix, f"Trying to link on {port} @ {baudrate}")
     # connect to chip
-    bk = BK7231Serial(port=port, baudrate=baud or ctx.baudrate or 115200)
+    bk = BK7231Serial(port=port, baudrate=baudrate, link_timeout=timeout or 10.0)
 
     # collect continuous blocks of data
     parts = ctx.collect(ota_idx=1)
