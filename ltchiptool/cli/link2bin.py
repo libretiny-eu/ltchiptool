@@ -43,7 +43,12 @@ def checkfile(path: str):
         exit(1)
 
 
-@click.command(context_settings={"ignore_unknown_options": True})
+@click.command(
+    context_settings=dict(
+        ignore_unknown_options=True,
+        help_option_names=["--help"],
+    )
+)
 @click.argument("board", type=BoardParamType())
 @click.argument("ota1")
 @click.argument("ota2")
