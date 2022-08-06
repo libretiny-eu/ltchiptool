@@ -42,6 +42,7 @@ __all__ = [
     "readjson",
     "readtext",
     "set_",
+    "sizeof",
     "slice2int",
     "str2enum",
     "unpack_obj",
