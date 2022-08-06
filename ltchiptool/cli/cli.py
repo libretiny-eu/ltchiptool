@@ -9,6 +9,7 @@ from click import Command, Context, MultiCommand
 from ..version import get_version
 
 COMMANDS = {
+    "dump": "ltchiptool/cli/dumptool.py",
     "link2bin": "ltchiptool/cli/link2bin.py",
     "elf2bin": "ltchiptool/cli/elf2bin.py",
     "uf2": "uf2tool/cli.py",
@@ -20,7 +21,7 @@ FULL_TRACEBACK: bool = False
 class ChipToolCLI(MultiCommand):
     def list_commands(self, ctx: Context) -> List[str]:
         ctx.ensure_object(dict)
-        return ["link2bin", "elf2bin", "uf2", "soc"]
+        return ["link2bin", "elf2bin", "uf2", "soc", "dump"]
 
     def get_command(self, ctx: Context, cmd_name: str) -> Optional[Command]:
         if cmd_name not in COMMANDS:
