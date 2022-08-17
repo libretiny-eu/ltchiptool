@@ -193,7 +193,7 @@ def fileiter(
     read = 0
     while True:
         if count and read + size >= count:
-            yield pad_data(f.read(count % size), size, padding)
+            yield pad_data(f.read(count - read), size, padding)
             return
         data = f.read(size)
         read += len(data)
