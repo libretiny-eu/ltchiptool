@@ -17,8 +17,8 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		return UF2_ERR_DATA_TOO_LONG;
 
 	uint8_t *tags_start = block->data + block->len;
-	uint8_t tags_len	= 476 - block->len;
-	uint8_t tags_pos	= 0;
+	uint16_t tags_len	= 476 - block->len;
+	uint16_t tags_pos	= 0;
 	if (block->has_md5)
 		tags_len -= 24;
 
@@ -96,6 +96,9 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		return UF2_ERR_PART_ONE;
 	}
 
+	free(part1);
+	free(part2);
+
 	return UF2_ERR_OK;
 }
 
@@ -103,10 +106,10 @@ uint8_t uf2_read_tag(const uint8_t *data, uf2_tag_type_t *type) {
 	uint8_t len = data[0];
 	if (!len)
 		return 0;
-	uint32_t tag_type = *((uint32_t *)data);
+	uint32_t tag_type = data[1] | (data[2] << 8) | (data[3] << 16);
 	if (!tag_type)
 		return 0;
-	*type = tag_type >> 8; // remove tag length byte
+	*type = tag_type;
 	return len;
 }
 
