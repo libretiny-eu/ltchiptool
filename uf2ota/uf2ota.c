@@ -83,11 +83,11 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 
 	int ret;
 	// erase sectors if needed
-	if (!uf2_is_erased(ctx, block->addr, block->len)) {
+	if (!uf2_is_erased(ctx, part->offset + block->addr, block->len)) {
 		ret = fal_partition_erase(part, block->addr, block->len);
 		if (ret < 0)
 			return UF2_ERR_ERASE_FAILED;
-		ctx->erased_offset = block->addr;
+		ctx->erased_offset = part->offset + block->addr;
 		ctx->erased_length = ret;
 	}
 	// write data to flash
