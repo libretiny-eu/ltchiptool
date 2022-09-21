@@ -1,24 +1,8 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
-import sys
+from bk7231tools.serial import BK7231Serial
 
 from uf2tool import UploadContext
-
-
-# noinspection PyUnresolvedReferences
-def import_bkserial() -> type:
-    try:
-        from platformio.package.manager.tool import ToolPackageManager
-
-        manager = ToolPackageManager()
-        pkg = manager.get_package("tool-bk7231tools")
-        sys.path.append(pkg.path)
-        from bk7231tools.serial import BK7231Serial
-    except (ImportError, AttributeError):
-        raise RuntimeError(
-            "You need PlatformIO and tool-bk7231tools package to run this program."
-        )
-    return BK7231Serial
 
 
 # noinspection PyUnusedLocal
@@ -29,9 +13,6 @@ def upload(
     timeout: float = None,
     **kwargs,
 ):
-    # noinspection PyPep8Naming
-    BK7231Serial = import_bkserial()
-
     # collect continuous blocks of data (before linking, as this takes time)
     parts = ctx.collect(ota_idx=1)
 
