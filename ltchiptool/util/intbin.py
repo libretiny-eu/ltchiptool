@@ -177,6 +177,8 @@ def geniter(gen: ByteSource, size: int) -> ByteGenerator:
         while len(buf) >= size:
             yield buf[0:size]
             buf = buf[size:]
+    if buf:
+        yield buf
 
 
 def fileiter(
