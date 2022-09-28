@@ -20,13 +20,15 @@ def auto_int(x):
     return int(x, 0)
 
 
-def add_common_args(parser):
-    parser.add_argument(
-        "coeffs", type=str, help="Encryption coefficients (hex string, 32 chars)"
-    )
+def add_common_args(parser, encryption: bool = True):
+    if encryption:
+        parser.add_argument(
+            "coeffs", type=str, help="Encryption coefficients (hex string, 32 chars)"
+        )
     parser.add_argument("input", type=FileType("rb"), help="Input file")
     parser.add_argument("output", type=FileType("wb"), help="Output file")
-    parser.add_argument("addr", type=auto_int, help="Memory address (dec/hex)")
+    if encryption:
+        parser.add_argument("addr", type=auto_int, help="Memory address (dec/hex)")
 
 
 def add_package_args(parser):
@@ -64,6 +66,12 @@ if __name__ == "__main__":
         help="Do not check CRC16 (if present)",
         action="store_true",
     )
+
+    crc = sub.add_parser("crc", help="Apply CRC to firmware file")
+    add_common_args(crc, encryption=False)
+
+    uncrc = sub.add_parser("uncrc", help="Remove CRC from firmware file")
+    add_common_args(uncrc, encryption=False)
 
     package = sub.add_parser(
         "package", description="Package raw binary files as RBL containers"
@@ -104,7 +112,7 @@ if __name__ == "__main__":
     add_package_args(deota)
 
     args = parser.parse_args()
-    bk = BekenBinary(args.coeffs if "ota" not in args.action else None)
+    bk = BekenBinary(getattr(args, "coeffs", None))
     f: FileIO = args.input
     size = stat(args.input.name).st_size
     start = time()
@@ -132,6 +140,18 @@ if __name__ == "__main__":
         else:
             print(f" - raw binary, no CRC")
             gen = bk.crypt(args.addr, f)
+
+    if args.action == "crc":
+        print(f"Adding CRC to '{f.name}' ({size} bytes)")
+        if size % 32 != 0:
+            raise ValueError("Input file is not 32-byte aligned")
+        gen = bk.crc(f)
+
+    if args.action == "uncrc":
+        print(f"Removing CRC from '{f.name}' ({size} bytes)")
+        if size % 34 != 0:
+            raise ValueError("Input file is not 34-byte aligned")
+        gen = bk.uncrc(f)
 
     if args.action == "package":
         print(f"Packaging {args.name} '{f.name}' for memory address 0x{args.addr:X}")
