@@ -65,7 +65,7 @@ class Family:
                 return family
         if any:
             raise ValueError(f"Family not found - {any}")
-        text = ", ".join(filter(None, [id, short_name, name, code]))
+        text = ", ".join(filter(None, [hex(id), short_name, name, code]))
         raise ValueError(f"Family not found - {text}")
 
     @property
