@@ -6,7 +6,8 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 	if (block->block_seq != ctx->seq)
 		// sequence number must match
 		return UF2_ERR_SEQ_MISMATCH;
-	ctx->seq++; // increment sequence number after checking it
+	ctx->seq++;			   // increment sequence number after checking it
+	ctx->binpatch_len = 0; // binpatch applies to one block only
 
 	if (!block->has_tags)
 		// no tags in this block, no further processing needed
@@ -22,9 +23,8 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 	if (block->has_md5)
 		tags_len -= 24;
 
-	ctx->binpatch_len = 0; // binpatch applies to one block only
-	char *part1		  = NULL;
-	char *part2		  = NULL;
+	char *part1 = NULL;
+	char *part2 = NULL;
 
 	uf2_tag_type_t type;
 	while (tags_pos < tags_len) {
