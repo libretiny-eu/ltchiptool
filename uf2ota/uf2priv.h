@@ -3,7 +3,7 @@
 #pragma once
 
 // include family stdlib APIs
-#include <WVariant.h>
+#include <Arduino.h>
 
 #include "uf2binpatch.h"
 #include "uf2types.h"
