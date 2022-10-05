@@ -11,7 +11,9 @@ import platform
 import struct
 import sys
 import time
+from typing import List
 
+import click
 import serial
 
 # Protocol bytes
@@ -314,7 +316,7 @@ def arg_auto_int(x):
     return int(x, 0)
 
 
-if __name__ == "__main__":
+def main(*argv):
     parser = argparse.ArgumentParser(
         description="RT871xBx ROM Bootloader Utility", prog="rtltool"
     )
@@ -360,7 +362,7 @@ if __name__ == "__main__":
     subparsers.add_parser("bf", help="Start boot flash")
     subparsers.add_parser("gm", help="Go ROM Monitor")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     rtl = RTLXMD(args.port)
     print("Connecting...")
     if rtl.connect():
@@ -490,3 +492,19 @@ if __name__ == "__main__":
             raise RuntimeError("Error!")
     print("Done!")
     sys.exit(0)
+
+
+@click.command(
+    help="rtltool by pvvx",
+    context_settings=dict(
+        help_option_names=[],
+        ignore_unknown_options=True,
+    ),
+)
+@click.argument("args", nargs=-1)
+def cli(args: List[str]):
+    main(*args)
+
+
+if __name__ == "__main__":
+    main(*sys.argv[1:])
