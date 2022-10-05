@@ -4,13 +4,15 @@ import sys
 from os.path import dirname, join
 
 sys.path.append(join(dirname(__file__), "..", "..", ".."))
+sys.path.append(dirname(__file__))
 
 from argparse import ArgumentParser, FileType
 from io import SEEK_SET, FileIO
 from os import stat
 from time import time
-from typing import Union
+from typing import List, Union
 
+import click
 from util import RBL, BekenBinary, OTACompression, OTAEncryption
 
 from ltchiptool.util.intbin import ByteGenerator, fileiter
@@ -50,7 +52,7 @@ def add_package_args(parser):
     )
 
 
-if __name__ == "__main__":
+def main(*argv):
     parser = ArgumentParser(description="Encrypt/decrypt Beken firmware binaries")
     sub = parser.add_subparsers(dest="action", required=True)
 
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     deota.add_argument("--iv", type=str, required=False, help="AES256 IV (optional)")
     add_package_args(deota)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     bk = BekenBinary(getattr(args, "coeffs", None))
     f: FileIO = args.input
     size = stat(args.input.name).st_size
@@ -221,3 +223,19 @@ if __name__ == "__main__":
         args.output.write(data)
         written += len(data)
     print(f" - wrote {written} bytes in {time()-start:.3f} s")
+
+
+@click.command(
+    help="BK72xx Packager",
+    context_settings=dict(
+        help_option_names=[],
+        ignore_unknown_options=True,
+    ),
+)
+@click.argument("args", nargs=-1)
+def cli(args: List[str]):
+    main(*args)
+
+
+if __name__ == "__main__":
+    main(*sys.argv[1:])
