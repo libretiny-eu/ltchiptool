@@ -11,6 +11,7 @@ COMMANDS = {
     "elf2bin": "ltchiptool/cli/elf2bin.py",
     "link2bin": "ltchiptool/cli/link2bin.py",
     "list": "ltchiptool/cli/list.py",
+    "soc": "ltchiptool/cli/soc.py",
     "uf2": "uf2tool/cli.py",
 }
 
