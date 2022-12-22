@@ -2,6 +2,7 @@
 
 from enum import IntEnum
 from io import FileIO
+from logging import debug, info
 from os import stat
 from socket import (
     AF_INET,
@@ -15,6 +16,7 @@ from socket import (
 )
 from typing import Tuple, Union
 
+from ltchiptool.util import verbose
 from ltchiptool.util.intbin import inttobe32
 
 OTA_MAGIC = b"\x6C\x26\xF7\x5C\x45"
@@ -65,7 +67,6 @@ class ESPHomeUploader:
     port: int
 
     password: str = None
-    debug: bool = False
 
     def __init__(
         self,
@@ -74,7 +75,6 @@ class ESPHomeUploader:
         host: str,
         port: int,
         password: str = None,
-        debug: bool = False,
     ):
         self.file = file
         self.file_size = stat(file.name).st_size
@@ -82,25 +82,20 @@ class ESPHomeUploader:
         self.host = host
         self.port = port
         self.password = password
-        self.debug = debug
-
-    def dbg(self, *msg):
-        if self.debug:
-            print(*msg)
 
     def resolve_host(self):
-        self.dbg("Resolving", self.host)
+        debug(f"Resolving {self.host}")
         parts = self.host.split(".")
         if all(map(lambda x: x.isnumeric(), parts)):
             if not all(map(lambda x: int(x) in range(0, 255), parts)):
                 raise ValueError(f"Invalid IP address: {self.host}")
             return
         ip_addr = gethostbyname(self.host)
-        print(f"|   |-- Resolved {self.host} to {ip_addr}")
+        info(f"|   |-- Resolved {self.host} to {ip_addr}")
         self.host = ip_addr
 
     def connect(self):
-        self.dbg("Connecting to", self.host, self.port)
+        debug(f"Connecting to {self.host}:{self.port}")
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.sock.settimeout(10.0)
         try:
@@ -113,19 +108,19 @@ class ESPHomeUploader:
     def send(self, data: Union[bytes, int]):
         if isinstance(data, int):
             data = bytes([data])
-        self.dbg("<-- TX:", tohex(data))
+        verbose(f"<-- TX: {tohex(data)}")
         self.sock.sendall(data)
 
     def receive(self, *codes: OTACode, size: int = 0) -> Tuple[OTACode, bytes]:
         data = self.sock.recv(1)
         response = OTACode(data[0])
-        self.dbg("--> RX:", response.name)
+        verbose(f"--> RX: {response.name}")
         if response not in codes:
             raise ValueError(f"Received {response.name} instead of {codes}")
         if size == 0:
             return response, b""
         data = self.sock.recv(size)
-        self.dbg("--> RX:", tohex(data))
+        verbose(f"--> RX: {tohex(data)}")
         return response, data
 
     def upload(self):
@@ -136,7 +131,7 @@ class ESPHomeUploader:
         _, ver = self.receive(OTACode.RESP_OK, size=1)
         if ver[0] != OTACode.VERSION_1_0:
             raise ValueError("Invalid OTA version")
-        print("|-- Connected to ESPHome")
+        info("|-- Connected to ESPHome")
 
         self.send(OTACode.FEATURE_SUPPORTS_COMPRESSION)
         features, _ = self.receive(
@@ -159,7 +154,7 @@ class ESPHomeUploader:
         self.sock.setsockopt(SOL_SOCKET, SO_SNDBUF, 8192)
         self.sock.settimeout(20.0)
 
-        print("|-- Starting OTA upload")
+        info("|-- Starting OTA upload")
         while True:
             data = self.file.read(1024)
             if not data:

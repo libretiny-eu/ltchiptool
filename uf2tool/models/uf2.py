@@ -2,6 +2,7 @@
 
 from hashlib import md5
 from io import BytesIO, FileIO
+from logging import info
 from typing import Dict, List
 
 from ltchiptool import Family
@@ -89,16 +90,16 @@ class UF2:
                 self.data.append(block)
 
     def dump(self):
-        print(f"Family: {self.family.short_name} / {self.family.description}")
-        print(f"Tags:")
+        info(f"Family: {self.family.short_name} / {self.family.description}")
+        info(f"Tags:")
         for k, v in self.tags.items():
             if "\\x" not in str(v):
                 v = v.decode()
             else:
                 v = v.hex()
-            print(f" - {k.name}: {v}")
-        print(f"Data chunks: {len(self.data)}")
-        print(f"Total binary size: {sum(bl.length for bl in self.data)}")
+            info(f" - {k.name}: {v}")
+        info(f"Data chunks: {len(self.data)}")
+        info(f"Total binary size: {sum(bl.length for bl in self.data)}")
 
     @property
     def block_count(self) -> int:

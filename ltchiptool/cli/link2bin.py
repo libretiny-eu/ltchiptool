@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import shlex
+from logging import error, info
 from os import stat, unlink
 from os.path import basename, isfile
 from shutil import copyfile
@@ -39,7 +40,7 @@ def ldargs_parse(
 
 def checkfile(path: str):
     if not isfile(path) or stat(path).st_size == 0:
-        print(f"Generated file not found: {path}")
+        error(f"Generated file not found: {path}")
         exit(1)
 
 
@@ -88,7 +89,7 @@ def cli(board: Board, ota1: str, ota2: str, args: Tuple[str]):
     ota_idx = 1
     for elf, ldargs in elfs:
         # print graph element
-        print(f"|-- Image {ota_idx}: {basename(elf)}")
+        info(f"|-- Image {ota_idx}: {basename(elf)}")
         if isfile(elf):
             unlink(elf)
         toolchain.cmd(f"gcc", args=ldargs).read()

@@ -16,6 +16,7 @@ from .fileio import (
     writejson,
     writetext,
 )
+from .logging import log_setup, verbose
 from .misc import sizeof, unpack_obj
 from .obj import get, has, pop, set_, str2enum
 from .slice import SliceLike, slice2int
@@ -34,6 +35,7 @@ __all__ = [
     "get",
     "has",
     "isnewer",
+    "log_setup",
     "lt_find_path",
     "lt_read_json",
     "merge_dicts",
@@ -46,6 +48,7 @@ __all__ = [
     "slice2int",
     "str2enum",
     "unpack_obj",
+    "verbose",
     "writebin",
     "writejson",
     "writetext",

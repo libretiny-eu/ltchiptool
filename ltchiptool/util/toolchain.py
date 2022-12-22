@@ -1,5 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+from logging import info
 from os.path import basename
 from subprocess import PIPE, Popen
 from typing import IO, Dict, List
@@ -44,7 +45,7 @@ class Toolchain:
         if not sections:
             sections = []
         # print graph element
-        print(f"|   |   |-- {basename(output)}")
+        info(f"|   |   |-- {basename(output)}")
         if isnewer(input, output):
             args = []
             for section in sections:

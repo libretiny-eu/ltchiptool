@@ -1,5 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+from logging import info
 from typing import Dict, Optional
 
 from ltchiptool import Board, SocInterface
@@ -11,7 +12,7 @@ from .upload import upload
 
 class AmebaZMain(SocInterface):
     def hello(self):
-        print("Hello from AmebaZ")
+        info("Hello from AmebaZ")
 
     @property
     def elf_has_dual_ota(self) -> bool:

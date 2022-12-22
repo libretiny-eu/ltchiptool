@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from io import BytesIO
+from logging import info
 
 from ltchiptool.util.intbin import letoint
 from uf2tool import UploadContext
@@ -12,7 +13,7 @@ from .util.rtltool import RTLXMD
 def upload(ctx: UploadContext, port: str, baud: int = None, **kwargs):
     prefix = "|   |--"
     rtl = RTLXMD(port=port)
-    print(prefix, f"Connecting to {port}...")
+    info(f"{prefix} Connecting to {port}...")
     if not rtl.connect():
         raise ValueError(f"Failed to connect on port {port}")
 
@@ -37,7 +38,7 @@ def upload(ctx: UploadContext, port: str, baud: int = None, **kwargs):
                 f"Invalid OTA2 address on chip - found {ota2_addr}, expected {part_addr}"
             )
 
-    print(prefix, f"Flashing image to OTA {ota_idx}...")
+    info(f"{prefix} Flashing image to OTA {ota_idx}...")
     # collect continuous blocks of data
     parts = ctx.collect(ota_idx=ota_idx)
     # write blocks to flash
@@ -45,7 +46,7 @@ def upload(ctx: UploadContext, port: str, baud: int = None, **kwargs):
         offs |= 0x8000000
         length = len(data.getvalue())
         data.seek(0)
-        print(prefix, f"Writing {length} bytes to 0x{offs:06x}")
+        info(f"{prefix} Writing {length} bytes to 0x{offs:06x}")
         if not rtl.WriteBlockFlash(data, offs, length):
             raise ValueError(f"Writing failed at 0x{offs:x}")
     return True

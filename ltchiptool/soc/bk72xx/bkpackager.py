@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import sys
+from logging import info
 from os.path import dirname, join
 
 sys.path.append(join(dirname(__file__), "..", "..", ".."))
@@ -121,58 +122,58 @@ def main(*argv):
     gen: Union[ByteGenerator, None] = None
 
     if args.action == "encrypt":
-        print(f"Encrypting '{f.name}' ({size} bytes)")
+        info(f"Encrypting '{f.name}' ({size} bytes)")
         if args.crc:
-            print(f" - calculating 32-byte block CRC16...")
+            info(f" - calculating 32-byte block CRC16...")
             gen = bk.crc(bk.crypt(args.addr, f))
         else:
-            print(f" - as raw binary, without CRC16...")
+            info(f" - as raw binary, without CRC16...")
             gen = bk.crypt(args.addr, f)
 
     if args.action == "decrypt":
-        print(f"Decrypting '{f.name}' ({size} bytes)")
+        info(f"Decrypting '{f.name}' ({size} bytes)")
         if size % 34 == 0:
             if args.no_crc_check:
-                print(f" - has CRC16, skipping checks...")
+                info(f" - has CRC16, skipping checks...")
             else:
-                print(f" - has CRC16, checking...")
+                info(f" - has CRC16, checking...")
             gen = bk.crypt(args.addr, bk.uncrc(f, check=not args.no_crc_check))
         elif size % 4 != 0:
             raise ValueError("Input file has invalid length")
         else:
-            print(f" - raw binary, no CRC")
+            info(f" - raw binary, no CRC")
             gen = bk.crypt(args.addr, f)
 
     if args.action == "crc":
-        print(f"Adding CRC to '{f.name}' ({size} bytes)")
+        info(f"Adding CRC to '{f.name}' ({size} bytes)")
         if size % 32 != 0:
             raise ValueError("Input file is not 32-byte aligned")
         gen = bk.crc(f)
 
     if args.action == "uncrc":
-        print(f"Removing CRC from '{f.name}' ({size} bytes)")
+        info(f"Removing CRC from '{f.name}' ({size} bytes)")
         if size % 34 != 0:
             raise ValueError("Input file is not 34-byte aligned")
         gen = bk.uncrc(f)
 
     if args.action == "package":
-        print(f"Packaging {args.name} '{f.name}' for memory address 0x{args.addr:X}")
+        info(f"Packaging {args.name} '{f.name}' for memory address 0x{args.addr:X}")
         rbl = RBL(name=args.name, version=args.version)
         if args.name == "bootloader":
             rbl.has_part_table = True
-            print(f" - in bootloader mode; partition table unencrypted")
+            info(f" - in bootloader mode; partition table unencrypted")
         rbl.container_size = args.size
-        print(f" - container size (excl. CRC): 0x{rbl.container_size:X}")
-        print(f" - container size (incl. CRC): 0x{rbl.container_size_crc:X}")
+        info(f" - container size (excl. CRC): 0x{rbl.container_size:X}")
+        info(f" - container size (incl. CRC): 0x{rbl.container_size_crc:X}")
         gen = bk.package(f, args.addr, size, rbl)
 
     if args.action == "unpackage":
-        print(f"Unpackaging '{f.name}' (at 0x{args.offset:X}, size 0x{args.size:X})")
+        info(f"Unpackaging '{f.name}' (at 0x{args.offset:X}, size 0x{args.size:X})")
         f.seek(args.offset + args.size - 102, SEEK_SET)
         rbl = f.read(102)
         rbl = b"".join(bk.uncrc(rbl))
         rbl = RBL.deserialize(rbl)
-        print(f" - found '{rbl.name}' ({rbl.version}), size {rbl.data_size}")
+        info(f" - found '{rbl.name}' ({rbl.version}), size {rbl.data_size}")
         f.seek(0, SEEK_SET)
         crc_size = (rbl.data_size - 16) // 32 * 34
         gen = bk.crypt(args.addr, bk.uncrc(fileiter(f, 32, 0xFF, crc_size)))
@@ -192,7 +193,7 @@ def main(*argv):
             raise ValueError("Invalid compression algorithm")
         if args.encrypt not in algo_encr:
             raise ValueError("Invalid encryption algorithm")
-        print(
+        info(
             f"OTA packaging '{f.name}' with compression '{args.compress}' and encryption '{args.encrypt}'"
         )
         rbl = RBL(
@@ -204,10 +205,10 @@ def main(*argv):
         gen = bk.ota_package(f, rbl, key=args.key, iv=args.iv)
 
     if args.action == "deota":
-        print(f"OTA un-packaging '{f.name}'")
+        info(f"OTA un-packaging '{f.name}'")
         rbl = f.read(96)
         rbl = RBL.deserialize(rbl)
-        print(
+        info(
             f" - found '{rbl.name}' ({rbl.version}),",
             f"size {rbl.raw_size},",
             f"compression {rbl.compression.name},",
@@ -222,7 +223,7 @@ def main(*argv):
     for data in gen:
         args.output.write(data)
         written += len(data)
-    print(f" - wrote {written} bytes in {time()-start:.3f} s")
+    info(f" - wrote {written} bytes in {time()-start:.3f} s")
 
 
 @click.command(

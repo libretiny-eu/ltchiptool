@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from io import SEEK_SET, BytesIO
+from logging import info, warning
 from os import stat
 from os.path import basename
 from typing import Dict, Optional
@@ -46,7 +47,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     fw_bin = chext(input, "bin")
     outputs = [out_rbl, out_crc, out_rblh, out_ota, out_ug]
     # print graph element
-    print(f"|   |-- {basename(out_rbl)}")
+    info(f"|   |-- {basename(out_rbl)}")
     # objcopy ELF -> raw BIN
     toolchain.objcopy(input, fw_bin)
     result[fw_bin] = None
@@ -71,7 +72,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
     out = open(out_rbl, "wb")
 
     # open encrypted+CRC binary output
-    print(f"|   |-- {basename(out_crc)}")
+    info(f"|   |-- {basename(out_crc)}")
     crc = open(out_crc, "wb")
 
     # get partial (type, bytes) data generator
@@ -89,7 +90,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         out.write(b"\xff" * data)
 
     # open RBL header output
-    print(f"|   |-- {basename(out_rblh)}")
+    info(f"|   |-- {basename(out_rblh)}")
     rblh = open(out_rblh, "wb")
 
     # write all RBL blocks
@@ -110,7 +111,7 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         encryption=str2enum(OTAEncryption, ota_encryption) or OTAEncryption.NONE,
         compression=str2enum(OTACompression, ota_compression) or OTACompression.NONE,
     )
-    print(f"|   |-- {basename(out_ota)}")
+    info(f"|   |-- {basename(out_ota)}")
     # seek back to start
     raw.seek(0, SEEK_SET)
     ota_gen = bk.ota_package(raw, rbl, key=ota_key, iv=ota_iv)
@@ -120,11 +121,11 @@ def elf2bin(board: Board, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         ota.write(data)
         ota_data.write(data)
     if rbl.data_size > ota_size:
-        print(f"OTA size too large: {rbl.data_size} > {ota_size} (0x{ota_size:X})")
+        warning(f"OTA size too large: {rbl.data_size} > {ota_size} (0x{ota_size:X})")
     result[out_ota] = None
 
     # write Tuya OTA package (UG)
-    print(f"|   |-- {basename(out_ug)}")
+    info(f"|   |-- {basename(out_ug)}")
     with open(out_ug, "wb") as ug:
         hdr = BytesIO()
         ota_bin = ota_data.getvalue()

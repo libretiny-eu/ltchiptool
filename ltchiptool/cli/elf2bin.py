@@ -1,5 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+from logging import info
+
 import click
 
 from ltchiptool import Board, SocInterface
@@ -22,9 +24,9 @@ def cli(board: Board, input: str, ota_idx: int):
     """
     soc = SocInterface.get(board.family)
     files = soc.elf2bin(board, input, ota_idx)
-    print("Generated files:")
+    info("Generated files:")
     for name, offset in files.items():
         if offset is None:
-            print(f" - {name}")
+            info(f" - {name}")
         else:
-            print(f" - {name} - flashable at 0x{offset:X}")
+            info(f" - {name} - flashable at 0x{offset:X}")

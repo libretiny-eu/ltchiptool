@@ -1,5 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+import logging
 from io import SEEK_SET, FileIO
 from os import makedirs
 from os.path import join
@@ -88,7 +89,7 @@ def dump(file: FileIO, output: str):
         ctx.seq = 0
         for offset, data in ctx.collect(ota_idx).items():
             path = f"{prefix}_ota{ota_idx}_0x{offset:X}.bin"
-            print(f"Writing to {path}")
+            logging.info(f"Writing to {path}")
             with open(join(output, path), "wb") as f:
                 f.write(data.read())
 
@@ -100,7 +101,7 @@ def upload(ctx, file: FileIO):
     uf2 = UF2(file)
     uf2.read(block_tags=False)
     context = UploadContext(uf2)
-    print(
+    logging.info(
         f"|-- {context.fw_name} {context.fw_version} @ {context.build_date} -> {context.board_name}"
     )
     ctx.obj["file"] = file
@@ -120,10 +121,10 @@ def upload(ctx, file: FileIO):
 )
 @unpack_obj
 def upload_uart(soc: SocInterface, start: float, **kwargs):
-    print("|-- Using UART")
+    logging.info("|-- Using UART")
     soc.upload_uart(**kwargs)
     duration = time() - start
-    print(f"|-- Finished in {duration:.3f} s")
+    logging.info(f"|-- Finished in {duration:.3f} s")
 
 
 @upload.command("openocd", help="Upload with OpenOCD")
@@ -135,7 +136,6 @@ def upload_openocd():
 @click.argument("HOST")
 @click.option("-P", "--port", help="OTA port", default=8892, type=int)
 @click.option("-p", "--password", help="OTA password", default=None)
-@click.option("-v", "--verbose", help="Print debugging info", is_flag=True)
 @unpack_obj
 def upload_esphome(
     uf2: UF2,
@@ -143,20 +143,18 @@ def upload_esphome(
     host: str,
     port: int,
     password: str,
-    verbose: bool,
     start: float,
     **kwargs,
 ):
     file.seek(0, SEEK_SET)
-    print(f"|-- Using ESPHome OTA ({host}:{port})")
+    logging.info(f"|-- Using ESPHome OTA ({host}:{port})")
     esphome = ESPHomeUploader(
         file=file,
         md5=uf2.md5.digest(),
         host=host,
         port=port,
         password=password,
-        debug=verbose,
     )
     esphome.upload()
     duration = time() - start
-    print(f"|-- Finished in {duration:.3f} s")
+    logging.info(f"|-- Finished in {duration:.3f} s")

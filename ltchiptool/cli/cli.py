@@ -3,6 +3,7 @@
 import click
 from click import Context
 
+from ..util import log_setup
 from ..version import get_version
 from .util import get_multi_command_class
 
@@ -23,15 +24,41 @@ FULL_TRACEBACK: bool = False
     help="Tools for working with LT-supported IoT chips",
     context_settings=dict(help_option_names=["-h", "--help"]),
 )
-@click.option("--traceback", help="Print complete exception traceback", is_flag=True)
+@click.option(
+    "-v",
+    "--verbose",
+    help="Output debugging messages (repeat to output more)",
+    count=True,
+)
+@click.option(
+    "-T",
+    "--traceback",
+    help="Print complete exception traceback",
+    is_flag=True,
+)
+@click.option(
+    "-t",
+    "--timed",
+    help="Prepend log lines with timing info",
+    is_flag=True,
+)
 @click.version_option(
-    get_version(), "--version", "-V", message="ltchiptool v%(version)s"
+    get_version(),
+    "--version",
+    "-V",
+    message="ltchiptool v%(version)s",
 )
 @click.pass_context
-def cli(ctx: Context, traceback: bool):
+def cli(
+    ctx: Context,
+    verbose: int,
+    traceback: bool,
+    timed: bool,
+):
     global FULL_TRACEBACK
     FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
+    log_setup(verbosity=verbose, timed=timed)
 
 
 def tb_echo(tb):
