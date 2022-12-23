@@ -1,12 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from logging import info
 from os.path import basename
 from typing import IO, Dict, Optional
 
-from ltchiptool import Board, SocInterface
-from ltchiptool.util import chname, isnewer, readbin
+from ltchiptool import SocInterface
+from ltchiptool.util import chname, graph, isnewer, readbin
 from ltchiptool.util.intbin import inttole32
 
 
@@ -45,7 +44,7 @@ class AmebaZElf2Bin(SocInterface, ABC):
         out_xip = chname(input, f"ota{ota_idx}.xip_image2.bin")
         out_rdp = chname(input, f"ota{ota_idx}.rdp.bin")
         # print graph element
-        info(f"|   |-- {basename(output)}")
+        graph(2, basename(output))
         # objcopy required images
         ram = toolchain.objcopy(input, out_ram, sections_ram)
         xip = toolchain.objcopy(input, out_xip, sections_xip)

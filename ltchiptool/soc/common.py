@@ -1,14 +1,13 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from logging import error, info
+from logging import error
 from os import stat, unlink
 from os.path import basename, isfile
 from shutil import copyfile
 from typing import Dict, List, Optional, Tuple
 
-from ltchiptool import Board
-from ltchiptool.util import chext
+from ltchiptool.util import chext, graph
 
 from .interface import SocInterface
 
@@ -61,8 +60,7 @@ class SocInterfaceCommon(SocInterface, ABC):
 
         ota_idx = 1
         for elf, ldargs in elfs:
-            # print graph element
-            info(f"|-- Image {ota_idx}: {basename(elf)}")
+            graph(1, f"Image {ota_idx}: {basename(elf)}")
             if isfile(elf):
                 unlink(elf)
             toolchain.cmd(f"gcc", args=ldargs).read()

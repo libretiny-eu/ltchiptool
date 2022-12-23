@@ -46,7 +46,7 @@ class LoggingHandler(StreamHandler):
         if self.timed:
             message = f"{log_prefix} [{elapsed_total:11.3f}] (+{elapsed_current:5.3f}s) {message}"
         else:
-            message = f"{log_prefix} | {message}"
+            message = f"{log_prefix}: {message}"
         click.secho(message, fg=log_color)
         self.time_prev += elapsed_current
 

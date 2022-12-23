@@ -1,11 +1,10 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
-from logging import info
 from os.path import basename
 from subprocess import PIPE, Popen
 from typing import IO, Dict, List
 
-from ltchiptool.util import isnewer
+from ltchiptool.util import graph, isnewer
 
 
 class Toolchain:
@@ -45,7 +44,7 @@ class Toolchain:
         if not sections:
             sections = []
         # print graph element
-        info(f"|   |   |-- {basename(output)}")
+        graph(3, basename(output))
         if isnewer(input, output):
             args = []
             for section in sections:

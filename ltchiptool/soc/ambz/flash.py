@@ -2,9 +2,9 @@
 
 from abc import ABC
 from io import BytesIO
-from logging import info
 
 from ltchiptool import SocInterface
+from ltchiptool.util import graph
 from ltchiptool.util.intbin import letoint
 from uf2tool import UploadContext
 
@@ -19,9 +19,8 @@ class AmebaZFlash(SocInterface, ABC):
         self,
         ctx: UploadContext,
     ):
-        prefix = "|   |--"
         rtl = self.build_protocol()
-        info(f"{prefix} Connecting to {self.port}...")
+        graph(2, f"Connecting to {self.port}...")
         if not rtl.connect():
             raise ValueError(f"Failed to connect on port {self.port}")
 
@@ -48,7 +47,7 @@ class AmebaZFlash(SocInterface, ABC):
                     f"Invalid OTA2 address on chip - found {ota2_addr}, expected {part_addr}"
                 )
 
-        info(f"{prefix} Flashing image to OTA {ota_idx}...")
+        graph(2, f"Flashing image to OTA {ota_idx}...")
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
         # write blocks to flash
@@ -56,7 +55,7 @@ class AmebaZFlash(SocInterface, ABC):
             offs |= 0x8000000
             length = len(data.getvalue())
             data.seek(0)
-            info(f"{prefix} Writing {length} bytes to 0x{offs:06x}")
+            graph(2, f"Writing {length} bytes to 0x{offs:06x}")
             if not rtl.WriteBlockFlash(data, offs, length):
                 raise ValueError(f"Writing failed at 0x{offs:x}")
         return True

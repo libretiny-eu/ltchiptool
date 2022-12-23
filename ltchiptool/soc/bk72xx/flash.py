@@ -1,11 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from logging import info
 
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
+from ltchiptool.util import graph
 from uf2tool import UploadContext
 
 
@@ -25,9 +25,8 @@ class BK72XXFlash(SocInterface, ABC):
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
 
-        prefix = "|   |--"
         baudrate = self.baud or ctx.baudrate or 115200
-        info(f"{prefix} Trying to link on {self.port} @ {baudrate}")
+        graph(2, f"Trying to link on {self.port} @ {baudrate}")
         # connect to chip
         bk = self.build_protocol(baudrate)
 
@@ -35,7 +34,7 @@ class BK72XXFlash(SocInterface, ABC):
         for offs, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            info(f"{prefix} Writing {length} bytes to 0x{offs:06x}")
+            graph(2, f"Writing {length} bytes to 0x{offs:06x}")
             try:
                 bk.program_flash(
                     data,

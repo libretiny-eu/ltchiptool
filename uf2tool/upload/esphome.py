@@ -2,7 +2,7 @@
 
 from enum import IntEnum
 from io import FileIO
-from logging import debug, info
+from logging import debug
 from os import stat
 from socket import (
     AF_INET,
@@ -16,7 +16,7 @@ from socket import (
 )
 from typing import Tuple, Union
 
-from ltchiptool.util import verbose
+from ltchiptool.util import graph, verbose
 from ltchiptool.util.intbin import inttobe32
 
 OTA_MAGIC = b"\x6C\x26\xF7\x5C\x45"
@@ -91,7 +91,7 @@ class ESPHomeUploader:
                 raise ValueError(f"Invalid IP address: {self.host}")
             return
         ip_addr = gethostbyname(self.host)
-        info(f"|   |-- Resolved {self.host} to {ip_addr}")
+        graph(2, "Resolved {self.host} to {ip_addr}")
         self.host = ip_addr
 
     def connect(self):
@@ -131,7 +131,7 @@ class ESPHomeUploader:
         _, ver = self.receive(OTACode.RESP_OK, size=1)
         if ver[0] != OTACode.VERSION_1_0:
             raise ValueError("Invalid OTA version")
-        info("|-- Connected to ESPHome")
+        graph(1, "Connected to ESPHome")
 
         self.send(OTACode.FEATURE_SUPPORTS_COMPRESSION)
         features, _ = self.receive(
@@ -154,7 +154,7 @@ class ESPHomeUploader:
         self.sock.setsockopt(SOL_SOCKET, SO_SNDBUF, 8192)
         self.sock.settimeout(20.0)
 
-        info("|-- Starting OTA upload")
+        graph(1, "Starting OTA upload")
         while True:
             data = self.file.read(1024)
             if not data:

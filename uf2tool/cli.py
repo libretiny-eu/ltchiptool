@@ -11,7 +11,7 @@ import click
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import unpack_obj
+from ltchiptool.util import graph, unpack_obj
 from uf2tool.models import UF2, Input, InputParamType, UploadContext
 from uf2tool.upload import ESPHomeUploader
 from uf2tool.writer import UF2Writer
@@ -101,8 +101,14 @@ def upload(ctx, file: FileIO):
     uf2 = UF2(file)
     uf2.read(block_tags=False)
     context = UploadContext(uf2)
-    logging.info(
-        f"|-- {context.fw_name} {context.fw_version} @ {context.build_date} -> {context.board_name}"
+    graph(
+        1,
+        context.fw_name,
+        context.fw_version,
+        "@",
+        context.build_date,
+        "->",
+        context.board_name,
     )
     ctx.obj["file"] = file
     ctx.obj["start"] = time()
@@ -137,11 +143,11 @@ def upload_uart(
     timeout: float = None,
     **kwargs,
 ):
-    logging.info("|-- Using UART")
+    graph(1, "Using UART")
     soc.set_uart_params(port, baud, link_timeout=timeout)
     soc.flash_write_uf2(ctx)
-    duration = time() - start
-    logging.info(f"|-- Finished in {duration:.3f} s")
+    time() - start
+    graph(1, "Finished in {duration:.3f} s")
 
 
 @upload.command("openocd", help="Upload with OpenOCD")
@@ -164,7 +170,7 @@ def upload_esphome(
     **kwargs,
 ):
     file.seek(0, SEEK_SET)
-    logging.info(f"|-- Using ESPHome OTA ({host}:{port})")
+    graph(1, "Using ESPHome OTA ({host}:{port})")
     esphome = ESPHomeUploader(
         file=file,
         md5=uf2.md5.digest(),
@@ -173,5 +179,5 @@ def upload_esphome(
         password=password,
     )
     esphome.upload()
-    duration = time() - start
-    logging.info(f"|-- Finished in {duration:.3f} s")
+    time() - start
+    graph(1, "Finished in {duration:.3f} s")

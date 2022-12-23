@@ -2,7 +2,7 @@
 
 from . import intbin
 from .bitint import BitInt, bitcat, bitcatraw
-from .cli import get_multi_command_class, parse_argfile
+from .cli import get_multi_command_class, graph, parse_argfile
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
 from .env import lt_find_path, lt_read_json
@@ -35,6 +35,7 @@ __all__ = [
     "chname",
     "get",
     "get_multi_command_class",
+    "graph",
     "has",
     "isnewer",
     "log_setup",
