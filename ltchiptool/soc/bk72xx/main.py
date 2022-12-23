@@ -3,14 +3,15 @@
 from logging import info
 from typing import Dict, Optional
 
-from ltchiptool import Board, SocInterface
+from ltchiptool import Board
+from ltchiptool.soc import SocInterfaceCommon
 from uf2tool import UploadContext
 
 from .elf2bin import elf2bin
 from .upload import upload
 
 
-class BK72XXMain(SocInterface):
+class BK72XXMain(SocInterfaceCommon):
     def hello(self):
         info("Hello from BK72xx")
 

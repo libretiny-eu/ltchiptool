@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from ltchiptool import Board, Family
 from uf2tool import UploadContext
@@ -27,8 +27,29 @@ class SocInterface(ABC):
     def elf_has_dual_ota(self) -> bool:
         raise NotImplementedError()
 
+    def link2elf(
+        self,
+        board: Board,
+        ota1: str,
+        ota2: str,
+        args: List[str],
+    ) -> List[str]:
+        raise NotImplementedError()
+
     def elf2bin(
-        self, board: Board, input: str, ota_idx: int
+        self,
+        board: Board,
+        input: str,
+        ota_idx: int,
+    ) -> Dict[str, Optional[int]]:
+        raise NotImplementedError()
+
+    def link2bin(
+        self,
+        board: Board,
+        ota1: str,
+        ota2: str,
+        args: List[str],
     ) -> Dict[str, Optional[int]]:
         raise NotImplementedError()
 

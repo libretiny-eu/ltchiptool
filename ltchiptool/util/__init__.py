@@ -2,7 +2,7 @@
 
 from . import intbin
 from .bitint import BitInt, bitcat, bitcatraw
-from .cli import get_multi_command_class
+from .cli import get_multi_command_class, parse_argfile
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
 from .env import lt_find_path, lt_read_json
@@ -41,6 +41,7 @@ __all__ = [
     "lt_find_path",
     "lt_read_json",
     "merge_dicts",
+    "parse_argfile",
     "pop",
     "readbin",
     "readjson",

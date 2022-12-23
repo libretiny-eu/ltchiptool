@@ -1,9 +1,12 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-10-5.
 
+import shlex
 from os.path import basename, dirname, join
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from click import Command, Context, MultiCommand
+
+from .fileio import readtext
 
 
 def get_multi_command_class(cmds: Dict[str, str]):
@@ -27,3 +30,17 @@ def get_multi_command_class(cmds: Dict[str, str]):
             return ns["cli"]
 
     return CLIClass
+
+
+def parse_argfile(args: Iterable[str]) -> List[str]:
+    args = list(args)
+    try:
+        while True:
+            i = next(i for i, a in enumerate(args) if a.startswith("@"))
+            arg = args.pop(i)
+            argv = readtext(arg[1:])
+            argv = shlex.split(argv)
+            args = args[0:i] + argv + args[i:]
+    except StopIteration:
+        pass
+    return args
