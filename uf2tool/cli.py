@@ -115,14 +115,22 @@ def upload(ctx, file: FileIO):
 
 @upload.command("uart", help="Upload using UART protocol")
 @click.argument("PORT")
-@click.option("-b", "--baud", help="Baudrate (board default)", type=int)
 @click.option(
-    "-t", "--timeout", help="Timeout (transmission, linking, etc.)", type=float
+    "-b",
+    "--baud",
+    help="Baudrate (board default)",
+    type=int,
+)
+@click.option(
+    "-t",
+    "--timeout",
+    help="Timeout (transmission, linking, etc.)",
+    type=float,
 )
 @unpack_obj
 def upload_uart(soc: SocInterface, start: float, **kwargs):
     logging.info("|-- Using UART")
-    soc.upload_uart(**kwargs)
+    soc.flash_write_uf2(**kwargs)
     duration = time() - start
     logging.info(f"|-- Finished in {duration:.3f} s")
 

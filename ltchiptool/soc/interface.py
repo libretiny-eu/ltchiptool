@@ -53,5 +53,11 @@ class SocInterface(ABC):
     ) -> Dict[str, Optional[int]]:
         raise NotImplementedError()
 
-    def upload_uart(self, ctx: UploadContext, port: str, baud: int = None, **kwargs):
+    def flash_write_uf2(
+        self,
+        ctx: UploadContext,
+        port: str,
+        baud: int = None,
+        **kwargs,
+    ):
         raise NotImplementedError()
