@@ -1,35 +1,62 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import BytesIO
+from typing import BinaryIO, Generator
 
 from ltchiptool import SocInterface
 from ltchiptool.util import graph
-from ltchiptool.util.intbin import letoint
+from ltchiptool.util.intbin import gen2bytes, letoint
 from uf2tool import UploadContext
 
-from .util.rtltool import RTLXMD
+from .util.rtltool import RTL_ROM_BAUD, RTLXMD
 
 
 class AmebaZFlash(SocInterface, ABC):
+    rtl: RTLXMD = None
+    baud: int = RTL_ROM_BAUD
+
     def build_protocol(self):
-        return RTLXMD(port=self.port, timeout=self.link_timeout)
+        if self.rtl is not None:
+            return
+        self.print_protocol()
+        self.rtl = RTLXMD(
+            port=self.port,
+            baud=self.baud,
+            timeout=self.link_timeout,
+        )
+        if not self.rtl.connect():
+            raise ValueError(f"Failed to connect on port {self.port}")
+
+    def flash_read_raw(
+        self,
+        offset: int,
+        length: int,
+        use_rom: bool = False,
+    ) -> Generator[bytes, None, None]:
+        self.build_protocol()
+        success = yield from self.rtl.ReadBlockFlashGenerator(offset, length)
+        if not success:
+            raise ValueError(f"Failed to read from 0x{offset:X}")
+
+    def flash_write_raw(
+        self,
+        offset: int,
+        length: int,
+        data: BinaryIO,
+        verify: bool = True,
+    ):
+        self.build_protocol()
+        offset |= 0x8000000
+        if not self.rtl.WriteBlockFlash(data, offset, length):
+            raise ValueError(f"Failed to write to 0x{offset:X}")
+        return data.tell()
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
     ):
-        rtl = self.build_protocol()
-        graph(2, f"Connecting to {self.port}...")
-        if not rtl.connect():
-            raise ValueError(f"Failed to connect on port {self.port}")
-
         # read system data to get active OTA index
-        io = BytesIO()
-        if not rtl.ReadBlockFlash(io, offset=0x9000, size=256):
-            raise ValueError("Failed to read from 0x9000")
-        # get as bytes
-        system = io.getvalue()
+        system = gen2bytes(self.flash_read_raw(0x9000, 256))
         if len(system) != 256:
             raise ValueError(
                 f"Length invalid while reading from 0x9000 - {len(system)}"
@@ -51,11 +78,9 @@ class AmebaZFlash(SocInterface, ABC):
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
         # write blocks to flash
-        for offs, data in parts.items():
-            offs |= 0x8000000
+        for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            graph(2, f"Writing {length} bytes to 0x{offs:06x}")
-            if not rtl.WriteBlockFlash(data, offs, length):
-                raise ValueError(f"Writing failed at 0x{offs:x}")
+            graph(2, f"Writing {length} bytes to 0x{offset:06x}")
+            self.flash_write_raw(offset, length, data)
         return True

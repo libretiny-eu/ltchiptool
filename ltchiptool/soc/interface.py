@@ -1,9 +1,10 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import Dict, Generator, List, Optional
+from typing import BinaryIO, Dict, Generator, List, Optional
 
 from ltchiptool import Board, Family
+from ltchiptool.util import graph
 from uf2tool import UploadContext
 
 
@@ -32,6 +33,8 @@ class SocInterface(ABC):
 
     def set_board(self, board: Board):
         self.board = board
+        if board:
+            self.baud = self.baud or board["upload.speed"] or 115200
 
     def set_uart_params(
         self,
@@ -44,6 +47,9 @@ class SocInterface(ABC):
         self.baud = baud or self.baud
         self.link_timeout = link_timeout or self.link_timeout
         self.read_timeout = read_timeout or self.read_timeout
+
+    def print_protocol(self):
+        graph(2, f"Connecting on {self.port} @ {self.baud}")
 
     #####################################################
     # Abstract methods - implemented by the SoC modules #
@@ -98,8 +104,10 @@ class SocInterface(ABC):
     def flash_write_raw(
         self,
         offset: int,
-        data: bytes,
-    ) -> int:
+        length: int,
+        data: BinaryIO,
+        verify: bool = True,
+    ):
         raise NotImplementedError()
 
     def flash_write_uf2(

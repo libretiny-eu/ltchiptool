@@ -144,6 +144,7 @@ def upload_uart(
     **kwargs,
 ):
     graph(1, "Using UART")
+    soc.set_board(ctx.board)
     soc.set_uart_params(port, baud, link_timeout=timeout)
     soc.flash_write_uf2(ctx)
     time() - start

@@ -49,12 +49,8 @@ RTL_FLASH_SECTOR_SIZE = 4096
 class RTLXMD:
     def __init__(self, port=0, baud=RTL_ROM_BAUD, timeout=1):
         self.mode = MODE_UNK1
-        try:
-            self._port = serial.Serial(port, baud)
-            self._port.timeout = timeout
-        except:
-            # 			raise Exception('Error open %s, %d baud' % (port, baud))
-            raise RuntimeError("Open %s, %d baud!" % (port, baud))
+        self._port = serial.Serial(port, baud)
+        self._port.timeout = timeout
 
     def writecmd(self, cmd, ok=ACK):
         if self._port.write(cmd):
@@ -178,6 +174,14 @@ class RTLXMD:
         return None
 
     def ReadBlockFlash(self, stream, offset=0, size=0x200000):
+        generator = self.ReadBlockFlashGenerator(offset, size)
+        try:
+            while True:
+                stream.write(next(generator))
+        except StopIteration as e:
+            return e.value
+
+    def ReadBlockFlashGenerator(self, offset=0, size=0x200000):
         # Read sectors size: 4 block 1024 bytes, else not set ACK!
         count = int((size + RTL_FLASH_SECTOR_SIZE - 1) / RTL_FLASH_SECTOR_SIZE)
         offset &= 0xFFFFFF
@@ -201,9 +205,9 @@ class RTLXMD:
                             ret = self._port.write(ACK)
                             if ret:
                                 if size > RTL_READ_BLOCK_SIZE:
-                                    stream.write(data)
+                                    yield data
                                 elif size > 0:
-                                    stream.write(data[:size])
+                                    yield data[:size]
                             else:
                                 return ret
                         else:
