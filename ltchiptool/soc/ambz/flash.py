@@ -27,28 +27,32 @@ class AmebaZFlash(SocInterface, ABC):
         if not self.rtl.connect():
             raise ValueError(f"Failed to connect on port {self.port}")
 
+    def flash_get_size(self) -> int:
+        return 0x200000
+
     def flash_read_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
+        verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         self.build_protocol()
-        success = yield from self.rtl.ReadBlockFlashGenerator(offset, length)
+        success = yield from self.rtl.ReadBlockFlashGenerator(start, length)
         if not success:
-            raise ValueError(f"Failed to read from 0x{offset:X}")
+            raise ValueError(f"Failed to read from 0x{start:X}")
 
     def flash_write_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
     ):
         self.build_protocol()
-        offset |= 0x8000000
-        if not self.rtl.WriteBlockFlash(data, offset, length):
-            raise ValueError(f"Failed to write to 0x{offset:X}")
+        start |= 0x8000000
+        if not self.rtl.WriteBlockFlash(data, start, length):
+            raise ValueError(f"Failed to write to 0x{start:X}")
         return data.tell()
 
     def flash_write_uf2(

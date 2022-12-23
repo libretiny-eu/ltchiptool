@@ -1,7 +1,8 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import BinaryIO, Dict, Generator, List, Optional
+from io import FileIO
+from typing import BinaryIO, Dict, Generator, List, Optional, Tuple
 
 from ltchiptool import Board, Family
 from ltchiptool.util import graph
@@ -44,7 +45,7 @@ class SocInterface(ABC):
         read_timeout: float = None,
     ):
         self.port = port or self.port
-        self.baud = baud or self.baud
+        self.baud = baud or self.baud or 115200
         self.link_timeout = link_timeout or self.link_timeout
         self.read_timeout = read_timeout or self.read_timeout
 
@@ -93,25 +94,49 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_get_file_type(
+        self,
+        file: FileIO,
+        length: int,
+    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+        """
+        Check if the file is flashable to this SoC.
+
+        :return: a tuple: (file type, start, skip, length), or None if type unknown
+        """
+        raise NotImplementedError()
+
+    def flash_get_guide(self) -> str:
+        """Get a short textual guide for putting the chip in download mode."""
+        raise NotImplementedError()
+
+    def flash_get_size(self) -> int:
+        """Retrieve the flash size, in bytes."""
+        raise NotImplementedError()
+
     def flash_read_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
+        verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
+        """Return a generator reading 'length' bytes from offset 'start' of the flash."""
         raise NotImplementedError()
 
     def flash_write_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
     ):
+        """Write 'length' bytes (represented by 'data') to offset 'start' of the flash."""
         raise NotImplementedError()
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
     ):
+        """Upload the UF2 package to the chip."""
         raise NotImplementedError()

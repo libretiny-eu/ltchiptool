@@ -24,18 +24,22 @@ class BK72XXFlash(SocInterface, ABC):
             cmnd_timeout=self.read_timeout,
         )
 
+    def flash_get_size(self) -> int:
+        return 0x200000
+
     def flash_read_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
+        verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         self.build_protocol()
-        return self.bk.flash_read(start=offset, length=length)
+        return self.bk.flash_read(start=start, length=length, crc_check=verify)
 
     def flash_write_raw(
         self,
-        offset: int,
+        start: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
@@ -44,10 +48,10 @@ class BK72XXFlash(SocInterface, ABC):
         if not self.bk.program_flash(
             io=data,
             io_size=length,
-            start=offset,
+            start=start,
             crc_check=verify,
         ):
-            raise ValueError(f"Failed to write to 0x{offset:X}")
+            raise ValueError(f"Failed to write to 0x{start:X}")
 
     def flash_write_uf2(
         self,
@@ -60,15 +64,15 @@ class BK72XXFlash(SocInterface, ABC):
         self.build_protocol()
 
         # write blocks to flash
-        for offs, data in parts.items():
+        for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            graph(2, f"Writing {length} bytes to 0x{offs:06x}")
+            graph(2, f"Writing {length} bytes to 0x{offset:06x}")
             try:
                 self.bk.program_flash(
                     io=data,
                     io_size=length,
-                    start=offs,
+                    start=offset,
                     verbose=False,
                     crc_check=True,
                     dry_run=False,

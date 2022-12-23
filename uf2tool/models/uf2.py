@@ -80,7 +80,7 @@ class UF2:
 
             if block.block_seq != self.seq:
                 raise ValueError(
-                    f"Mismatched sequence number ({self.seq} != {block.block_seq}"
+                    f"Mismatched sequence number ({self.seq} != {block.block_seq})"
                 )
             self.seq += 1
 

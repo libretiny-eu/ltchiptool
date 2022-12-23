@@ -2,7 +2,7 @@
 
 from . import intbin
 from .bitint import BitInt, bitcat, bitcatraw
-from .cli import get_multi_command_class, graph, parse_argfile
+from .cli import AutoIntParamType, get_multi_command_class, graph, parse_argfile
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
 from .env import lt_find_path, lt_read_json
@@ -24,6 +24,7 @@ from .slice import SliceLike, slice2int
 from .toolchain import Toolchain
 
 __all__ = [
+    "AutoIntParamType",
     "BitInt",
     "CRC16",
     "RecursiveDict",

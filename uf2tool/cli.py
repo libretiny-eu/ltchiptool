@@ -147,8 +147,8 @@ def upload_uart(
     soc.set_board(ctx.board)
     soc.set_uart_params(port, baud, link_timeout=timeout)
     soc.flash_write_uf2(ctx)
-    time() - start
-    graph(1, "Finished in {duration:.3f} s")
+    duration = time() - start
+    graph(1, f"Finished in {duration:.3f} s")
 
 
 @upload.command("openocd", help="Upload with OpenOCD")

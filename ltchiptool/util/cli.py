@@ -5,15 +5,16 @@ from logging import info
 from os.path import basename, dirname, join
 from typing import Dict, Iterable, List, Optional
 
+import click
 from click import Command, Context, MultiCommand
 
 from .fileio import readtext
 
 
 def graph(level: int, *message):
-    prefix = (level - 1) * "|   " + "|--"
+    prefix = (level - 1) * "|   " + "|-- " if level else ""
     message = " ".join(str(m) for m in message)
-    info(f"{prefix} {message}")
+    info(f"{prefix}{message}")
 
 
 def get_multi_command_class(cmds: Dict[str, str]):
@@ -51,3 +52,13 @@ def parse_argfile(args: Iterable[str]) -> List[str]:
     except StopIteration:
         pass
     return args
+
+
+class AutoIntParamType(click.ParamType):
+    name = "DEC/HEX"
+
+    def convert(self, value, param, ctx) -> int:
+        try:
+            return int(value, base=0)
+        except ValueError as e:
+            self.fail(str(e), param, ctx)

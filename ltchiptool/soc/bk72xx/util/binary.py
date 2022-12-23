@@ -3,7 +3,6 @@
 import gzip
 from binascii import crc32
 from io import FileIO
-from logging import error
 from typing import Union
 
 from Cryptodome.Cipher import AES
@@ -59,8 +58,9 @@ class BekenBinary:
                 crc = CRC16.CMS.calc(block[0:32])
                 crc_found = betoint(block[32:34])
                 if crc != crc_found:
-                    error(f"CRC invalid: expected={crc:X}, found={crc_found:X}")
-                    return
+                    raise ValueError(
+                        f"CRC invalid: expected={crc:X}, found={crc_found:X}"
+                    )
             yield block[0:32]
 
     def crypt(
