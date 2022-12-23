@@ -24,7 +24,7 @@ isort = "^5.10.1"
 autoflake = "^1.4"
 
 [tool.poetry.scripts]
-ltchiptool = "ltchiptool.cli:main"
+ltchiptool = "ltchiptool:cli"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

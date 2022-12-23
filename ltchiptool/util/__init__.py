@@ -2,6 +2,7 @@
 
 from . import intbin
 from .bitint import BitInt, bitcat, bitcatraw
+from .cli import get_multi_command_class
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
 from .env import lt_find_path, lt_read_json
@@ -33,6 +34,7 @@ __all__ = [
     "chext",
     "chname",
     "get",
+    "get_multi_command_class",
     "has",
     "isnewer",
     "log_setup",

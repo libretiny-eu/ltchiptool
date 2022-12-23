@@ -3,16 +3,16 @@
 import click
 from click import Context
 
-from ..util import log_setup
-from ..version import get_version
-from .util import get_multi_command_class
+from ltchiptool.util import get_multi_command_class, log_setup
+
+from .version import get_version
 
 COMMANDS = {
-    "dump": "ltchiptool/cli/dumptool.py",
-    "elf2bin": "ltchiptool/cli/elf2bin.py",
-    "link2bin": "ltchiptool/cli/link2bin.py",
-    "list": "ltchiptool/cli/list.py",
-    "soc": "ltchiptool/cli/soc.py",
+    "dump": "ltchiptool/commands/dumptool.py",
+    "elf2bin": "ltchiptool/commands/elf2bin.py",
+    "link2bin": "ltchiptool/commands/link2bin.py",
+    "list": "ltchiptool/commands/list.py",
+    "soc": "ltchiptool/commands/soc.py",
     "uf2": "uf2tool/cli.py",
 }
 
@@ -44,12 +44,12 @@ FULL_TRACEBACK: bool = False
 )
 @click.version_option(
     get_version(),
-    "--version",
     "-V",
+    "--version",
     message="ltchiptool v%(version)s",
 )
 @click.pass_context
-def cli(
+def cli_entrypoint(
     ctx: Context,
     verbose: int,
     traceback: bool,
@@ -68,9 +68,9 @@ def tb_echo(tb):
     click.secho(f' - File "{filename}", line {line}, in {name}', fg="red")
 
 
-def main():
+def cli():
     try:
-        cli()
+        cli_entrypoint()
     except Exception as e:
         click.secho(f"ERROR: {type(e).__name__}: {e}", fg="red")
         tb = e.__traceback__
@@ -80,3 +80,7 @@ def main():
             tb = tb.tb_next
         tb_echo(tb)
         exit(1)
+
+
+if __name__ == "__main__":
+    cli()
