@@ -10,22 +10,26 @@ from uf2tool import UploadContext
 
 
 class BK72XXFlash(SocInterface, ABC):
+    def build_protocol(self, baudrate: int):
+        return BK7231Serial(
+            port=self.port,
+            baudrate=baudrate,
+            link_timeout=self.link_timeout,
+            cmnd_timeout=self.read_timeout,
+        )
+
     def flash_write_uf2(
         self,
         ctx: UploadContext,
-        port: str,
-        baud: int = None,
-        timeout: float = None,
-        **kwargs,
     ):
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
 
         prefix = "|   |--"
-        baudrate = baud or ctx.baudrate or 115200
-        info(f"{prefix} Trying to link on {port} @ {baudrate}")
+        baudrate = self.baud or ctx.baudrate or 115200
+        info(f"{prefix} Trying to link on {self.port} @ {baudrate}")
         # connect to chip
-        bk = BK7231Serial(port=port, baudrate=baudrate, link_timeout=timeout or 10.0)
+        bk = self.build_protocol(baudrate)
 
         # write blocks to flash
         for offs, data in parts.items():

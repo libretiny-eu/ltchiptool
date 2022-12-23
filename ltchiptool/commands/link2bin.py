@@ -32,4 +32,5 @@ def cli(board: Board, ota1: str, ota2: str, args: Tuple[str]):
     """
     args = parse_argfile(args)
     soc = SocInterface.get(board.family)
-    soc.link2bin(board, ota1, ota2, args)
+    soc.set_board(board)
+    soc.link2bin(ota1, ota2, args)

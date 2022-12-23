@@ -20,20 +20,18 @@ def calc_offset(addr: int) -> int:
 
 
 class BK72XXElf2Bin(SocInterface, ABC):
-    def elf2bin(
-        self, board: Board, input: str, ota_idx: int
-    ) -> Dict[str, Optional[int]]:
-        toolchain = board.toolchain
+    def elf2bin(self, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
+        toolchain = self.board.toolchain
         result: Dict[str, Optional[int]] = {}
 
-        mcu = board["build.mcu"]
-        coeffs = board["build.bkcrypt_coeffs"] or ("0" * 32)
-        rbl_size = board["build.bkrbl_size_app"]
-        ota_encryption = board["build.bkota.encryption"]
-        ota_compression = board["build.bkota.compression"]
-        ota_key = board["build.bkota.key"]
-        ota_iv = board["build.bkota.iv"]
-        _, ota_size, _ = board.region("download")
+        mcu = self.board["build.mcu"]
+        coeffs = self.board["build.bkcrypt_coeffs"] or ("0" * 32)
+        rbl_size = self.board["build.bkrbl_size_app"]
+        ota_encryption = self.board["build.bkota.encryption"]
+        ota_compression = self.board["build.bkota.compression"]
+        ota_key = self.board["build.bkota.key"]
+        ota_iv = self.board["build.bkota.iv"]
+        _, ota_size, _ = self.board.region("download")
         version = datetime.now().strftime("%y.%m.%d")
 
         nmap = toolchain.nm(input)

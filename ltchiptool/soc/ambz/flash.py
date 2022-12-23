@@ -12,18 +12,18 @@ from .util.rtltool import RTLXMD
 
 
 class AmebaZFlash(SocInterface, ABC):
+    def build_protocol(self):
+        return RTLXMD(port=self.port, timeout=self.link_timeout)
+
     def flash_write_uf2(
         self,
         ctx: UploadContext,
-        port: str,
-        baud: int = None,
-        **kwargs,
     ):
         prefix = "|   |--"
-        rtl = RTLXMD(port=port)
-        info(f"{prefix} Connecting to {port}...")
+        rtl = self.build_protocol()
+        info(f"{prefix} Connecting to {self.port}...")
         if not rtl.connect():
-            raise ValueError(f"Failed to connect on port {port}")
+            raise ValueError(f"Failed to connect on port {self.port}")
 
         # read system data to get active OTA index
         io = BytesIO()

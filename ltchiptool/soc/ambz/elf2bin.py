@@ -19,9 +19,11 @@ def write_header(f: IO[bytes], start: int, end: int):
 
 class AmebaZElf2Bin(SocInterface, ABC):
     def elf2bin(
-        self, board: Board, input: str, ota_idx: int
+        self,
+        input: str,
+        ota_idx: int,
     ) -> Dict[str, Optional[int]]:
-        toolchain = board.toolchain
+        toolchain = self.board.toolchain
         result: Dict[str, Optional[int]] = {}
 
         sections_ram = [

@@ -23,7 +23,8 @@ def cli(board: Board, input: str, ota_idx: int):
       OTA_IDX  OTA index of the input file
     """
     soc = SocInterface.get(board.family)
-    files = soc.elf2bin(board, input, ota_idx)
+    soc.set_board(board)
+    files = soc.elf2bin(input, ota_idx)
     info("Generated files:")
     for name, offset in files.items():
         if offset is None:

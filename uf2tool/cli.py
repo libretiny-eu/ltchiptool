@@ -128,9 +128,18 @@ def upload(ctx, file: FileIO):
     type=float,
 )
 @unpack_obj
-def upload_uart(soc: SocInterface, start: float, **kwargs):
+def upload_uart(
+    start: float,
+    soc: SocInterface,
+    ctx: UploadContext,
+    port: str,
+    baud: int = None,
+    timeout: float = None,
+    **kwargs,
+):
     logging.info("|-- Using UART")
-    soc.flash_write_uf2(**kwargs)
+    soc.set_uart_params(port, baud, link_timeout=timeout)
+    soc.flash_write_uf2(ctx)
     duration = time() - start
     logging.info(f"|-- Finished in {duration:.3f} s")
 

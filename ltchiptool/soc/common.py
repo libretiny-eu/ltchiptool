@@ -46,12 +46,11 @@ def checkfile(path: str):
 class SocInterfaceCommon(SocInterface, ABC):
     def link2elf(
         self,
-        board: Board,
         ota1: str,
         ota2: str,
         args: List[str],
     ) -> List[str]:
-        toolchain = board.toolchain
+        toolchain = self.board.toolchain
 
         if self.elf_has_dual_ota:
             # process linker arguments for dual-OTA chips
@@ -79,18 +78,17 @@ class SocInterfaceCommon(SocInterface, ABC):
 
     def link2bin(
         self,
-        board: Board,
         ota1: str,
         ota2: str,
         args: List[str],
     ) -> Dict[str, Optional[int]]:
-        elfs = self.link2elf(board, ota1, ota2, args)
+        elfs = self.link2elf(ota1, ota2, args)
         output = {}
 
         ota_idx = 1
         for elf, ldargs in elfs:
             # generate a set of binaries for the SoC
-            bins = self.elf2bin(board, elf, ota_idx)
+            bins = self.elf2bin(elf, ota_idx)
             output.update(bins)
             ota_idx += 1
         return output
