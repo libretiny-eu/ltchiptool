@@ -30,7 +30,8 @@ FILE_TYPES = {
 
 
 def get_file_type(
-    family: Optional[Family], file: FileIO
+    family: Optional[Family],
+    file: FileIO,
 ) -> Optional[
     Tuple[
         str,
@@ -385,9 +386,16 @@ def write(
     help="Chip family name/code (default: based on file type)",
     type=FamilyParamType(by_parent=True),
 )
+@click.option(
+    "-S",
+    "--skip",
+    help="Amount of bytes to skip from **input file** (default: based on file type)",
+    type=AutoIntParamType(),
+)
 def file_cmd(
     file: FileIO,
     family: Family,
+    skip: int,
 ):
     """
     Scan the file and check its type.
@@ -398,6 +406,9 @@ def file_cmd(
     Arguments:
       FILE      Input file name
     """
+    if skip is not None:
+        # ignore the skipped bytes entirely
+        file.seek(skip, SEEK_SET)
     file_type, family, _, start, skip, length = get_file_type(family, file)
     info(f"{file.name}: {file_type or 'Unrecognized'}")
     debug(f"\tfamily={family}")

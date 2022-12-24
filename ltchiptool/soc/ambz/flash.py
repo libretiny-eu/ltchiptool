@@ -1,14 +1,32 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import BinaryIO, Generator
+from io import FileIO
+from struct import unpack
+from typing import BinaryIO, Generator, Optional, Tuple
 
 from ltchiptool import SocInterface
-from ltchiptool.util import graph
+from ltchiptool.util import graph, peek
 from ltchiptool.util.intbin import gen2bytes, letoint
 from uf2tool import UploadContext
 
 from .util.rtltool import RTL_ROM_BAUD, RTLXMD
+
+
+def check_xip_binary(
+    data: bytes,
+    header: bytes = b"81958711",
+) -> Optional[Tuple[int, int, bytes]]:
+    if data[0:8] != header:
+        return None
+    if data[16:32] != b"\xFF" * 16:
+        return None
+    length, start = unpack("<II", data[8:16])
+    return start, length, data[32:]
+
+
+def check_bootloader_binary(data: bytes) -> Optional[Tuple[int, int, bytes]]:
+    return check_xip_binary(data, header=b"\x99\x99\x96\x96\x3F\xCC\x66\xFC")
 
 
 class AmebaZFlash(SocInterface, ABC):
@@ -29,6 +47,58 @@ class AmebaZFlash(SocInterface, ABC):
 
     def flash_get_size(self) -> int:
         return 0x200000
+
+    def flash_get_file_type(
+        self,
+        file: FileIO,
+        length: int,
+    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+
+        data = peek(file, size=64)
+        if not data:
+            return None
+
+        if data[0x08:0x0E] == b"RTKWin" or data[0x28:0x2E] == b"RTKWin":
+            return "Realtek AmebaZ RAM Image", None, 0, 0
+
+        # stage 0 - check XIP file
+        tpl = check_xip_binary(data)
+        if tpl:
+            start, xip_length, data = tpl
+            start = start or None
+            type = "SDK" if data.startswith(b"Customer") else "LT"
+            if start:
+                if start & 0x8000020 != 0x8000020:
+                    return "Realtek AmebaZ Unknown Image", None, 0, 0
+                ota_idx = 1 if start == 0xB000 else 2
+                return f"Realtek AmebaZ {type}-XIP{ota_idx}", start, 0, xip_length
+            return f"Realtek AmebaZ {type}-XIP Unknown", None, 0, 0
+
+        # stage 1 - check full dump file
+        tpl = check_bootloader_binary(data)
+        if not tpl:
+            # no bootloader at 0x0, nothing to do
+            return None
+        start, xip_length, _ = tpl
+        if start != 0x8000020:
+            # make sure the bootloader offset is correct
+            return None
+        # read app header
+        data = peek(file, size=64, seek=0xB000)
+        if not data:
+            # bootloader only binary
+            if xip_length >= 0x4000:
+                # too long, probably not AmebaZ
+                return None
+            return "Realtek AmebaZ Bootloader", 0, 0, xip_length
+        # check XIP at 0xB000
+        tpl = check_xip_binary(data)
+        if not tpl:
+            return None
+
+        if length != 2048 * 1024:
+            return "Realtek AmebaZ Incomplete Dump", None, 0, 0
+        return "Realtek AmebaZ Full Dump", 0, 0, 0
 
     def flash_read_raw(
         self,
