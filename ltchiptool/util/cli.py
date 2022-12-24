@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-10-5.
 
 import shlex
-from logging import info
+from logging import INFO, log
 from os.path import basename, dirname, join
 from typing import Dict, Iterable, List, Optional
 
@@ -11,10 +11,10 @@ from click import Command, Context, MultiCommand
 from .fileio import readtext
 
 
-def graph(level: int, *message):
+def graph(level: int, *message, loglevel: int = INFO):
     prefix = (level - 1) * "|   " + "|-- " if level else ""
     message = " ".join(str(m) for m in message)
-    info(f"{prefix}{message}")
+    log(loglevel, f"{prefix}{message}")
 
 
 def get_multi_command_class(cmds: Dict[str, str]):

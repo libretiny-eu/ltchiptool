@@ -1,9 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+from logging import ERROR, error
+
 import click
 from click import Context
 
-from ltchiptool.util import get_multi_command_class, log_setup
+from ltchiptool.util import get_multi_command_class, graph, log_setup
 
 from .version import get_version
 
@@ -66,14 +68,14 @@ def tb_echo(tb):
     filename = tb.tb_frame.f_code.co_filename
     name = tb.tb_frame.f_code.co_name
     line = tb.tb_lineno
-    click.secho(f' - File "{filename}", line {line}, in {name}', fg="red")
+    graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
 
 
 def cli():
     try:
         cli_entrypoint()
     except Exception as e:
-        click.secho(f"ERROR: {type(e).__name__}: {e}", fg="red")
+        error(f"{type(e).__name__}: {e}")
         tb = e.__traceback__
         while tb.tb_next:
             if FULL_TRACEBACK:
