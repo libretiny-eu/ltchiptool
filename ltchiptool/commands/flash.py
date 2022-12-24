@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
 from io import SEEK_CUR, SEEK_SET, FileIO
-from logging import debug, error, fatal, info
+from logging import WARNING, debug, error, fatal, info, warning
 from os import stat
 from time import time
 from typing import Optional, Tuple
@@ -27,6 +27,36 @@ FILE_TYPES = {
         (0x1C, b"\xAA\x55\xAA\x55"),
     ],
 }
+
+
+def find_serial_port() -> Optional[str]:
+    from serial.tools.list_ports import comports
+
+    ports = {}
+    graph(0, "Available COM ports:")
+    for port in comports():
+        is_usb = port.hwid.startswith("USB")
+        if is_usb:
+            description = (
+                f"{port.name} - {port.description} - "
+                f"VID={port.vid:04X} ({port.manufacturer}), "
+                f"PID={port.pid:04X} "
+            )
+        else:
+            description = f"{port.name} - {port.description} - HWID={port.hwid}"
+        ports[port.device] = [is_usb, description]
+
+    ports = sorted(ports.items(), key=lambda x: (not x[1][0], x[1][1]))
+    if not ports:
+        warning("No COM ports found! Use -d/--device to specify the port manually.")
+        return None
+    for idx, (_, (is_usb, description)) in enumerate(ports):
+        graph(1, description)
+        if idx == 0:
+            graph(2, "Selecting this port. To override, use -d/--device")
+            if not is_usb:
+                graph(2, "This is not a USB COM port", loglevel=WARNING)
+    return ports[0][0]
 
 
 def get_file_type(
@@ -160,6 +190,9 @@ def read(
       FAMILY    Chip family name/code
       FILE      Output file name
     """
+    device = device or find_serial_port()
+    if not device:
+        return
     time_start = time()
     soc = SocInterface.get(family)
     soc.set_uart_params(port=device, baud=baudrate, link_timeout=timeout)
@@ -259,6 +292,9 @@ def write(
     Arguments:
       FILE      File name to write
     """
+    device = device or find_serial_port()
+    if not device:
+        return
     time_start = time()
     if skip is not None:
         # ignore the skipped bytes entirely
