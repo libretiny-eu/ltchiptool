@@ -11,7 +11,7 @@ from click import File
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import AutoIntParamType, graph, sizeof
+from ltchiptool.util import AutoIntParamType, graph, peek, sizeof
 
 FILE_TYPES = {
     "UF2": [
@@ -48,9 +48,8 @@ def get_file_type(
     auto_length = None
 
     # auto-detection - stage 1 - common file types
-    data = file.read(512)
-    if len(data) == 512:
-        file.seek(-512, SEEK_CUR)
+    data = peek(file, size=512)
+    if data:
         for name, patterns in FILE_TYPES.items():
             if all(
                 data[offset : offset + len(pattern)] == pattern

@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import SEEK_CUR, FileIO
+from io import FileIO
 from logging import warning
 from typing import BinaryIO, Generator, Optional, Tuple, Union
 
@@ -9,7 +9,7 @@ from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.bk72xx.util import RBL, BekenBinary
-from ltchiptool.util import CRC16, graph
+from ltchiptool.util import CRC16, graph, peek
 from ltchiptool.util.intbin import betoint, gen2bytes
 from uf2tool import UploadContext
 
@@ -49,9 +49,8 @@ class BK72XXFlash(SocInterface, ABC):
         file: FileIO,
         length: int,
     ) -> Optional[Tuple[str, Optional[int], int, int]]:
-        data = file.read(96)
-        file.seek(-len(data), SEEK_CUR)
-        if len(data) != 96:
+        data = peek(file, size=96)
+        if not data:
             return None
         bk = BekenBinary()
 
@@ -85,15 +84,9 @@ class BK72XXFlash(SocInterface, ABC):
             return None
 
         # CRC is okay, but it's not app file - try to find bootloader RBL
-        try:
-            file.seek(0x10F9A, SEEK_CUR)
-        except OSError:
-            return None
-
         # read RBL+CRC and app opcodes
-        data = file.read(34 * 4)
-        file.seek(-len(data) - 0x10F9A, SEEK_CUR)
-        if len(data) != 34 * 4:
+        data = peek(file, size=34 * 4, seek=0x10F9A)
+        if not data:
             return None
 
         # file with bootloader - possibly a full dump
