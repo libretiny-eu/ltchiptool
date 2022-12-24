@@ -15,7 +15,7 @@ class AmebaZFlash(SocInterface, ABC):
     rtl: RTLXMD = None
     baud: int = RTL_ROM_BAUD
 
-    def build_protocol(self):
+    def _build_protocol(self):
         if self.rtl is not None:
             return
         self.print_protocol()
@@ -37,7 +37,7 @@ class AmebaZFlash(SocInterface, ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
-        self.build_protocol()
+        self._build_protocol()
         success = yield from self.rtl.ReadBlockFlashGenerator(start, length)
         if not success:
             raise ValueError(f"Failed to read from 0x{start:X}")
@@ -49,7 +49,7 @@ class AmebaZFlash(SocInterface, ABC):
         data: BinaryIO,
         verify: bool = True,
     ):
-        self.build_protocol()
+        self._build_protocol()
         start |= 0x8000000
         if not self.rtl.WriteBlockFlash(data, start, length):
             raise ValueError(f"Failed to write to 0x{start:X}")

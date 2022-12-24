@@ -30,7 +30,7 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 class BK72XXFlash(SocInterface, ABC):
     bk: BK7231Serial = None
 
-    def build_protocol(self):
+    def _build_protocol(self):
         if self.bk is not None:
             return
         self.print_protocol()
@@ -40,6 +40,9 @@ class BK72XXFlash(SocInterface, ABC):
             link_timeout=self.link_timeout,
             cmnd_timeout=self.read_timeout,
         )
+
+    def flash_get_size(self) -> int:
+        return 0x200000
 
     def flash_get_file_type(
         self,
@@ -117,9 +120,6 @@ class BK72XXFlash(SocInterface, ABC):
 
         return None
 
-    def flash_get_size(self) -> int:
-        return 0x200000
-
     def flash_read_raw(
         self,
         start: int,
@@ -127,7 +127,7 @@ class BK72XXFlash(SocInterface, ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
-        self.build_protocol()
+        self._build_protocol()
         return self.bk.flash_read(start=start, length=length, crc_check=verify)
 
     def flash_write_raw(
@@ -137,7 +137,7 @@ class BK72XXFlash(SocInterface, ABC):
         data: BinaryIO,
         verify: bool = True,
     ):
-        self.build_protocol()
+        self._build_protocol()
         if not self.bk.program_flash(
             io=data,
             io_size=length,
@@ -154,7 +154,7 @@ class BK72XXFlash(SocInterface, ABC):
         parts = ctx.collect(ota_idx=1)
 
         # connect to chip
-        self.build_protocol()
+        self._build_protocol()
 
         # write blocks to flash
         for offset, data in parts.items():

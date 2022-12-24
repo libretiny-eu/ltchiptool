@@ -69,8 +69,11 @@ def get_file_type(
         for f in Family.get_all():
             if f.name is None:
                 continue
-            soc = SocInterface.get(f)
-            tpl = soc.flash_get_file_type(file, length=file_size)
+            try:
+                soc = SocInterface.get(f)
+                tpl = soc.flash_get_file_type(file, length=file_size)
+            except NotImplementedError:
+                tpl = None
             if tpl:
                 file_type, auto_start, auto_skip, auto_length = tpl
             if file_type:
@@ -78,8 +81,11 @@ def get_file_type(
                 break
     else:
         # check the specified family only
-        soc = SocInterface.get(family)
-        tpl = soc.flash_get_file_type(file, length=file_size)
+        try:
+            soc = SocInterface.get(family)
+            tpl = soc.flash_get_file_type(file, length=file_size)
+        except NotImplementedError:
+            tpl = None
         if tpl:
             file_type, auto_start, auto_skip, auto_length = tpl
 
@@ -394,7 +400,7 @@ def file_cmd(
       FILE      Input file name
     """
     file_type, family, _, start, skip, length = get_file_type(family, file)
-    info(f"{file.name}: {file_type}")
+    info(f"{file.name}: {file_type or 'Unrecognized'}")
     debug(f"\tfamily={family}")
     debug(f"\tstart={start}")
     debug(f"\tskip={skip}")
