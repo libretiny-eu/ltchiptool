@@ -200,7 +200,7 @@ def read(
     start = start or 0
     length = length or soc.flash_get_size()
 
-    graph(1, f"Reading {sizeof(length)} from '{family.description}' to '{file.name}'")
+    graph(0, f"Reading {sizeof(length)} from '{family.description}' to '{file.name}'")
     for chunk in soc.flash_read_raw(start, length, verify=check):
         file.write(chunk)
 
@@ -365,7 +365,7 @@ def write(
 
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
-        soc.flash_write_uf2(ctx)
+        generator = soc.flash_write_uf2(ctx)
     else:
         if start is None:
             start = auto_start
@@ -408,7 +408,10 @@ def write(
             file.seek(auto_skip, SEEK_CUR)
         tell = file.tell()
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
-        soc.flash_write_raw(start, length, data=file, verify=check)
+        generator = soc.flash_write_raw(start, length, data=file, verify=check)
+
+    for _ in generator:
+        pass
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

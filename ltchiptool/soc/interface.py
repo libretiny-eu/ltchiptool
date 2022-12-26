@@ -2,7 +2,7 @@
 
 from abc import ABC
 from io import FileIO
-from typing import BinaryIO, Dict, Generator, List, Optional, Tuple
+from typing import BinaryIO, Dict, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.util import graph
@@ -50,7 +50,7 @@ class SocInterface(ABC):
         self.read_timeout = read_timeout or self.read_timeout
 
     def print_protocol(self):
-        graph(2, f"Connecting on {self.port} @ {self.baud}")
+        graph(1, f"Connecting on {self.port} @ {self.baud}")
 
     #####################################################
     # Abstract methods - implemented by the SoC modules #
@@ -94,6 +94,18 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_hw_reset(self) -> None:
+        """Perform a hardware reset using UART GPIO lines."""
+        raise NotImplementedError()
+
+    def flash_connect(self) -> None:
+        """Link with the chip for read/write operations. Do nothing if already linked or not supported."""
+        raise NotImplementedError()
+
+    def flash_get_chip_info_string(self) -> str:
+        """Read chip info from the protocol as a string."""
+        raise NotImplementedError()
+
     def flash_get_size(self) -> int:
         """Retrieve the flash size, in bytes."""
         raise NotImplementedError()
@@ -121,7 +133,11 @@ class SocInterface(ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
-        """Return a generator reading 'length' bytes from offset 'start' of the flash."""
+        """
+        Read 'length' bytes from offset 'start' of the flash.
+
+        :return: a generator yielding the chunks being read
+        """
         raise NotImplementedError()
 
     def flash_write_raw(
@@ -130,13 +146,22 @@ class SocInterface(ABC):
         length: int,
         data: BinaryIO,
         verify: bool = True,
-    ):
-        """Write 'length' bytes (represented by 'data') to offset 'start' of the flash."""
+    ) -> Generator[int, None, None]:
+        """
+        Write 'length' bytes (represented by 'data') to offset 'start' of the flash.
+
+        :return: a generator yielding lengths of the chunks being written
+        """
         raise NotImplementedError()
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
-    ):
-        """Upload the UF2 package to the chip."""
+    ) -> Generator[Union[int, str], None, None]:
+        """
+        Upload an UF2 package to the chip.
+
+        :return: a generator, yielding either the total writing length,
+        then lengths of the chunks being written, or progress messages, as string
+        """
         raise NotImplementedError()

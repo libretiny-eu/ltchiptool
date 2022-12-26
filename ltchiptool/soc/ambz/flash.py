@@ -3,10 +3,10 @@
 from abc import ABC
 from io import FileIO
 from struct import unpack
-from typing import BinaryIO, Generator, Optional, Tuple
+from typing import BinaryIO, Generator, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util import graph, peek
+from ltchiptool.util import peek
 from ltchiptool.util.intbin import gen2bytes, letoint
 from uf2tool import UploadContext
 
@@ -33,7 +33,7 @@ class AmebaZFlash(SocInterface, ABC):
     rtl: RTLXMD = None
     baud: int = RTL_ROM_BAUD
 
-    def _build_protocol(self):
+    def flash_connect(self):
         if self.rtl is not None:
             return
         self.print_protocol()
@@ -107,7 +107,7 @@ class AmebaZFlash(SocInterface, ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
-        self._build_protocol()
+        self.flash_connect()
         success = yield from self.rtl.ReadBlockFlashGenerator(start, length)
         if not success:
             raise ValueError(f"Failed to read from 0x{start:X}")
@@ -118,17 +118,17 @@ class AmebaZFlash(SocInterface, ABC):
         length: int,
         data: BinaryIO,
         verify: bool = True,
-    ):
-        self._build_protocol()
+    ) -> Generator[int, None, None]:
+        self.flash_connect()
         start |= 0x8000000
         if not self.rtl.WriteBlockFlash(data, start, length):
             raise ValueError(f"Failed to write to 0x{start:X}")
-        return data.tell()
+        yield data.tell()
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
-    ):
+    ) -> Generator[Union[int, str], None, None]:
         # read system data to get active OTA index
         system = gen2bytes(self.flash_read_raw(0x9000, 256))
         if len(system) != 256:
@@ -148,13 +148,15 @@ class AmebaZFlash(SocInterface, ABC):
                     f"Invalid OTA2 address on chip - found {ota2_addr}, expected {part_addr}"
                 )
 
-        graph(2, f"Flashing image to OTA {ota_idx}...")
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
+        # yield the total writing length
+        yield sum(len(part.getvalue()) for part in parts.values())
+
+        yield f"Flashing image to OTA {ota_idx}..."
         # write blocks to flash
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            graph(2, f"Writing {length} bytes to 0x{offset:06x}")
+            yield f"Writing {length} bytes to 0x{offset:06x}"
             self.flash_write_raw(offset, length, data)
-        return True

@@ -1,16 +1,18 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+import logging
 from abc import ABC
 from io import FileIO
-from logging import warning
+from logging import DEBUG, debug, warning
 from typing import BinaryIO, Generator, Optional, Tuple, Union
 
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.bk72xx.util import RBL, BekenBinary
-from ltchiptool.util import CRC16, graph, peek
+from ltchiptool.util import CRC16, peek
 from ltchiptool.util.intbin import betoint, gen2bytes
+from ltchiptool.util.logging import VERBOSE, verbose
 from uf2tool import UploadContext
 
 
@@ -30,7 +32,7 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 class BK72XXFlash(SocInterface, ABC):
     bk: BK7231Serial = None
 
-    def _build_protocol(self):
+    def flash_connect(self):
         if self.bk is not None:
             return
         self.print_protocol()
@@ -40,6 +42,12 @@ class BK72XXFlash(SocInterface, ABC):
             link_timeout=self.link_timeout,
             cmnd_timeout=self.read_timeout,
         )
+        loglevel = logging.getLogger().getEffectiveLevel()
+        if loglevel <= DEBUG:
+            self.bk.info = lambda *args: debug(" ".join(args))
+        if loglevel <= VERBOSE:
+            self.bk.debug = lambda *args: verbose(" ".join(args))
+        self.bk.connect()
 
     def flash_get_size(self) -> int:
         return 0x200000
@@ -120,7 +128,7 @@ class BK72XXFlash(SocInterface, ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
-        self._build_protocol()
+        self.flash_connect()
         return self.bk.flash_read(start=start, length=length, crc_check=verify)
 
     def flash_write_raw(
@@ -129,42 +137,40 @@ class BK72XXFlash(SocInterface, ABC):
         length: int,
         data: BinaryIO,
         verify: bool = True,
-    ):
-        self._build_protocol()
-        if not self.bk.program_flash(
+    ) -> Generator[int, None, None]:
+        self.flash_connect()
+        yield from self.bk.program_flash(
             io=data,
             io_size=length,
             start=start,
             crc_check=verify,
-        ):
-            raise ValueError(f"Failed to write to 0x{start:X}")
+        )
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
-    ):
+    ) -> Generator[Union[int, str], None, None]:
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
 
+        # yield the total writing length
+        yield sum(len(part.getvalue()) for part in parts.values())
+
         # connect to chip
-        self._build_protocol()
+        self.flash_connect()
 
         # write blocks to flash
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            graph(2, f"Writing {length} bytes to 0x{offset:06x}")
-            try:
-                self.bk.program_flash(
-                    io=data,
-                    io_size=length,
-                    start=offset,
-                    verbose=False,
-                    crc_check=True,
-                    dry_run=False,
-                    really_erase=True,
-                )
-            except ValueError as e:
-                raise RuntimeError(f"Writing failed: {e.args[0]}")
+            yield f"Writing {length} bytes to 0x{offset:06x}"
+            yield from self.bk.program_flash(
+                io=data,
+                io_size=length,
+                start=offset,
+                crc_check=True,
+                dry_run=False,
+                really_erase=True,
+            )
         # reboot the chip
         self.bk.reboot_chip()
