@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-10-5.
 
 import shlex
-from logging import INFO, log
+from logging import INFO, WARNING, log, warning
 from os.path import basename, dirname, join
 from typing import Dict, Iterable, List, Optional
 
@@ -54,6 +54,36 @@ def parse_argfile(args: Iterable[str]) -> List[str]:
     return args
 
 
+def find_serial_port() -> Optional[str]:
+    from serial.tools.list_ports import comports
+
+    ports = {}
+    graph(0, "Available COM ports:")
+    for port in comports():
+        is_usb = port.hwid.startswith("USB")
+        if is_usb:
+            description = (
+                f"{port.name} - {port.description} - "
+                f"VID={port.vid:04X} ({port.manufacturer}), "
+                f"PID={port.pid:04X} "
+            )
+        else:
+            description = f"{port.name} - {port.description} - HWID={port.hwid}"
+        ports[port.device] = [is_usb, description]
+
+    ports = sorted(ports.items(), key=lambda x: (not x[1][0], x[1][1]))
+    if not ports:
+        warning("No COM ports found! Use -d/--device to specify the port manually.")
+        return None
+    for idx, (_, (is_usb, description)) in enumerate(ports):
+        graph(1, description)
+        if idx == 0:
+            graph(2, "Selecting this port. To override, use -d/--device")
+            if not is_usb:
+                graph(2, "This is not a USB COM port", loglevel=WARNING)
+    return ports[0][0]
+
+
 class AutoIntParamType(click.ParamType):
     name = "DEC/HEX"
 
@@ -62,3 +92,16 @@ class AutoIntParamType(click.ParamType):
             return int(value, base=0)
         except ValueError as e:
             self.fail(str(e), param, ctx)
+
+
+class DevicePortParamType(click.ParamType):
+    name = "DEVICE"
+
+    def convert(self, value, param, ctx) -> str:
+        if isinstance(value, tuple):
+            # special default value to auto-detect a serial port
+            port = find_serial_port()
+            if not port:
+                self.fail("No COM ports found", param, ctx)
+            return port
+        return value

@@ -1,220 +1,28 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
 from io import SEEK_CUR, SEEK_SET, FileIO
-from logging import WARNING, debug, error, fatal, info, warning
+from logging import debug, error, fatal
 from os import stat
 from time import time
-from typing import Optional, Tuple
 
 import click
 from click import File
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import AutoIntParamType, graph, peek, sizeof
+from ltchiptool.util import AutoIntParamType, DevicePortParamType, graph, sizeof
 
-FILE_TYPES = {
-    "UF2": [
-        (0x000, b"UF2\x0A"),
-        (0x004, b"\x57\x51\x5D\x9E"),
-        (0x1FC, b"\x30\x6F\xB1\x0A"),
-    ],
-    "ELF": [
-        (0x00, b"\x7FELF"),
-    ],
-    "Tuya UG": [
-        (0x00, b"\x55\xAA\x55\xAA"),
-        (0x1C, b"\xAA\x55\xAA\x55"),
-    ],
-}
+from ._utils import get_file_type
 
 
-def find_serial_port() -> Optional[str]:
-    from serial.tools.list_ports import comports
-
-    ports = {}
-    graph(0, "Available COM ports:")
-    for port in comports():
-        is_usb = port.hwid.startswith("USB")
-        if is_usb:
-            description = (
-                f"{port.name} - {port.description} - "
-                f"VID={port.vid:04X} ({port.manufacturer}), "
-                f"PID={port.pid:04X} "
-            )
-        else:
-            description = f"{port.name} - {port.description} - HWID={port.hwid}"
-        ports[port.device] = [is_usb, description]
-
-    ports = sorted(ports.items(), key=lambda x: (not x[1][0], x[1][1]))
-    if not ports:
-        warning("No COM ports found! Use -d/--device to specify the port manually.")
-        return None
-    for idx, (_, (is_usb, description)) in enumerate(ports):
-        graph(1, description)
-        if idx == 0:
-            graph(2, "Selecting this port. To override, use -d/--device")
-            if not is_usb:
-                graph(2, "This is not a USB COM port", loglevel=WARNING)
-    return ports[0][0]
-
-
-def get_file_type(
-    family: Optional[Family],
-    file: FileIO,
-) -> Optional[
-    Tuple[
-        str,
-        Optional[Family],
-        Optional[SocInterface],
-        Optional[int],
-        Optional[int],
-        Optional[int],
-    ]
-]:
-    file_type = None
-    soc = None
-    auto_start = None
-    auto_skip = None
-    auto_length = None
-
-    # auto-detection - stage 1 - common file types
-    data = peek(file, size=512)
-    if data:
-        for name, patterns in FILE_TYPES.items():
-            if all(
-                data[offset : offset + len(pattern)] == pattern
-                for offset, pattern in patterns
-            ):
-                file_type = name
-                break
-
-    if file_type:
-        return file_type, None, None, None, None, None
-
-    # auto-detection - stage 2 - checking using SocInterface
-    file_size = stat(file.name).st_size
-    if family is None:
-        # check all families
-        for f in Family.get_all():
-            if f.name is None:
-                continue
-            try:
-                soc = SocInterface.get(f)
-                tpl = soc.flash_get_file_type(file, length=file_size)
-            except NotImplementedError:
-                tpl = None
-            if tpl:
-                file_type, auto_start, auto_skip, auto_length = tpl
-            if file_type:
-                family = f
-                break
-    else:
-        # check the specified family only
-        try:
-            soc = SocInterface.get(family)
-            tpl = soc.flash_get_file_type(file, length=file_size)
-        except NotImplementedError:
-            tpl = None
-        if tpl:
-            file_type, auto_start, auto_skip, auto_length = tpl
-
-    return file_type, family, soc, auto_start, auto_skip, auto_length
-
-
-@click.group(help="Flashing tool - reading/writing")
-def cli():
-    pass
-
-
-@cli.command(short_help="Read flash contents")
-@click.argument("family", type=FamilyParamType(by_parent=True))
-@click.argument("file", type=File("wb"))
-@click.option(
-    "-d",
-    "--device",
-    help="Target device port (default: auto detect)",
-    type=str,
-)
-@click.option(
-    "-b",
-    "--baudrate",
-    help="UART baud rate (default: auto choose)",
-    type=int,
-)
-@click.option(
-    "-s",
-    "--start",
-    help="Starting address to read from (default: 0)",
-    type=AutoIntParamType(),
-)
-@click.option(
-    "-l",
-    "--length",
-    help="Length to read, in bytes (default: entire flash)",
-    type=AutoIntParamType(),
-)
-@click.option(
-    "-t",
-    "--timeout",
-    help="Timeout for operations in seconds (default: 20.0)",
-    type=float,
-    default=None,
-)
-@click.option(
-    "-c/-C",
-    "--check/--no-check",
-    help="Check hash/CRC of the read data (default: True)",
-    default=True,
-)
-def read(
-    family: Family,
-    file: FileIO,
-    device: str,
-    baudrate: int,
-    start: int,
-    length: int,
-    timeout: float,
-    check: bool,
-):
-    """
-    Read flash contents to a file.
-
-    By default, read the entire flash chip, starting at offset 0x0.
-
-    When not specified (-d), the first UART port is used. The baud rate (-b)
-    is chosen automatically, depending on the chip capabilities.
-
-    \b
-    Arguments:
-      FAMILY    Chip family name/code
-      FILE      Output file name
-    """
-    device = device or find_serial_port()
-    if not device:
-        return
-    time_start = time()
-    soc = SocInterface.get(family)
-    soc.set_uart_params(port=device, baud=baudrate, link_timeout=timeout)
-
-    start = start or 0
-    length = length or soc.flash_get_size()
-
-    graph(0, f"Reading {sizeof(length)} from '{family.description}' to '{file.name}'")
-    for chunk in soc.flash_read_raw(start, length, verify=check):
-        file.write(chunk)
-
-    duration = time() - time_start
-    graph(1, f"Finished in {duration:.3f} s")
-
-
-@cli.command()
+@click.command(short_help="Write flash contents")
 @click.argument("file", type=File("rb"))
 @click.option(
     "-d",
     "--device",
     help="Target device port (default: auto detect)",
-    type=str,
+    type=DevicePortParamType(),
+    default=(),
 )
 @click.option(
     "-b",
@@ -259,7 +67,7 @@ def read(
     help="Check hash/CRC of the written data (default: True)",
     default=True,
 )
-def write(
+def cli(
     file: FileIO,
     device: str,
     baudrate: int,
@@ -292,9 +100,6 @@ def write(
     Arguments:
       FILE      File name to write
     """
-    device = device or find_serial_port()
-    if not device:
-        return
     time_start = time()
     if skip is not None:
         # ignore the skipped bytes entirely
@@ -415,42 +220,3 @@ def write(
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")
-
-
-@cli.command(name="file", short_help="Detect file type")
-@click.argument("file", type=File("rb"))
-@click.option(
-    "-f",
-    "--family",
-    help="Chip family name/code (default: based on file type)",
-    type=FamilyParamType(by_parent=True),
-)
-@click.option(
-    "-S",
-    "--skip",
-    help="Amount of bytes to skip from **input file** (default: based on file type)",
-    type=AutoIntParamType(),
-)
-def file_cmd(
-    file: FileIO,
-    family: Family,
-    skip: int,
-):
-    """
-    Scan the file and check its type.
-
-    When -f/--family is specified, file checks of other SoC families won't be performed.
-
-    \b
-    Arguments:
-      FILE      Input file name
-    """
-    if skip is not None:
-        # ignore the skipped bytes entirely
-        file.seek(skip, SEEK_SET)
-    file_type, family, _, start, skip, length = get_file_type(family, file)
-    info(f"{file.name}: {file_type or 'Unrecognized'}")
-    debug(f"\tfamily={family}")
-    debug(f"\tstart={start}")
-    debug(f"\tskip={skip}")
-    debug(f"\tlength={length}")
