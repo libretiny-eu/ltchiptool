@@ -47,10 +47,11 @@ RTL_FLASH_SECTOR_SIZE = 4096
 
 
 class RTLXMD:
-    def __init__(self, port=0, baud=RTL_ROM_BAUD, timeout=1):
+    def __init__(self, port=0, baud=RTL_ROM_BAUD, timeout=1, sync_timeout=10):
         self.mode = MODE_UNK1
         self._port = serial.Serial(port, baud)
         self._port.timeout = timeout
+        self.sync_timeout = sync_timeout
 
     def writecmd(self, cmd, ok=ACK):
         if self._port.write(cmd):
@@ -81,7 +82,8 @@ class RTLXMD:
             self._port.flushInput()
         error_count = 0
         cancel = 0
-        while True:
+        end = time.time() + self.sync_timeout
+        while time.time() < end:
             char = self._port.read(1)
             if char:
                 if char == b"\x00":
@@ -94,18 +96,18 @@ class RTLXMD:
                                 if self.writecmd(CMD_ABRT, CAN):
                                     self.mode = MODE_RTL
                                     # 									return True
-                                    break
+                                    return True
                             elif mode == MODE_XMD:
                                 if self.writecmd(CMD_XMD):
                                     self.mode = MODE_XMD
-                                    break
+                                    return True
                         else:
                             if mode == MODE_XMD:
                                 if self.writecmd(CMD_XMD):
                                     self.mode = MODE_XMD
-                                    break
+                                    return True
                         self.mode = MODE_RTL
-                    break
+                    return True
                 elif char == CAN:
                     # received CAN
                     if cancel:
@@ -143,7 +145,7 @@ class RTLXMD:
                     self._port.write(CAN)
                     self._port.write(CAN)
                 return False
-        return True
+        return False
 
     def ModeXmodem(self):
         if self.sync():

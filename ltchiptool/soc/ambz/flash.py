@@ -3,7 +3,7 @@
 from abc import ABC
 from io import FileIO
 from struct import unpack
-from typing import BinaryIO, Generator, Optional, Tuple, Union
+from typing import BinaryIO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util import peek
@@ -33,17 +33,50 @@ class AmebaZFlash(SocInterface, ABC):
     rtl: RTLXMD = None
     baud: int = RTL_ROM_BAUD
 
-    def flash_connect(self):
-        if self.rtl is not None:
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return [
+            "Connect UART2 of the Realtek chip to the USB-TTL adapter:",
+            [
+                ("PC", "RTL8710B"),
+                ("RX", "TX2 (Log_TX / PA30)"),
+                ("TX", "RX2 (Log_RX / PA29)"),
+                ("RTS", "CEN (or RST, optional)"),
+                ("DTR", "TX2 (Log_TX / PA30, optional)"),
+                ("", ""),
+                ("GND", "GND"),
+            ],
+            "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
+            "lose power during chip reset. Usually, the adapter's power regulator\n"
+            "is not enough and an external power supply is needed (like AMS1117).",
+            "If you didn't connect RTS and DTR, you need to put the chip in download\n"
+            "mode manually. This is done by connecting CEN to GND, while holding TX2 (Log_TX)\n"
+            "to GND as well. After doing that, you need to disconnect TX2 from GND.",
+            "If the download mode is enabled, you'll see a few garbage characters\n"
+            "printed to the serial console every second.",
+        ]
+
+    def flash_hw_reset(self) -> None:
+        if not self.rtl:
             return
-        self.print_protocol()
+        self.rtl.connect()
+
+    def flash_connect(self, force: bool = False) -> None:
+        if not force and self.rtl:
+            return
+        if self.rtl:
+            self.rtl._port.close()
+
         self.rtl = RTLXMD(
             port=self.port,
             baud=self.baud,
-            timeout=self.link_timeout,
+            timeout=self.read_timeout,
+            sync_timeout=self.link_timeout,
         )
-        if not self.rtl.connect():
-            raise ValueError(f"Failed to connect on port {self.port}")
+        if not self.rtl.sync():
+            raise TimeoutError(f"Failed to connect on port {self.port}")
+
+    def flash_get_chip_info_string(self) -> str:
+        return "Realtek AmebaZ TBD"
 
     def flash_get_size(self) -> int:
         return 0x200000

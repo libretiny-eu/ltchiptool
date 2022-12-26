@@ -12,7 +12,7 @@ from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util import AutoIntParamType, DevicePortParamType, graph, sizeof
 
-from ._utils import get_file_type
+from ._utils import flash_link_interactive, get_file_type
 
 
 @click.command(short_help="Write flash contents")
@@ -160,14 +160,14 @@ def cli(
     # 1. file type found using SocInterface
     # 2. flashing in Raw mode (-f + -s)
     # 3. common file type (UF2 only, for now)
-    graph(0, f"Writing '{file.name}' ({file_type}) to '{family.description}'")
-    if family and not soc:
-        soc = SocInterface.get(family)
     if not family:
         fatal("Unknown error in parameter processing logic")
         return
-    soc.set_uart_params(port=device, baud=baudrate, link_timeout=timeout)
+    if not soc:
+        soc = SocInterface.get(family)
+    flash_link_interactive(soc, device, baudrate, timeout)
 
+    graph(0, f"Writing '{file.name}' ({file_type}) to '{family.description}'")
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
         generator = soc.flash_write_uf2(ctx)

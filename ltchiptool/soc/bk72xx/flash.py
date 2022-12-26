@@ -4,7 +4,7 @@ import logging
 from abc import ABC
 from io import FileIO
 from logging import DEBUG, debug, warning
-from typing import BinaryIO, Generator, Optional, Tuple, Union
+from typing import BinaryIO, Generator, List, Optional, Tuple, Union
 
 from bk7231tools.serial import BK7231Serial
 
@@ -32,10 +32,36 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 class BK72XXFlash(SocInterface, ABC):
     bk: BK7231Serial = None
 
-    def flash_connect(self):
-        if self.bk is not None:
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return [
+            "Connect UART1 of the BK7231 to the USB-TTL adapter:",
+            [
+                ("PC", "BK7231"),
+                ("RX", "TX1 (GPIO11 / P11)"),
+                ("TX", "RX1 (GPIO10 / P10)"),
+                ("RTS", "CEN (or RST, optional)"),
+                ("", ""),
+                ("GND", "GND"),
+            ],
+            "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
+            "lose power during chip reset. Usually, the adapter's power regulator\n"
+            "is not enough and an external power supply is needed (like AMS1117).",
+            "If you didn't connect RTS to CEN, after running the command you have\n"
+            "around 20 seconds to reset the chip manually. In order to do that,\n"
+            "you need to bridge CEN to GND with a wire.",
+        ]
+
+    def flash_hw_reset(self) -> None:
+        if not self.bk:
             return
-        self.print_protocol()
+        self.bk.hw_reset()
+
+    def flash_connect(self, force: bool = False) -> None:
+        if not force and self.bk:
+            return
+        if self.bk:
+            self.bk.close()
+
         self.bk = BK7231Serial(
             port=self.port,
             baudrate=self.baud,
@@ -48,6 +74,14 @@ class BK72XXFlash(SocInterface, ABC):
         if loglevel <= VERBOSE:
             self.bk.debug = lambda *args: verbose(" ".join(args))
         self.bk.connect()
+
+    def flash_get_chip_info_string(self) -> str:
+        items = [
+            self.bk.chip_info,
+            f"Flash ID: {self.bk.flash_id.hex(' ', -1) if self.bk.flash_id else None}",
+            f"Protocol: {self.bk.protocol_type.name}",
+        ]
+        return " / ".join(items)
 
     def flash_get_size(self) -> int:
         return 0x200000

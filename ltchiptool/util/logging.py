@@ -23,12 +23,15 @@ VERBOSITY_LEVEL = {
 
 
 class LoggingHandler(StreamHandler):
+    INSTANCE: "LoggingHandler" = None
+
     time_start: float
     time_prev: float
     timed: bool = False
 
     def __init__(self) -> None:
         super().__init__()
+        LoggingHandler.INSTANCE = self
         self.time_start = time()
         self.time_prev = self.time_start
 
@@ -36,12 +39,14 @@ class LoggingHandler(StreamHandler):
         message = record.getMessage()
         if not message:
             return
-        now = record.created
+        self.emit_string(record.levelname[:1], message)
+
+    def emit_string(self, log_prefix: str, message: str, color: str = None):
+        now = time()
         elapsed_total = now - self.time_start
         elapsed_current = now - self.time_prev
 
-        log_prefix = record.levelname[:1]
-        log_color = LOG_COLORS[log_prefix]
+        log_color = color or LOG_COLORS[log_prefix]
 
         if self.timed:
             message = f"{log_prefix} [{elapsed_total:11.3f}] (+{elapsed_current:5.3f}s) {message}"

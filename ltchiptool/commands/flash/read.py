@@ -10,6 +10,8 @@ from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util import AutoIntParamType, DevicePortParamType, graph, sizeof
 
+from ._utils import flash_link_interactive
+
 
 @click.command(short_help="Read flash contents")
 @click.argument("family", type=FamilyParamType(by_parent=True))
@@ -77,7 +79,7 @@ def cli(
     """
     time_start = time()
     soc = SocInterface.get(family)
-    soc.set_uart_params(port=device, baud=baudrate, link_timeout=timeout)
+    flash_link_interactive(soc, device, baudrate, timeout)
 
     start = start or 0
     length = length or soc.flash_get_size()
