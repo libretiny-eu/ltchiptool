@@ -157,6 +157,7 @@ class SocInterface(ABC):
     def flash_write_uf2(
         self,
         ctx: UploadContext,
+        verify: bool = True,
     ) -> Generator[Union[int, str], None, None]:
         """
         Upload an UF2 package to the chip.

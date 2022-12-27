@@ -161,6 +161,7 @@ class AmebaZFlash(SocInterface, ABC):
     def flash_write_uf2(
         self,
         ctx: UploadContext,
+        verify: bool = True,
     ) -> Generator[Union[int, str], None, None]:
         # read system data to get active OTA index
         system = gen2bytes(self.flash_read_raw(0x9000, 256))
@@ -186,10 +187,10 @@ class AmebaZFlash(SocInterface, ABC):
         # yield the total writing length
         yield sum(len(part.getvalue()) for part in parts.values())
 
-        yield f"Flashing image to OTA {ota_idx}..."
+        yield f"OTA {ota_idx}"
         # write blocks to flash
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            yield f"Writing {length} bytes to 0x{offset:06x}"
-            self.flash_write_raw(offset, length, data)
+            yield f"OTA {ota_idx} (0x{offset:06X})"
+            yield from self.flash_write_raw(offset, length, data, verify)

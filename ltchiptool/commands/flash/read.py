@@ -85,8 +85,10 @@ def cli(
     length = length or soc.flash_get_size()
 
     graph(0, f"Reading {sizeof(length)} from '{family.description}' to '{file.name}'")
-    for chunk in soc.flash_read_raw(start, length, verify=check):
-        file.write(chunk)
+    with click.progressbar(length=length, width=64) as bar:
+        for chunk in soc.flash_read_raw(start, length, verify=check):
+            file.write(chunk)
+            bar.update(len(chunk))
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

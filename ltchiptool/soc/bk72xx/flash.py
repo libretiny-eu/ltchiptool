@@ -213,6 +213,7 @@ class BK72XXFlash(SocInterface, ABC):
     def flash_write_uf2(
         self,
         ctx: UploadContext,
+        verify: bool = True,
     ) -> Generator[Union[int, str], None, None]:
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
@@ -227,12 +228,12 @@ class BK72XXFlash(SocInterface, ABC):
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            yield f"Writing {length} bytes to 0x{offset:06x}"
+            yield f"Writing (0x{offset:06X})"
             yield from self.bk.program_flash(
                 io=data,
                 io_size=length,
                 start=offset,
-                crc_check=True,
+                crc_check=verify,
                 dry_run=False,
                 really_erase=True,
             )

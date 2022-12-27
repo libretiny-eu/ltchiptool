@@ -170,7 +170,8 @@ def cli(
     graph(0, f"Writing '{file.name}' ({file_type}) to '{family.description}'")
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
-        generator = soc.flash_write_uf2(ctx)
+        generator = soc.flash_write_uf2(ctx, verify=check)
+        length = 0
     else:
         if start is None:
             start = auto_start
@@ -215,8 +216,16 @@ def cli(
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
         generator = soc.flash_write_raw(start, length, data=file, verify=check)
 
-    for _ in generator:
-        pass
+    with click.progressbar(length=length, width=64) as bar:
+        for data in generator:
+            if isinstance(data, int):
+                if bar.length == 0:
+                    bar.length = data
+                else:
+                    bar.update(data)
+            elif isinstance(data, str):
+                bar.label = data
+                bar.update(0)
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")
