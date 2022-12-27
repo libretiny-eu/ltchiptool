@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC
+from binascii import crc32
 from io import FileIO
 from logging import DEBUG, debug, warning
 from typing import BinaryIO, Generator, List, Optional, Tuple, Union
@@ -163,7 +164,36 @@ class BK72XXFlash(SocInterface, ABC):
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
-        return self.bk.flash_read(start=start, length=length, crc_check=verify)
+
+        crc_offset = start
+        crc_length = 0
+        crc_value = 0
+
+        for chunk in self.bk.flash_read(start=start, length=length, crc_check=False):
+            if not verify:
+                yield chunk
+                continue
+
+            crc_length += len(chunk)
+            crc_value = crc32(chunk, crc_value)
+            # check CRC every each 32 KiB, or by the end of file
+            if crc_length < 32 * 1024 and crc_offset + crc_length != start + length:
+                yield chunk
+                continue
+
+            crc_expected = self.bk.read_flash_range_crc(
+                crc_offset,
+                crc_offset + crc_length,
+            )
+            if crc_expected != crc_value:
+                raise ValueError(
+                    f"Chip CRC value {crc_expected:X} does not match calculated "
+                    f"CRC value {crc_value:X} (at 0x{crc_offset:X})"
+                )
+            crc_offset += crc_length
+            crc_length = 0
+            crc_value = 0
+            yield chunk
 
     def flash_write_raw(
         self,
