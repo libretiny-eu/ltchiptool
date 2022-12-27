@@ -30,39 +30,33 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
     return None
 
 
+BK72XX_GUIDE = [
+    "Connect UART1 of the BK7231 to the USB-TTL adapter:",
+    [
+        ("PC", "BK7231"),
+        ("RX", "TX1 (GPIO11 / P11)"),
+        ("TX", "RX1 (GPIO10 / P10)"),
+        ("RTS", "CEN (or RST, optional)"),
+        ("", ""),
+        ("GND", "GND"),
+    ],
+    "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
+    "lose power during chip reset. Usually, the adapter's power regulator\n"
+    "is not enough and an external power supply is needed (like AMS1117).",
+    "If you didn't connect RTS to CEN, after running the command you have\n"
+    "around 20 seconds to reset the chip manually. In order to do that,\n"
+    "you need to bridge CEN to GND with a wire.",
+]
+
+
 class BK72XXFlash(SocInterface, ABC):
-    bk: BK7231Serial = None
+    bk: Optional[BK7231Serial] = None
+    is_linked: bool = False
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        return [
-            "Connect UART1 of the BK7231 to the USB-TTL adapter:",
-            [
-                ("PC", "BK7231"),
-                ("RX", "TX1 (GPIO11 / P11)"),
-                ("TX", "RX1 (GPIO10 / P10)"),
-                ("RTS", "CEN (or RST, optional)"),
-                ("", ""),
-                ("GND", "GND"),
-            ],
-            "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
-            "lose power during chip reset. Usually, the adapter's power regulator\n"
-            "is not enough and an external power supply is needed (like AMS1117).",
-            "If you didn't connect RTS to CEN, after running the command you have\n"
-            "around 20 seconds to reset the chip manually. In order to do that,\n"
-            "you need to bridge CEN to GND with a wire.",
-        ]
-
-    def flash_hw_reset(self) -> None:
-        if not self.bk:
-            return
-        self.bk.hw_reset()
-
-    def flash_connect(self, force: bool = False) -> None:
+    def flash_build_protocol(self, force: bool = False) -> None:
         if not force and self.bk:
             return
-        if self.bk:
-            self.bk.close()
-
+        self.flash_disconnect()
         self.bk = BK7231Serial(
             port=self.port,
             baudrate=self.baud,
@@ -74,7 +68,23 @@ class BK72XXFlash(SocInterface, ABC):
             self.bk.info = lambda *args: debug(" ".join(args))
         if loglevel <= VERBOSE:
             self.bk.debug = lambda *args: verbose(" ".join(args))
+
+    def flash_hw_reset(self) -> None:
+        self.flash_build_protocol()
+        self.bk.hw_reset()
+
+    def flash_connect(self) -> None:
+        if self.bk and self.is_linked:
+            return
+        self.flash_build_protocol()
         self.bk.connect()
+        self.is_linked = True
+
+    def flash_disconnect(self) -> None:
+        if self.bk:
+            self.bk.close()
+        self.bk = None
+        self.is_linked = False
 
     def flash_get_chip_info_string(self) -> str:
         items = [
@@ -83,6 +93,9 @@ class BK72XXFlash(SocInterface, ABC):
             f"Protocol: {self.bk.protocol_type.name}",
         ]
         return " / ".join(items)
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return BK72XX_GUIDE
 
     def flash_get_size(self) -> int:
         return 0x200000

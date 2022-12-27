@@ -94,20 +94,28 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        """Get a short textual guide for putting the chip in download mode."""
+    def flash_build_protocol(self, force: bool = False) -> None:
+        """Create an instance of flashing protocol class. Only used internally."""
         raise NotImplementedError()
 
     def flash_hw_reset(self) -> None:
         """Perform a hardware reset using UART GPIO lines."""
         raise NotImplementedError()
 
-    def flash_connect(self, force: bool = False) -> None:
+    def flash_connect(self) -> None:
         """Link with the chip for read/write operations. Do nothing if already linked or not supported."""
+        raise NotImplementedError()
+
+    def flash_disconnect(self) -> None:
+        """Close the serial port, if it's open."""
         raise NotImplementedError()
 
     def flash_get_chip_info_string(self) -> str:
         """Read chip info from the protocol as a string."""
+        raise NotImplementedError()
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        """Get a short textual guide for putting the chip in download mode."""
         raise NotImplementedError()
 
     def flash_get_size(self) -> int:

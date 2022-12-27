@@ -141,7 +141,8 @@ def flash_link_interactive(
             if stage == 0:
                 # print once, but after setting port and baud
                 graph(0, f"Connecting on {soc.port} @ {soc.baud}")
-            soc.flash_connect(force=True)
+            soc.flash_disconnect()
+            soc.flash_connect()
             break
         except TimeoutError:
             stage += 1

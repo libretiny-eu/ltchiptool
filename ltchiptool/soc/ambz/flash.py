@@ -29,54 +29,68 @@ def check_bootloader_binary(data: bytes) -> Optional[Tuple[int, int, bytes]]:
     return check_xip_binary(data, header=b"\x99\x99\x96\x96\x3F\xCC\x66\xFC")
 
 
+AMEBAZ_GUIDE = [
+    "Connect UART2 of the Realtek chip to the USB-TTL adapter:",
+    [
+        ("PC", "RTL8710B"),
+        ("RX", "TX2 (Log_TX / PA30)"),
+        ("TX", "RX2 (Log_RX / PA29)"),
+        ("RTS", "CEN (or RST, optional)"),
+        ("DTR", "TX2 (Log_TX / PA30, optional)"),
+        ("", ""),
+        ("GND", "GND"),
+    ],
+    "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
+    "lose power during chip reset. Usually, the adapter's power regulator\n"
+    "is not enough and an external power supply is needed (like AMS1117).",
+    "If you didn't connect RTS and DTR, you need to put the chip in download\n"
+    "mode manually. This is done by connecting CEN to GND, while holding TX2 (Log_TX)\n"
+    "to GND as well. After doing that, you need to disconnect TX2 from GND.",
+    "If the download mode is enabled, you'll see a few garbage characters\n"
+    "printed to the serial console every second.",
+]
+
+
 class AmebaZFlash(SocInterface, ABC):
-    rtl: RTLXMD = None
+    rtl: Optional[RTLXMD] = None
+    is_linked: bool = False
     baud: int = RTL_ROM_BAUD
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        return [
-            "Connect UART2 of the Realtek chip to the USB-TTL adapter:",
-            [
-                ("PC", "RTL8710B"),
-                ("RX", "TX2 (Log_TX / PA30)"),
-                ("TX", "RX2 (Log_RX / PA29)"),
-                ("RTS", "CEN (or RST, optional)"),
-                ("DTR", "TX2 (Log_TX / PA30, optional)"),
-                ("", ""),
-                ("GND", "GND"),
-            ],
-            "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
-            "lose power during chip reset. Usually, the adapter's power regulator\n"
-            "is not enough and an external power supply is needed (like AMS1117).",
-            "If you didn't connect RTS and DTR, you need to put the chip in download\n"
-            "mode manually. This is done by connecting CEN to GND, while holding TX2 (Log_TX)\n"
-            "to GND as well. After doing that, you need to disconnect TX2 from GND.",
-            "If the download mode is enabled, you'll see a few garbage characters\n"
-            "printed to the serial console every second.",
-        ]
-
-    def flash_hw_reset(self) -> None:
-        if not self.rtl:
-            return
-        self.rtl.connect()
-
-    def flash_connect(self, force: bool = False) -> None:
+    def flash_build_protocol(self, force: bool = False) -> None:
         if not force and self.rtl:
             return
-        if self.rtl:
-            self.rtl._port.close()
-
+        self.flash_disconnect()
         self.rtl = RTLXMD(
             port=self.port,
             baud=self.baud,
             timeout=self.read_timeout,
             sync_timeout=self.link_timeout,
         )
+
+    def flash_hw_reset(self) -> None:
+        self.flash_build_protocol()
+        self.rtl.connect()
+
+    def flash_connect(self) -> None:
+        if self.rtl and self.is_linked:
+            return
+        self.flash_build_protocol()
         if not self.rtl.sync():
             raise TimeoutError(f"Failed to connect on port {self.port}")
+        self.is_linked = True
+
+    def flash_disconnect(self) -> None:
+        if self.rtl:
+            # noinspection PyProtectedMember
+            self.rtl._port.close()
+        self.rtl = None
+        self.is_linked = False
 
     def flash_get_chip_info_string(self) -> str:
-        return "Realtek AmebaZ TBD"
+        return "Realtek RTL87xxB"
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return AMEBAZ_GUIDE
 
     def flash_get_size(self) -> int:
         return 0x200000
