@@ -18,6 +18,7 @@ prettytable = "^3.3.0"
 bk7231tools = "^1.2.1"
 pycryptodomex = "^3.15.0"
 xmodem = "^0.4.6"
+pyelftools = "^0.29"
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
