@@ -84,7 +84,12 @@ def cli(
     start = start or 0
     length = length or soc.flash_get_size()
 
-    graph(0, f"Reading {sizeof(length)} from '{family.description}' to '{file.name}'")
+    graph(
+        0,
+        f"Reading {sizeof(length)} @ 0x{start:X} "
+        f"from '{family.description}' "
+        f"to '{file.name}'",
+    )
     with click.progressbar(length=length, width=64) as bar:
         for chunk in soc.flash_read_raw(start, length, verify=check):
             file.write(chunk)

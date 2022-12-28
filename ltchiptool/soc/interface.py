@@ -25,6 +25,9 @@ class SocInterface(ABC):
         if family.code == "ambz":
             from .ambz import AmebaZMain
             return AmebaZMain()
+        if family.code == "ambz2":
+            from .ambz2 import AmebaZ2Main
+            return AmebaZ2Main()
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
@@ -103,7 +106,8 @@ class SocInterface(ABC):
         raise NotImplementedError()
 
     def flash_connect(self) -> None:
-        """Link with the chip for read/write operations. Do nothing if already linked or not supported."""
+        """Link with the chip for read/write operations. Do nothing if
+        already linked or not supported."""
         raise NotImplementedError()
 
     def flash_disconnect(self) -> None:

@@ -69,5 +69,15 @@ def log_setup(verbosity: int, timed: bool):
     logger.addHandler(handler)
 
 
+def log_copy_setup(logger: str):
+    handler = LoggingHandler.INSTANCE
+    root = logging.getLogger("root")
+    logger = logging.getLogger(logger)
+    logger.setLevel(root.level)
+    for h in logger.handlers:
+        logger.removeHandler(h)
+    logger.addHandler(handler)
+
+
 def verbose(msg, *args, **kwargs):
     logging.log(VERBOSE, msg, *args, **kwargs)
