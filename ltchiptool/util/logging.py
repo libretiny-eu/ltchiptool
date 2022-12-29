@@ -1,6 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-22.
 
 import logging
+import sys
 from logging import LogRecord, StreamHandler
 from time import time
 
@@ -28,6 +29,7 @@ class LoggingHandler(StreamHandler):
     time_start: float
     time_prev: float
     timed: bool = False
+    raw: bool = False
 
     def __init__(self) -> None:
         super().__init__()
@@ -50,19 +52,26 @@ class LoggingHandler(StreamHandler):
 
         if self.timed:
             message = f"{log_prefix} [{elapsed_total:11.3f}] (+{elapsed_current:5.3f}s) {message}"
-        else:
+        elif not self.raw:
             message = f"{log_prefix}: {message}"
-        click.secho(message, fg=log_color)
+
+        file = sys.stderr if log_prefix in "WEC" else sys.stdout
+
+        if self.raw:
+            click.echo(message, file=file)
+        else:
+            click.secho(message, file=file, fg=log_color)
         self.time_prev += elapsed_current
 
 
-def log_setup(verbosity: int, timed: bool):
+def log_setup(verbosity: int, timed: bool, raw: bool):
     verbosity = min(verbosity, 2)
     handler = LoggingHandler()
     handler.timed = timed
+    handler.raw = raw
 
     logging.addLevelName(VERBOSE, "VERBOSE")
-    logger = logging.getLogger("root")
+    logger = logging.root
     logger.setLevel(VERBOSITY_LEVEL[verbosity])
     for h in logger.handlers:
         logger.removeHandler(h)
@@ -71,7 +80,7 @@ def log_setup(verbosity: int, timed: bool):
 
 def log_copy_setup(logger: str):
     handler = LoggingHandler.INSTANCE
-    root = logging.getLogger("root")
+    root = logging.root
     logger = logging.getLogger(logger)
     logger.setLevel(root.level)
     for h in logger.handlers:

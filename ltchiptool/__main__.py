@@ -45,6 +45,12 @@ FULL_TRACEBACK: bool = False
     help="Prepend log lines with timing info",
     is_flag=True,
 )
+@click.option(
+    "-r",
+    "--raw-log",
+    help="Output logging messages with no additional styling",
+    is_flag=True,
+)
 @click.version_option(
     get_version(),
     "-V",
@@ -57,11 +63,12 @@ def cli_entrypoint(
     verbose: int,
     traceback: bool,
     timed: bool,
+    raw_log: bool,
 ):
     global FULL_TRACEBACK
     FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
-    log_setup(verbosity=verbose, timed=timed)
+    log_setup(verbosity=verbose, timed=timed, raw=raw_log)
 
 
 def tb_echo(tb):
