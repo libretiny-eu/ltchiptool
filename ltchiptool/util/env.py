@@ -1,11 +1,17 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import json
-from os.path import expanduser, isdir, isfile, join
+from os.path import dirname, expanduser, isdir, isfile, join
 from typing import Dict, Union
 
 LT_PATH: Union[str, None] = None
 LT_JSON_CACHE: Dict[str, dict] = {}
+
+
+def lt_set_path(path: str) -> None:
+    global LT_PATH
+    if isfile(join(path, "families.json")) and isdir(join(path, "boards")):
+        LT_PATH = path
 
 
 def lt_find_path() -> str:
@@ -38,12 +44,26 @@ def lt_find_path() -> str:
     )
 
 
+def lt_find_json(name: str) -> str:
+    try:
+        path = join(lt_find_path(), name)
+        if isfile(path):
+            return path
+    except FileNotFoundError as e:
+        # LT can't be found, fallback to local copies
+        path = join(dirname(__file__), "..", name)
+        if not isfile(path):
+            # no local copy, raise the original exception
+            raise e
+        return path
+    # LT found, but no file by that name exists
+    raise FileNotFoundError(path)
+
+
 def lt_read_json(name: str) -> Union[dict, list]:
     global LT_JSON_CACHE
     if name not in LT_JSON_CACHE:
-        path = join(lt_find_path(), name)
-        if not isfile(path):
-            raise FileNotFoundError(path)
+        path = lt_find_json(name)
         with open(path, "rb") as f:
             LT_JSON_CACHE[name] = json.load(f)
     return LT_JSON_CACHE[name]

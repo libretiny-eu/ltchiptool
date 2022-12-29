@@ -145,7 +145,7 @@ def cli(
         uf2 = UF2(file)
         uf2.read(block_tags=False)
         ctx = UploadContext(uf2)
-        family = ctx.board.family
+        family = ctx.uf2.family
     elif file_type != "Raw" and not family:
         # file is of a common type (from FILE_TYPES)
         raise ValueError(

@@ -81,7 +81,7 @@ def dump(file: FileIO, output: str):
     if ctx.has_ota2:
         ota_idxs.append(2)
 
-    prefix = f"image_{ctx.board_name}_{ctx.board.family.code}"
+    prefix = f"image_{ctx.board_name}_{ctx.uf2.family.code}"
 
     for ota_idx in ota_idxs:
         ctx.seq = 0

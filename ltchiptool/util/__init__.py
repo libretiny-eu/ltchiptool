@@ -11,7 +11,7 @@ from .cli import (
 )
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
-from .env import lt_find_path, lt_read_json
+from .env import lt_find_path, lt_read_json, lt_set_path
 from .fileio import (
     chext,
     chname,
@@ -52,6 +52,7 @@ __all__ = [
     "log_setup",
     "lt_find_path",
     "lt_read_json",
+    "lt_set_path",
     "merge_dicts",
     "parse_argfile",
     "peek",
