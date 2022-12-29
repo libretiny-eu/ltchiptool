@@ -60,7 +60,7 @@ class SocInterfaceCommon(SocInterface, ABC):
 
         ota_idx = 1
         for elf, ldargs in elfs:
-            graph(1, f"Image {ota_idx}: {basename(elf)}")
+            graph(0, f"Image {ota_idx}: {basename(elf)}")
             if isfile(elf):
                 unlink(elf)
             toolchain.cmd(f"gcc", args=ldargs).read()

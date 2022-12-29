@@ -49,7 +49,7 @@ class BK72XXElf2Bin(SocInterface, ABC):
         fw_bin = chext(input, "bin")
         outputs = [out_rbl, out_crc, out_rblh, out_ota, out_ug]
         # print graph element
-        graph(2, basename(out_rbl))
+        graph(1, basename(out_rbl))
         # objcopy ELF -> raw BIN
         toolchain.objcopy(input, fw_bin)
         result[fw_bin] = None
@@ -74,7 +74,7 @@ class BK72XXElf2Bin(SocInterface, ABC):
         out = open(out_rbl, "wb")
 
         # open encrypted+CRC binary output
-        graph(2, basename(out_crc))
+        graph(1, basename(out_crc))
         crc = open(out_crc, "wb")
 
         # get partial (type, bytes) data generator
@@ -92,7 +92,7 @@ class BK72XXElf2Bin(SocInterface, ABC):
             out.write(b"\xff" * data)
 
         # open RBL header output
-        graph(2, basename(out_rblh))
+        graph(1, basename(out_rblh))
         rblh = open(out_rblh, "wb")
 
         # write all RBL blocks
@@ -114,7 +114,7 @@ class BK72XXElf2Bin(SocInterface, ABC):
             compression=str2enum(OTACompression, ota_compression)
             or OTACompression.NONE,
         )
-        graph(2, basename(out_ota))
+        graph(1, basename(out_ota))
         # seek back to start
         raw.seek(0, SEEK_SET)
         ota_gen = bk.ota_package(raw, rbl, key=ota_key, iv=ota_iv)
@@ -130,7 +130,7 @@ class BK72XXElf2Bin(SocInterface, ABC):
         result[out_ota] = None
 
         # write Tuya OTA package (UG)
-        graph(2, basename(out_ug))
+        graph(1, basename(out_ug))
         with open(out_ug, "wb") as ug:
             hdr = BytesIO()
             ota_bin = ota_data.getvalue()

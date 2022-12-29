@@ -2,7 +2,7 @@
 
 from enum import IntEnum
 from hashlib import sha256
-from logging import debug, info, warning
+from logging import debug, warning
 from math import ceil
 from time import time
 from typing import BinaryIO, Generator, List, Optional

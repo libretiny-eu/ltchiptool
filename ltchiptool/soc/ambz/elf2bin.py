@@ -44,7 +44,7 @@ class AmebaZElf2Bin(SocInterface, ABC):
         out_xip = chname(input, f"ota{ota_idx}.xip_image2.bin")
         out_rdp = chname(input, f"ota{ota_idx}.rdp.bin")
         # print graph element
-        graph(2, basename(output))
+        graph(1, basename(output))
         # objcopy required images
         ram = toolchain.objcopy(input, out_ram, sections_ram)
         xip = toolchain.objcopy(input, out_xip, sections_xip)

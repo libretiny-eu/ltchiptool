@@ -44,7 +44,7 @@ class Toolchain:
         if not sections:
             sections = []
         # print graph element
-        graph(3, basename(output))
+        graph(2, basename(output))
         if isnewer(input, output):
             args = []
             for section in sections:

@@ -30,6 +30,7 @@ class LoggingHandler(StreamHandler):
     time_prev: float
     timed: bool = False
     raw: bool = False
+    indent: int = 0
 
     def __init__(self) -> None:
         super().__init__()
@@ -50,6 +51,16 @@ class LoggingHandler(StreamHandler):
 
         log_color = color or LOG_COLORS[log_prefix]
 
+        if self.indent:
+            empty = (
+                not message.strip()
+                or message.startswith("|")
+                or message.startswith("  ")
+            )
+            prefix = (self.indent - 1) * "|   "
+            prefix += "|   " if empty else "|-- "
+            message = prefix + message
+
         if self.timed:
             message = f"{log_prefix} [{elapsed_total:11.3f}] (+{elapsed_current:5.3f}s) {message}"
         elif not self.raw:
@@ -64,11 +75,12 @@ class LoggingHandler(StreamHandler):
         self.time_prev += elapsed_current
 
 
-def log_setup(verbosity: int, timed: bool, raw: bool):
+def log_setup(verbosity: int, timed: bool, raw: bool, indent: int):
     verbosity = min(verbosity, 2)
     handler = LoggingHandler()
     handler.timed = timed
     handler.raw = raw
+    handler.indent = indent
 
     logging.addLevelName(VERBOSE, "VERBOSE")
     logger = logging.root

@@ -51,6 +51,13 @@ FULL_TRACEBACK: bool = False
     help="Output logging messages with no additional styling",
     is_flag=True,
 )
+@click.option(
+    "-i",
+    "--indent",
+    help="Indent log messages using graph lines",
+    type=int,
+    default=0,
+)
 @click.version_option(
     get_version(),
     "-V",
@@ -64,11 +71,12 @@ def cli_entrypoint(
     traceback: bool,
     timed: bool,
     raw_log: bool,
+    indent: int,
 ):
     global FULL_TRACEBACK
     FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
-    log_setup(verbosity=verbose, timed=timed, raw=raw_log)
+    log_setup(verbosity=verbose, timed=timed, raw=raw_log, indent=indent)
 
 
 def tb_echo(tb):
