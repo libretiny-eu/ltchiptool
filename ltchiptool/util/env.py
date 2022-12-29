@@ -16,7 +16,7 @@ def lt_set_path(path: str) -> None:
 
 def lt_find_path() -> str:
     global LT_PATH
-    if LT_PATH:
+    if LT_PATH and isdir(LT_PATH):
         return LT_PATH
     # try to import PIO modules first
     try:
