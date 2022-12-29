@@ -2,6 +2,7 @@
 
 from binascii import crc32
 from io import FileIO
+from logging import error, info
 from os import makedirs
 from os.path import basename, dirname, join
 
@@ -58,11 +59,11 @@ def split(board: Board, input: FileIO, output: str, trim: bool, checksum: bool):
     for name in board["flash"].keys():
         (start, length, end) = board.region(name)
         if end > len(dump):
-            print(f"Partition '{name}' is out of bounds!")
-            print(f" - Dump size: {hex(len(dump))}")
-            print(f" - Partition start: {hex(start)}")
-            print(f" - Partition length: {hex(length)}")
-            print(f" - Partition end: {hex(end)}")
+            error(f"Partition '{name}' is out of bounds!")
+            error(f" - Dump size: {hex(len(dump))}")
+            error(f" - Partition start: {hex(start)}")
+            error(f" - Partition length: {hex(length)}")
+            error(f" - Partition end: {hex(end)}")
             raise ValueError("Partition out of bounds")
 
         part = dump[start:end]
@@ -79,6 +80,6 @@ def split(board: Board, input: FileIO, output: str, trim: bool, checksum: bool):
                 cs = CRC16.ARC.calc(part)
                 cs = cs.to_bytes(length=2, byteorder="big")
             filename = f"{offset}_{name}_{cs.hex().upper()}.bin"
-        print(f"Writing {filename}")
+        info(f"Writing {filename}")
         with open(join(output, filename), "wb") as f:
             f.write(part)

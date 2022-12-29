@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
-from io import SEEK_SET, FileIO
+import logging
+from io import FileIO
 from os import makedirs
 from os.path import join
 from time import time
@@ -8,11 +9,9 @@ from typing import Tuple
 
 import click
 
-from ltchiptool import Family, SocInterface
+from ltchiptool import Family
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import unpack_obj
 from uf2tool.models import UF2, Input, InputParamType, UploadContext
-from uf2tool.upload import ESPHomeUploader
 from uf2tool.writer import UF2Writer
 
 
@@ -82,81 +81,30 @@ def dump(file: FileIO, output: str):
     if ctx.has_ota2:
         ota_idxs.append(2)
 
-    prefix = f"image_{ctx.board_name}_{ctx.board.family.code}"
+    prefix = f"image_{ctx.board_name}_{ctx.uf2.family.code}"
 
     for ota_idx in ota_idxs:
         ctx.seq = 0
         for offset, data in ctx.collect(ota_idx).items():
             path = f"{prefix}_ota{ota_idx}_0x{offset:X}.bin"
-            print(f"Writing to {path}")
+            logging.info(f"Writing to {path}")
             with open(join(output, path), "wb") as f:
                 f.write(data.read())
 
 
-@cli.group(help="Upload UF2 file to IoT device")
-@click.argument("file", type=click.File("rb"))
-@click.pass_context
-def upload(ctx, file: FileIO):
-    uf2 = UF2(file)
-    uf2.read(block_tags=False)
-    context = UploadContext(uf2)
-    print(
-        f"|-- {context.fw_name} {context.fw_version} @ {context.build_date} -> {context.board_name}"
-    )
-    ctx.obj["file"] = file
-    ctx.obj["start"] = time()
-    ctx.obj["uf2"] = uf2
-    ctx.obj["ctx"] = context
-    ctx.obj["board"] = context.board
-    ctx.obj["family"] = context.board.family
-    ctx.obj["soc"] = SocInterface.get(context.board.family)
-
-
-@upload.command("uart", help="Upload using UART protocol")
-@click.argument("PORT")
-@click.option("-b", "--baud", help="Baudrate (board default)", type=int)
-@click.option(
-    "-t", "--timeout", help="Timeout (transmission, linking, etc.)", type=float
+@cli.command(
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+    hidden=True,
+    deprecated=True,
+    no_args_is_help=True,
 )
-@unpack_obj
-def upload_uart(soc: SocInterface, start: float, **kwargs):
-    print("|-- Using UART")
-    soc.upload_uart(**kwargs)
-    duration = time() - start
-    print(f"|-- Finished in {duration:.3f} s")
+@click.argument("_", nargs=-1)
+def upload(*_, **__):
+    """
 
-
-@upload.command("openocd", help="Upload with OpenOCD")
-def upload_openocd():
-    raise NotImplementedError()
-
-
-@upload.command("esphome", help="Upload via ESPHome OTA")
-@click.argument("HOST")
-@click.option("-P", "--port", help="OTA port", default=8892, type=int)
-@click.option("-p", "--password", help="OTA password", default=None)
-@click.option("-v", "--verbose", help="Print debugging info", is_flag=True)
-@unpack_obj
-def upload_esphome(
-    uf2: UF2,
-    file: FileIO,
-    host: str,
-    port: int,
-    password: str,
-    verbose: bool,
-    start: float,
-    **kwargs,
-):
-    file.seek(0, SEEK_SET)
-    print(f"|-- Using ESPHome OTA ({host}:{port})")
-    esphome = ESPHomeUploader(
-        file=file,
-        md5=uf2.md5.digest(),
-        host=host,
-        port=port,
-        password=password,
-        debug=verbose,
-    )
-    esphome.upload()
-    duration = time() - start
-    print(f"|-- Finished in {duration:.3f} s")
+    This command was removed in v2.0.0.
+    Please use 'ltchiptool flash write' instead.
+    """
+    raise NotImplementedError(upload.__doc__)

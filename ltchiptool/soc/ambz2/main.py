@@ -1,4 +1,4 @@
-# Copyright (c) Kuba Szczodrzyński 2022-07-29.
+#  Copyright (c) Kuba Szczodrzyński 2022-12-28.
 
 from abc import ABC
 from logging import info
@@ -6,13 +6,11 @@ from logging import info
 from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
-from .binary import AmebaZBinary
-from .flash import AmebaZFlash
+from .flash import AmebaZ2Flash
 
 
-class AmebaZMain(
-    AmebaZBinary,
-    AmebaZFlash,
+class AmebaZ2Main(
+    AmebaZ2Flash,
     SocInterfaceCommon,
     ABC,
 ):
@@ -21,7 +19,7 @@ class AmebaZMain(
         self.family = family
 
     def hello(self):
-        info("Hello from AmebaZ")
+        info("Hello from AmebaZ2")
 
     @property
     def elf_has_dual_ota(self) -> bool:

@@ -35,16 +35,32 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+    - name: Checkout LT repository
+      uses: actions/checkout@v3
+      with:
+        repository: kuba2k2/libretuya
+        path: libretuya
+
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
         python-version: '3.10'
+
     - name: Install poetry
       uses: Gr1N/setup-poetry@v7
+
+    - name: Copy LT data snapshot
+      run: |
+        mkdir -p ltchiptool/boards/_base
+        cp libretuya/families.json ltchiptool/
+        cp libretuya/boards/*.json ltchiptool/boards/
+        cp -r libretuya/boards/_base/ ltchiptool/boards/
+
     - name: Build package
       run: poetry build
     - name: Publish to PyPI
       run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+
     # - name: Add GitHub release assets
     #   uses: softprops/action-gh-release@v1
     #   with:
@@ -53,6 +69,7 @@ jobs:
     #       dist/*.tar.gz
     #   env:
     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Upload workflow artifact
       uses: actions/upload-artifact@v3
       with:

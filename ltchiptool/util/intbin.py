@@ -144,6 +144,15 @@ def uintmax(bits: int) -> int:
     return (2**bits) - 1
 
 
+def gen2bytes(gen: ByteSource) -> bytes:
+    """Concatenate all data from 'gen' into a bytes object."""
+    if isinstance(gen, bytes):
+        return gen
+    if isinstance(gen, IO):
+        return gen.read()
+    return b"".join(gen)
+
+
 def biniter(data: bytes, size: int) -> ByteGenerator:
     """Iterate over 'data' in 'size'-bytes long chunks, returning
     a generator."""

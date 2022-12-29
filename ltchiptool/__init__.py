@@ -9,6 +9,13 @@ __all__ = [
     "Board",
     "Family",
     "SocInterface",
+    "cli",
     "get_version",
     "util",
 ]
+
+
+def cli():
+    from .__main__ import cli
+
+    cli()

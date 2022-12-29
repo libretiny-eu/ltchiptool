@@ -46,6 +46,7 @@ class Family:
         short_name: str = None,
         name: str = None,
         code: str = None,
+        by_parent: bool = False,
     ) -> "Family":
         if any:
             id = any
@@ -62,6 +63,12 @@ class Family:
             if name and family.name == name.lower():
                 return family
             if code and family.code == code.lower():
+                return family
+            if not by_parent:
+                continue
+            if name and family.parent == name.lower():
+                return family
+            if code and family.parent_code == code.lower():
                 return family
         if any:
             raise ValueError(f"Family not found - {any}")
@@ -107,8 +114,12 @@ class Family:
 class FamilyParamType(click.ParamType):
     name = "family"
 
+    def __init__(self, by_parent: bool = False) -> None:
+        super().__init__()
+        self.by_parent = by_parent
+
     def convert(self, value, param, ctx) -> Family:
         try:
-            return Family.get(value)
+            return Family.get(value, by_parent=self.by_parent)
         except FileNotFoundError:
             self.fail(f"Family {value} does not exist", param, ctx)
