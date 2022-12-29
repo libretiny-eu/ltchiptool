@@ -75,7 +75,7 @@ class SocInterface(ABC):
         ota1: str,
         ota2: str,
         args: List[str],
-    ) -> List[str]:
+    ) -> Dict[int, str]:
         raise NotImplementedError()
 
     def elf2bin(

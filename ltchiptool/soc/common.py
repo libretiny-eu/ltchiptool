@@ -48,7 +48,7 @@ class SocInterfaceCommon(SocInterface, ABC):
         ota1: str,
         ota2: str,
         args: List[str],
-    ) -> List[str]:
+    ) -> Dict[int, str]:
         toolchain = self.board.toolchain
 
         if self.elf_has_dual_ota:
@@ -72,7 +72,7 @@ class SocInterfaceCommon(SocInterface, ABC):
             elf, _ = ldargs_parse(args, None, None)[0]
             copyfile(elfs[0][0], elf)
 
-        return [elf for elf, _ in elfs]
+        return {ota_idx + 1: elf for ota_idx, (elf, _) in enumerate(elfs)}
 
     def link2bin(
         self,
@@ -83,10 +83,8 @@ class SocInterfaceCommon(SocInterface, ABC):
         elfs = self.link2elf(ota1, ota2, args)
         output = {}
 
-        ota_idx = 1
-        for elf, ldargs in elfs:
+        for ota_idx, elf in elfs.items():
             # generate a set of binaries for the SoC
             bins = self.elf2bin(elf, ota_idx)
             output.update(bins)
-            ota_idx += 1
         return output
