@@ -3,6 +3,7 @@
 from abc import ABC
 from logging import info
 
+from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
 from .flash import AmebaZ2Flash
@@ -13,6 +14,10 @@ class AmebaZ2Main(
     SocInterfaceCommon,
     ABC,
 ):
+    def __init__(self, family: Family) -> None:
+        super().__init__()
+        self.family = family
+
     def hello(self):
         info("Hello from AmebaZ2")
 

@@ -10,6 +10,7 @@ from uf2tool import UploadContext
 
 
 class SocInterface(ABC):
+    family: Family = None
     board: Board = None
     port: str = None
     baud: int = None
@@ -21,13 +22,13 @@ class SocInterface(ABC):
         # fmt: off
         if family.parent_code == "bk72xx":
             from .bk72xx import BK72XXMain
-            return BK72XXMain()
+            return BK72XXMain(family)
         if family.code == "ambz":
             from .ambz import AmebaZMain
-            return AmebaZMain()
+            return AmebaZMain(family)
         if family.code == "ambz2":
             from .ambz2 import AmebaZ2Main
-            return AmebaZ2Main()
+            return AmebaZ2Main(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 

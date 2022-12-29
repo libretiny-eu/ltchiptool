@@ -118,7 +118,10 @@ def _format_flash_guide(soc: SocInterface) -> List[str]:
 
 
 def flash_link_interactive(
-    soc: SocInterface, port: str, baud: int, link_timeout: float
+    soc: SocInterface,
+    port: str,
+    baud: int,
+    link_timeout: float,
 ):
     for stage in range(4):
         debug(f"Linking: stage {stage}")
@@ -140,7 +143,11 @@ def flash_link_interactive(
         try:
             if stage == 0:
                 # print once, but after setting port and baud
-                graph(0, f"Connecting on {soc.port} @ {soc.baud}")
+                graph(
+                    0,
+                    f"Connecting to '{soc.family.description}' "
+                    f"on {soc.port} @ {soc.baud}",
+                )
             soc.flash_disconnect()
             soc.flash_connect()
             break

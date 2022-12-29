@@ -157,6 +157,9 @@ def cli(
         )
         return
 
+    if file_type != "Raw":
+        graph(0, f"Detected file type: {file_type}")
+
     # 1. file type found using SocInterface
     # 2. flashing in Raw mode (-f + -s)
     # 3. common file type (UF2 only, for now)
@@ -167,7 +170,7 @@ def cli(
         soc = SocInterface.get(family)
     flash_link_interactive(soc, device, baudrate, timeout)
 
-    graph(0, f"Writing '{file.name}' ({file_type}) to '{family.description}'")
+    graph(0, f"Writing '{file.name}'")
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
         generator = soc.flash_write_uf2(ctx, verify=check)

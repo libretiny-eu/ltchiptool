@@ -3,6 +3,7 @@
 from abc import ABC
 from logging import info
 
+from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
 from .elf2bin import BK72XXElf2Bin
@@ -15,6 +16,10 @@ class BK72XXMain(
     SocInterfaceCommon,
     ABC,
 ):
+    def __init__(self, family: Family) -> None:
+        super().__init__()
+        self.family = family
+
     def hello(self):
         info("Hello from BK72xx")
 
