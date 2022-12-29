@@ -393,4 +393,3 @@ pip-selfcheck.json
 *.crc
 *.bat
 *.ota
-ltchiptool/**/*.json
