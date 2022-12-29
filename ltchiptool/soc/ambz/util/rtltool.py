@@ -283,6 +283,7 @@ class RTLXMD:
                 if not data:  # end of stream
                     print("send: at EOF")
                     return False
+                yield len(data)
                 data = data.ljust(packet_size, b"\xFF")
                 pkt = (
                     struct.pack("<BBBI", ord(cmd), sequence, 0xFF - sequence, offset)
@@ -384,9 +385,15 @@ def main(*argv):
                 "Write Flash data 0x%08x to 0x%08x from file: %s ..."
                 % (offset, offset + size, args.filename)
             )
-            if not rtl.WriteBlockFlash(stream, args.address, size):
-                stream.close()
-                raise RuntimeError("Write Flash!")
+            gen = rtl.WriteBlockFlash(stream, args.address, size)
+            for _ in gen:
+                pass
+            try:
+                next(gen)
+            except StopIteration as e:
+                if not e.value:
+                    stream.close()
+                    raise RuntimeError("Write Flash!")
             stream.close()
         # 			print 'Done!'
         # 			sys.exit(0)
@@ -416,9 +423,15 @@ def main(*argv):
                 "Write SRAM at 0x%08x to 0x%08x from file: %s ..."
                 % (args.address, args.address + size, args.filename)
             )
-            if not rtl.WriteBlockSRAM(stream, args.address, size):
-                stream.close()
-                raise RuntimeError("Write Flash!")
+            gen = rtl.WriteBlockSRAM(stream, args.address, size)
+            for _ in gen:
+                pass
+            try:
+                next(gen)
+            except StopIteration as e:
+                if not e.value:
+                    stream.close()
+                    raise RuntimeError("Write Flash!")
             stream.close()
             print("Done!")
             sys.exit(0)
@@ -452,11 +465,8 @@ def main(*argv):
         elif args.operation == "bf":
             print("BOOT_ROM_FromFlash()...")  # ROM-Call:00005404
             stream = io.BytesIO(b"\x05\x54\x00\x00")
-            if not rtl.WriteBlockSRAM(
-                stream, 0x10002000, 4
-            ):  # [0x10002000] = 0x00005405
-                stream.close()
-                raise RuntimeError("Error!")
+            # [0x10002000] = 0x00005405
+            list(rtl.WriteBlockSRAM(stream, 0x10002000, 4))
             print("Done!")
             rtl._port.close()
             rtl._port.baudrate = 115200
@@ -480,9 +490,8 @@ def main(*argv):
                 b"\x08\xb5\x02\x4c\x4f\xf4\x7a\x70"
                 b"\xa0\x47\xfb\xe7\x05\x22\x00\x00"
             )
-            if not rtl.WriteBlockSRAM(stream, 0x10002000, 40):  # [0x10002000] = ...
-                stream.close()
-                raise RuntimeError("Error!")
+            # [0x10002000] = ...
+            list(rtl.WriteBlockSRAM(stream, 0x10002000, 40))
             print("Done!")
             sys.exit(0)
     else:
@@ -493,9 +502,8 @@ def main(*argv):
             raise RuntimeError("Sync!")
         print("BOOT FromFlash...")  # ROM-Call:00005404
         stream = io.BytesIO(b"\x05\x54\x00\x00")
-        if not rtl.WriteBlockSRAM(stream, 0x10002000, 4):  # [0x10002000] = 0x00005405
-            stream.close()
-            raise RuntimeError("Error!")
+        # [0x10002000] = 0x00005405
+        list(rtl.WriteBlockSRAM(stream, 0x10002000, 4))
     print("Done!")
     sys.exit(0)
 

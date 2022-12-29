@@ -232,7 +232,7 @@ def cli(
                     bar.update(data)
             elif isinstance(data, str):
                 bar.label = data
-                bar.update(0)
+                bar.render_progress()
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import BinaryIO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util.intbin import gen2bytes, letoint
+from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
 from uf2tool import UploadContext
 
 from .util.rtltool import RTL_ROM_BAUD, RTLXMD
@@ -102,9 +102,9 @@ class AmebaZFlash(SocInterface, ABC):
     ) -> Generator[int, None, None]:
         self.flash_connect()
         offset |= 0x8000000
-        if not self.rtl.WriteBlockFlash(data, offset, length):
+        success = yield from self.rtl.WriteBlockFlash(data, offset, length)
+        if not success:
             raise ValueError(f"Failed to write to 0x{offset:X}")
-        yield data.tell()
 
     def flash_write_uf2(
         self,
@@ -132,8 +132,8 @@ class AmebaZFlash(SocInterface, ABC):
 
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
-        # yield the total writing length
-        yield sum(len(part.getvalue()) for part in parts.values())
+        # yield the total writing length (plus boot-from-flash command)
+        yield sum(len(part.getvalue()) for part in parts.values()) + 4
 
         yield f"OTA {ota_idx}"
         # write blocks to flash
@@ -145,5 +145,5 @@ class AmebaZFlash(SocInterface, ABC):
 
         yield "Booting firmware"
         # [0x10002000] = 0x00005405
-        stream = BytesIO(b"\x05\x54\x00\x00")
-        self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)
+        stream = BytesIO(inttole32(0x00005405))
+        yield from self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)
