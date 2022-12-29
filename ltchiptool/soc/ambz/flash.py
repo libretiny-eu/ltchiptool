@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import FileIO
+from io import BytesIO, FileIO
 from struct import unpack
 from typing import BinaryIO, Generator, List, Optional, Tuple, Union
 
@@ -208,3 +208,8 @@ class AmebaZFlash(SocInterface, ABC):
             data.seek(0)
             yield f"OTA {ota_idx} (0x{offset:06X})"
             yield from self.flash_write_raw(offset, length, data, verify)
+
+        yield "Booting firmware"
+        # [0x10002000] = 0x00005405
+        stream = BytesIO(b"\x05\x54\x00\x00")
+        self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)

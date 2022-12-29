@@ -251,5 +251,6 @@ class BK72XXFlash(SocInterface, ABC):
                 dry_run=False,
                 really_erase=True,
             )
+        yield "Booting firmware"
         # reboot the chip
         self.bk.reboot_chip()
