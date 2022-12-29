@@ -76,6 +76,9 @@ class AmebaZFlash(SocInterface, ABC):
     def flash_get_size(self) -> int:
         return 0x200000
 
+    def flash_get_rom_size(self) -> int:
+        raise NotImplementedError("ROM is not readable via UART on RTL87xxB")
+
     def flash_read_raw(
         self,
         start: int,
@@ -83,6 +86,8 @@ class AmebaZFlash(SocInterface, ABC):
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
+        if use_rom:
+            self.flash_get_rom_size()
         self.flash_connect()
         success = yield from self.rtl.ReadBlockFlashGenerator(start, length)
         if not success:

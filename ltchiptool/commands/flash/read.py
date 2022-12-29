@@ -54,6 +54,12 @@ from ._utils import flash_link_interactive
     help="Check hash/CRC of the read data (default: True)",
     default=True,
 )
+@click.option(
+    "-R",
+    "--rom",
+    help="Read from ROM instead of Flash (default: False)",
+    is_flag=True,
+)
 def cli(
     family: Family,
     file: FileIO,
@@ -63,6 +69,7 @@ def cli(
     length: int,
     timeout: float,
     check: bool,
+    rom: bool,
 ):
     """
     Read flash contents to a file.
@@ -81,12 +88,27 @@ def cli(
     soc = SocInterface.get(family)
     flash_link_interactive(soc, device, baudrate, timeout)
 
-    start = start or 0
-    length = length or soc.flash_get_size()
+    if rom:
+        max_length = soc.flash_get_rom_size()
+    else:
+        max_length = soc.flash_get_size()
 
-    graph(0, f"Reading {sizeof(length)} @ 0x{start:X} to '{file.name}'")
+    start = start or 0
+    length = length or (max_length - start)
+
+    if start + length > max_length:
+        raise ValueError(
+            f"Reading length {sizeof(length)} @ 0x{start:X} is more than "
+            f"chip capacity ({sizeof(max_length)})",
+        )
+
+    if rom:
+        graph(0, f"Reading ROM ({sizeof(length)}) to '{file.name}'")
+    else:
+        graph(0, f"Reading {sizeof(length)} @ 0x{start:X} to '{file.name}'")
+
     with click.progressbar(length=length, width=64) as bar:
-        for chunk in soc.flash_read_raw(start, length, verify=check):
+        for chunk in soc.flash_read_raw(start, length, verify=check, use_rom=rom):
             file.write(chunk)
             bar.update(len(chunk))
 

@@ -9,6 +9,7 @@ from typing import BinaryIO, Generator, List, Optional, Union
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
+from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
 from uf2tool import UploadContext
 
@@ -83,6 +84,12 @@ class BK72XXFlash(SocInterface, ABC):
     def flash_get_size(self) -> int:
         return 0x200000
 
+    def flash_get_rom_size(self) -> int:
+        self.flash_connect()
+        if self.bk.chip_info != "0x7231c":
+            raise NotImplementedError("Only BK7231N has built-in ROM")
+        return 16 * 1024
+
     def flash_read_raw(
         self,
         start: int,
@@ -91,6 +98,14 @@ class BK72XXFlash(SocInterface, ABC):
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
+
+        if use_rom:
+            if start % 4 != 0 or length % 4 != 0:
+                raise ValueError("Offset and length must be 4-byte aligned")
+            for address in range(start, start + length, 4):
+                reg = self.bk.register_read(address)
+                yield inttole32(reg)
+            return
 
         crc_offset = start
         crc_length = 0

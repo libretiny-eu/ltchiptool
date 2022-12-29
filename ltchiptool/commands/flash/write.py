@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
 from io import SEEK_CUR, SEEK_SET, FileIO
-from logging import debug, error, fatal
+from logging import debug, fatal
 from os import stat
 from time import time
 
@@ -91,7 +91,8 @@ def cli(
     - specifying -S/--skip will only consider the file after skipping
     - specifying -f/--family and -s/--start disables the auto-detection entirely
 
-    Note that flashing unrecognized files is possible, but requires -f/--family and -s/--start.
+    Note that flashing unrecognized files is possible,
+    but requires -f/--family and -s/--start.
 
     When not specified (-d), the first UART port is used. The baud rate (-b)
     is chosen automatically, depending on the chip capabilities.
@@ -108,8 +109,7 @@ def cli(
 
     if family is None and start is not None:
         # not possible
-        error("Specifying -s/--start without -f/--family is not possible")
-        return
+        raise ValueError("Specifying -s/--start without -f/--family is not possible")
 
     ctx = None
     if family and start is not None:
@@ -123,20 +123,21 @@ def cli(
 
     if not file_type:
         # file type not found using auto-detection
-        error(
+        raise ValueError(
             f"'{file.name}' is of an unknown type. "
-            f"To flash raw files, use -f/--family and -s/--start."
+            f"To flash raw files, use -f/--family and -s/--start.",
         )
-        return
 
     # different handling of common file types
     if file_type == "UF2":
         if family is not None:
-            error("Can't specify -f/--family for flashing UF2 files")
-            return
+            raise ValueError(
+                "Can't specify -f/--family " "for flashing UF2 files",
+            )
         if length:
-            error("Can't specify -s/--start and -l/--length for flashing UF2 files")
-            return
+            raise ValueError(
+                "Can't specify -s/--start and -l/--length for flashing UF2 files",
+            )
         from uf2tool import UploadContext
         from uf2tool.models import UF2
 
@@ -146,16 +147,16 @@ def cli(
         family = ctx.board.family
     elif file_type != "Raw" and not family:
         # file is of a common type (from FILE_TYPES)
-        error(f"'{file.name}' is a '{file_type}' file - it's not directly flashable")
-        return
+        raise ValueError(
+            f"'{file.name}' is a '{file_type}' file - it's not directly flashable",
+        )
 
     if soc and auto_start is None:
         # file type found using SocInterface, but marked as not flashable
-        error(
+        raise ValueError(
             f"'{file.name}' is a '{file_type}' file - it's not "
-            f"directly flashable to '{family.description}'"
+            f"directly flashable to '{family.description}'",
         )
-        return
 
     if file_type != "Raw":
         graph(0, f"Detected file type: {file_type}")
@@ -206,12 +207,14 @@ def cli(
             graph(1, f"Skipped data: {auto_skip_str}" + auto_str)
 
         if (auto_skip or 0) + length > file_size or length <= 0:
-            error(f"File is too small")
-            return
-        flash_size = soc.flash_get_size()
-        if start + length > flash_size:
-            error(f"Flash is too small")
-            return
+            raise ValueError(f"File is too small")
+
+        max_length = soc.flash_get_size()
+        if start + length > max_length:
+            raise ValueError(
+                f"Writing length {sizeof(length)} @ 0x{start:X} is more than "
+                f"chip capacity ({sizeof(max_length)})",
+            )
 
         if auto_skip:
             file.seek(auto_skip, SEEK_CUR)

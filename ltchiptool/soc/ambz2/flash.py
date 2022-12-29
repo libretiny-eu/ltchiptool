@@ -55,6 +55,9 @@ class AmebaZ2Flash(SocInterface, ABC):
     def flash_get_size(self) -> int:
         return 0x200000
 
+    def flash_get_rom_size(self) -> int:
+        return 384 * 1024
+
     def flash_read_raw(
         self,
         start: int,
@@ -66,7 +69,7 @@ class AmebaZ2Flash(SocInterface, ABC):
         yield from self.amb.memory_read(
             offset=start,
             length=length,
-            use_flash=True,
+            use_flash=not use_rom,
             hash_check=verify,
             yield_size=1024,
         )

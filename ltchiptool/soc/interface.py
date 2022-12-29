@@ -139,6 +139,11 @@ class SocInterface(ABC):
         """Retrieve the flash size, in bytes."""
         raise NotImplementedError()
 
+    def flash_get_rom_size(self) -> int:
+        """Retrieve the ROM size, in bytes. Raises NotImplementedError() if ROM is
+        not available or not readable."""
+        raise NotImplementedError()
+
     def flash_read_raw(
         self,
         start: int,
