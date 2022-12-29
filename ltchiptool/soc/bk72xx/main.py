@@ -6,12 +6,12 @@ from logging import info
 from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
-from .elf2bin import BK72XXElf2Bin
+from .binary import BK72XXBinary
 from .flash import BK72XXFlash
 
 
 class BK72XXMain(
-    BK72XXElf2Bin,
+    BK72XXBinary,
     BK72XXFlash,
     SocInterfaceCommon,
     ABC,

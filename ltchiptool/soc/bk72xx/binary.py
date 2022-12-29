@@ -2,15 +2,15 @@
 
 from abc import ABC
 from datetime import datetime
-from io import SEEK_SET, BytesIO
+from io import SEEK_SET, BytesIO, FileIO
 from logging import warning
 from os import stat
 from os.path import basename
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util import chext, chname, graph, isnewer, str2enum
-from ltchiptool.util.intbin import inttobe32, pad_data
+from ltchiptool.util import CRC16, chext, chname, graph, isnewer, peek, str2enum
+from ltchiptool.util.intbin import betoint, gen2bytes, inttobe32, pad_data
 
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
 
@@ -19,7 +19,20 @@ def calc_offset(addr: int) -> int:
     return int(addr + (addr // 32) * 2)
 
 
-class BK72XXElf2Bin(SocInterface, ABC):
+def check_app_code_crc(data: bytes) -> Union[bool, None]:
+    # b #0x40
+    # ldr pc, [pc, #0x14]
+    if data[0:8] == b"\x2F\x07\xB5\x94\x35\xFF\x2A\x9B":
+        crc = CRC16.CMS.calc(data[0:32])
+        crc_found = betoint(data[32:34])
+        if crc == crc_found:
+            return True
+        warning("File CRC16 invalid. Considering as non-CRC file.")
+        return
+    return None
+
+
+class BK72XXBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
         toolchain = self.board.toolchain
         result: Dict[str, Optional[int]] = {}
@@ -151,3 +164,72 @@ class BK72XXElf2Bin(SocInterface, ABC):
         rblh.close()
         ota.close()
         return result
+
+    def detect_file_type(
+        self,
+        file: FileIO,
+        length: int,
+    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+        data = peek(file, size=96)
+        if not data:
+            return None
+        bk = BekenBinary()
+
+        # app firmware file - opcodes encrypted for 0x10000
+        app_code = check_app_code_crc(data)
+        if app_code is None:
+            pass
+        elif app_code:
+            return "Beken CRC App", 0x11000, 0, min(length, 0x121000)
+        elif not app_code:
+            return "Beken Encrypted App", None, 0, 0
+
+        # raw firmware binary
+        if data[0:8] == b"\x0E\x00\x00\xEA\x14\xF0\x9F\xE5":
+            return "Raw ARM Binary", None, 0, 0
+
+        # RBL file for OTA - 'download' partition
+        try:
+            rbl = RBL.deserialize(data)
+            if rbl.encryption or rbl.compression:
+                return "Beken OTA", None, 0, 0
+        except ValueError:
+            # no OTA RBL - continue checking
+            pass
+
+        # tried all known non-CRC formats - make sure CRC is okay
+        try:
+            bk.uncrc(data[0 : 34 * 2], check=True)
+        except ValueError:
+            # invalid CRC - nothing more to do
+            return None
+
+        # CRC is okay, but it's not app file - try to find bootloader RBL
+        # read RBL+CRC and app opcodes
+        data = peek(file, size=34 * 4, seek=0x10F9A)
+        if not data:
+            return None
+
+        # file with bootloader - possibly a full dump
+        try:
+            rbl_data = gen2bytes(bk.uncrc(data[0 : 34 * 3], check=True))
+            rbl = RBL.deserialize(rbl_data)
+            if rbl.encryption or rbl.compression:
+                return None
+        except ValueError:
+            # no bootloader RBL - give up
+            return None
+
+        # full dump file - encrypted app opcodes at 0x11000
+        app_code = check_app_code_crc(data[34 * 3 : 34 * 4])
+        if app_code:
+            blocks = length // 1024
+            if blocks == 2048:
+                name = "Beken Full Dump"
+            elif blocks == 1192:
+                name = "Beken BL+APP Dump"
+            else:
+                name = "Beken Incomplete Dump"
+            return name, 0x11000, 0x11000, min(length - 0x11000, 0x121000)
+
+        return None

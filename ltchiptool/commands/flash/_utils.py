@@ -68,7 +68,7 @@ def get_file_type(
                 continue
             try:
                 soc = SocInterface.get(f)
-                tpl = soc.flash_get_file_type(file, length=file_size)
+                tpl = soc.detect_file_type(file, length=file_size)
             except NotImplementedError:
                 tpl = None
             if tpl:
@@ -80,7 +80,7 @@ def get_file_type(
         # check the specified family only
         try:
             soc = SocInterface.get(family)
-            tpl = soc.flash_get_file_type(file, length=file_size)
+            tpl = soc.detect_file_type(file, length=file_size)
         except NotImplementedError:
             tpl = None
         if tpl:

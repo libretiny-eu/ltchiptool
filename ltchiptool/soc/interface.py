@@ -94,6 +94,18 @@ class SocInterface(ABC):
     ) -> Dict[str, Optional[int]]:
         raise NotImplementedError()
 
+    def detect_file_type(
+        self,
+        file: FileIO,
+        length: int,
+    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+        """
+        Check if the file is flashable to this SoC.
+
+        :return: a tuple: (file type, start, skip, length), or None if type unknown
+        """
+        raise NotImplementedError()
+
     #########################################################
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
@@ -125,18 +137,6 @@ class SocInterface(ABC):
 
     def flash_get_size(self) -> int:
         """Retrieve the flash size, in bytes."""
-        raise NotImplementedError()
-
-    def flash_get_file_type(
-        self,
-        file: FileIO,
-        length: int,
-    ) -> Optional[Tuple[str, Optional[int], int, int]]:
-        """
-        Check if the file is flashable to this SoC.
-
-        :return: a tuple: (file type, start, skip, length), or None if type unknown
-        """
         raise NotImplementedError()
 
     def flash_read_raw(

@@ -6,12 +6,12 @@ from logging import info
 from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
-from .elf2bin import AmebaZElf2Bin
+from .binary import AmebaZBinary
 from .flash import AmebaZFlash
 
 
 class AmebaZMain(
-    AmebaZElf2Bin,
+    AmebaZBinary,
     AmebaZFlash,
     SocInterfaceCommon,
     ABC,
