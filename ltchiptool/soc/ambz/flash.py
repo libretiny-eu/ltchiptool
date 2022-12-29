@@ -81,7 +81,7 @@ class AmebaZFlash(SocInterface, ABC):
 
     def flash_read_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         verify: bool = True,
         use_rom: bool = False,
@@ -89,21 +89,21 @@ class AmebaZFlash(SocInterface, ABC):
         if use_rom:
             self.flash_get_rom_size()
         self.flash_connect()
-        success = yield from self.rtl.ReadBlockFlashGenerator(start, length)
+        success = yield from self.rtl.ReadBlockFlashGenerator(offset, length)
         if not success:
-            raise ValueError(f"Failed to read from 0x{start:X}")
+            raise ValueError(f"Failed to read from 0x{offset:X}")
 
     def flash_write_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
     ) -> Generator[int, None, None]:
         self.flash_connect()
-        start |= 0x8000000
-        if not self.rtl.WriteBlockFlash(data, start, length):
-            raise ValueError(f"Failed to write to 0x{start:X}")
+        offset |= 0x8000000
+        if not self.rtl.WriteBlockFlash(data, offset, length):
+            raise ValueError(f"Failed to write to 0x{offset:X}")
         yield data.tell()
 
     def flash_write_uf2(

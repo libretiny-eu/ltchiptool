@@ -41,7 +41,7 @@ def get_file_type(
 ]:
     file_type = None
     soc = None
-    auto_start = None
+    auto_offset = None
     auto_skip = None
     auto_length = None
 
@@ -72,7 +72,7 @@ def get_file_type(
             except NotImplementedError:
                 tpl = None
             if tpl:
-                file_type, auto_start, auto_skip, auto_length = tpl
+                file_type, auto_offset, auto_skip, auto_length = tpl
             if file_type:
                 family = f
                 break
@@ -84,9 +84,9 @@ def get_file_type(
         except NotImplementedError:
             tpl = None
         if tpl:
-            file_type, auto_start, auto_skip, auto_length = tpl
+            file_type, auto_offset, auto_skip, auto_length = tpl
 
-    return file_type, family, soc, auto_start, auto_skip, auto_length
+    return file_type, family, soc, auto_offset, auto_skip, auto_length
 
 
 def _format_flash_guide(soc: SocInterface) -> List[str]:

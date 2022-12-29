@@ -39,6 +39,7 @@ from ._utils import flash_link_interactive, get_file_type
 @click.option(
     "-s",
     "--start",
+    "offset",
     help="Starting address to read from (default: based on file type)",
     type=AutoIntParamType(),
 )
@@ -72,7 +73,7 @@ def cli(
     device: str,
     baudrate: int,
     family: Family,
-    start: int,
+    offset: int,
     skip: int,
     length: int,
     timeout: float,
@@ -107,17 +108,17 @@ def cli(
         file.seek(skip, SEEK_SET)
     file_size = stat(file.name).st_size - (skip or 0)
 
-    if family is None and start is not None:
+    if family is None and offset is not None:
         # not possible
         raise ValueError("Specifying -s/--start without -f/--family is not possible")
 
     ctx = None
-    if family and start is not None:
+    if family and offset is not None:
         file_type = "Raw"
-        soc = auto_start = auto_skip = auto_length = None
+        soc = auto_offset = auto_skip = auto_length = None
     else:
         # perform auto-detection
-        file_type, family, soc, auto_start, auto_skip, auto_length = get_file_type(
+        file_type, family, soc, auto_offset, auto_skip, auto_length = get_file_type(
             family, file
         )
 
@@ -151,7 +152,7 @@ def cli(
             f"'{file.name}' is a '{file_type}' file - it's not directly flashable",
         )
 
-    if soc and auto_start is None:
+    if soc and auto_offset is None:
         # file type found using SocInterface, but marked as not flashable
         raise ValueError(
             f"'{file.name}' is a '{file_type}' file - it's not "
@@ -177,10 +178,10 @@ def cli(
         generator = soc.flash_write_uf2(ctx, verify=check)
         length = 0
     else:
-        if start is None:
-            start = auto_start
+        if offset is None:
+            offset = auto_offset
         else:
-            auto_start = None
+            auto_offset = None
 
         if length is None:
             length = auto_length
@@ -197,7 +198,7 @@ def cli(
         auto_skip_str = sizeof(auto_skip) if auto_skip else None
         total_skip_str = sizeof(skip + auto_skip) if skip and auto_skip else None
 
-        graph(1, f"Start offset: 0x{start:X}" + (auto_str if auto_start else ""))
+        graph(1, f"Start offset: 0x{offset:X}" + (auto_str if auto_offset else ""))
         graph(1, f"Write length: {length_str}" + (auto_str if auto_length else ""))
         if total_skip_str:
             graph(1, f"Skipped data: {skip_str} + {auto_skip_str} = {total_skip_str}")
@@ -210,9 +211,9 @@ def cli(
             raise ValueError(f"File is too small")
 
         max_length = soc.flash_get_size()
-        if start + length > max_length:
+        if offset + length > max_length:
             raise ValueError(
-                f"Writing length {sizeof(length)} @ 0x{start:X} is more than "
+                f"Writing length {sizeof(length)} @ 0x{offset:X} is more than "
                 f"chip capacity ({sizeof(max_length)})",
             )
 
@@ -220,7 +221,7 @@ def cli(
             file.seek(auto_skip, SEEK_CUR)
         tell = file.tell()
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
-        generator = soc.flash_write_raw(start, length, data=file, verify=check)
+        generator = soc.flash_write_raw(offset, length, data=file, verify=check)
 
     with click.progressbar(length=length, width=64) as bar:
         for data in generator:

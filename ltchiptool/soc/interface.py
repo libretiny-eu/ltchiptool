@@ -102,7 +102,7 @@ class SocInterface(ABC):
         """
         Check if the file is flashable to this SoC.
 
-        :return: a tuple: (file type, start, skip, length), or None if type unknown
+        :return: a tuple: (file type, offset, skip, length), or None if type unknown
         """
         raise NotImplementedError()
 
@@ -146,13 +146,13 @@ class SocInterface(ABC):
 
     def flash_read_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         """
-        Read 'length' bytes from offset 'start' of the flash.
+        Read 'length' bytes from the flash, starting at 'offset'.
 
         :return: a generator yielding the chunks being read
         """
@@ -160,13 +160,13 @@ class SocInterface(ABC):
 
     def flash_write_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
     ) -> Generator[int, None, None]:
         """
-        Write 'length' bytes (represented by 'data') to offset 'start' of the flash.
+        Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
         :return: a generator yielding lengths of the chunks being written
         """

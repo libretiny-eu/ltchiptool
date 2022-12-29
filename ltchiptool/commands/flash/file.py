@@ -44,9 +44,9 @@ def cli(
     if skip is not None:
         # ignore the skipped bytes entirely
         file.seek(skip, SEEK_SET)
-    file_type, family, _, start, skip, length = get_file_type(family, file)
+    file_type, family, _, offset, skip, length = get_file_type(family, file)
     info(f"{file.name}: {file_type or 'Unrecognized'}")
     debug(f"\tfamily={family}")
-    debug(f"\tstart={start}")
+    debug(f"\toffset={offset}")
     debug(f"\tskip={skip}")
     debug(f"\tlength={length}")

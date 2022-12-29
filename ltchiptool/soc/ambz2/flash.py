@@ -60,14 +60,14 @@ class AmebaZ2Flash(SocInterface, ABC):
 
     def flash_read_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         verify: bool = True,
         use_rom: bool = False,
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
         yield from self.amb.memory_read(
-            offset=start,
+            offset=offset,
             length=length,
             use_flash=not use_rom,
             hash_check=verify,

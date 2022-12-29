@@ -32,6 +32,7 @@ from ._utils import flash_link_interactive
 @click.option(
     "-s",
     "--start",
+    "offset",
     help="Starting address to read from (default: 0)",
     type=AutoIntParamType(),
 )
@@ -65,7 +66,7 @@ def cli(
     file: FileIO,
     device: str,
     baudrate: int,
-    start: int,
+    offset: int,
     length: int,
     timeout: float,
     check: bool,
@@ -93,22 +94,22 @@ def cli(
     else:
         max_length = soc.flash_get_size()
 
-    start = start or 0
-    length = length or (max_length - start)
+    offset = offset or 0
+    length = length or (max_length - offset)
 
-    if start + length > max_length:
+    if offset + length > max_length:
         raise ValueError(
-            f"Reading length {sizeof(length)} @ 0x{start:X} is more than "
+            f"Reading length {sizeof(length)} @ 0x{offset:X} is more than "
             f"chip capacity ({sizeof(max_length)})",
         )
 
     if rom:
         graph(0, f"Reading ROM ({sizeof(length)}) to '{file.name}'")
     else:
-        graph(0, f"Reading {sizeof(length)} @ 0x{start:X} to '{file.name}'")
+        graph(0, f"Reading {sizeof(length)} @ 0x{offset:X} to '{file.name}'")
 
     with click.progressbar(length=length, width=64) as bar:
-        for chunk in soc.flash_read_raw(start, length, verify=check, use_rom=rom):
+        for chunk in soc.flash_read_raw(offset, length, verify=check, use_rom=rom):
             file.write(chunk)
             bar.update(len(chunk))
 

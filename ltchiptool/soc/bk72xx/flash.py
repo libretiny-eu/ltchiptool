@@ -92,7 +92,7 @@ class BK72XXFlash(SocInterface, ABC):
 
     def flash_read_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         verify: bool = True,
         use_rom: bool = False,
@@ -100,18 +100,18 @@ class BK72XXFlash(SocInterface, ABC):
         self.flash_connect()
 
         if use_rom:
-            if start % 4 != 0 or length % 4 != 0:
+            if offset % 4 != 0 or length % 4 != 0:
                 raise ValueError("Offset and length must be 4-byte aligned")
-            for address in range(start, start + length, 4):
+            for address in range(offset, offset + length, 4):
                 reg = self.bk.register_read(address)
                 yield inttole32(reg)
             return
 
-        crc_offset = start
+        crc_offset = offset
         crc_length = 0
         crc_value = 0
 
-        for chunk in self.bk.flash_read(start=start, length=length, crc_check=False):
+        for chunk in self.bk.flash_read(start=offset, length=length, crc_check=False):
             if not verify:
                 yield chunk
                 continue
@@ -119,7 +119,7 @@ class BK72XXFlash(SocInterface, ABC):
             crc_length += len(chunk)
             crc_value = crc32(chunk, crc_value)
             # check CRC every each 32 KiB, or by the end of file
-            if crc_length < 32 * 1024 and crc_offset + crc_length != start + length:
+            if crc_length < 32 * 1024 and crc_offset + crc_length != offset + length:
                 yield chunk
                 continue
 
@@ -139,7 +139,7 @@ class BK72XXFlash(SocInterface, ABC):
 
     def flash_write_raw(
         self,
-        start: int,
+        offset: int,
         length: int,
         data: BinaryIO,
         verify: bool = True,
@@ -148,7 +148,7 @@ class BK72XXFlash(SocInterface, ABC):
         yield from self.bk.program_flash(
             io=data,
             io_size=length,
-            start=start,
+            start=offset,
             crc_check=verify,
         )
 

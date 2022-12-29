@@ -34,7 +34,7 @@ class AmbZ2Tool:
     prev_timeout_list: List[float]
     flash_mode: AmbZ2FlashMode = None
     flash_speed: AmbZ2FlashSpeed = AmbZ2FlashSpeed.SINGLE
-    flash_hash_start: int = None
+    flash_hash_offset: int = None
 
     def __init__(
         self,
@@ -245,7 +245,7 @@ class AmbZ2Tool:
             self.flash_mode = AmbZ2FlashMode((reg >> 5) & 0b11)
             self.register_write(0x4000_2800, 0x7EFF_FFFF)
             debug(f"Flash mode read: {self.flash_mode}")
-        if self.flash_hash_start is None and configure:
+        if self.flash_hash_offset is None and configure:
             self.flash_read_hash(offset=None, length=0)
             debug(
                 f"Flash set up: "
@@ -258,7 +258,7 @@ class AmbZ2Tool:
         self.flash_init(configure=False)
 
         # configure start offset of "hashq"
-        if self.flash_hash_start != offset:
+        if self.flash_hash_offset != offset:
             self.flash_transmit(stream=None, offset=offset)
 
         timeout = self.read_timeout
@@ -294,7 +294,7 @@ class AmbZ2Tool:
         self.push_timeout(2.0)
 
         self.command(f"fwd {self.flash_cfg} {offset:x}")
-        self.flash_hash_start = offset
+        self.flash_hash_offset = offset
 
         if not stream:
             debug("XMODEM: starting empty transmission")
