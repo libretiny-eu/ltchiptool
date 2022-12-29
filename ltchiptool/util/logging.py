@@ -89,6 +89,24 @@ def log_setup(verbosity: int, timed: bool, raw: bool, indent: int):
         logger.removeHandler(h)
     logger.addHandler(handler)
 
+    # make Click progress bars visible on non-TTY stdout
+    if sys.stdout.isatty():
+        return
+    # noinspection PyProtectedMember
+    from click._termui_impl import ProgressBar
+
+    def render_progress(self: ProgressBar):
+        bar = self.format_bar().strip("-")
+        if getattr(self, "bar", None) != bar:
+            click.echo("#", nl=False)
+            self.bar = bar
+
+    def render_finish(_: ProgressBar):
+        click.echo("")
+
+    ProgressBar.render_progress = render_progress
+    ProgressBar.render_finish = render_finish
+
 
 def log_copy_setup(logger: str):
     handler = LoggingHandler.INSTANCE
