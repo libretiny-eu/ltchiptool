@@ -137,7 +137,9 @@ class AmbZ2Tool:
 
     def ping(self) -> None:
         self.command("ping")
-        assert self.read(4) == b"ping"
+        resp = self.read(4)
+        if resp != b"ping":
+            raise RuntimeError(f"incorrect ping response: {resp!r}")
 
     def link(self) -> None:
         end = time() + self.link_timeout
@@ -157,7 +159,10 @@ class AmbZ2Tool:
         self.s.baudrate = baudrate
         # wait up to 1 second for OK response
         self.push_timeout(1.0)
-        assert self.read() == b"OK"
+        resp = self.read()
+        if resp != b"OK":
+            raise RuntimeError(f"baud rate change not OK: {resp!r}")
+
         self.pop_timeout()
         # link again to make sure it still works
         self.link()
@@ -299,12 +304,17 @@ class AmbZ2Tool:
         if not stream:
             debug("XMODEM: starting empty transmission")
             # wait for NAK
-            assert self.read(1) == b"\x15"
+            resp = self.read(1)
+            if resp != b"\x15":
+                raise RuntimeError(f"expected NAK, got {resp!r}")
+
             # abort using CAN
             self.xm.abort()
             self.flush()
             # wait for CAN response
-            assert self.read(3) == b"\x18ER"
+            resp = self.read(3)
+            if resp != b"\x18ER":
+                raise RuntimeError(f"expected CAN, got {resp!r}")
         else:
             debug(f"XMODEM: transmitting to 0x{offset:X}")
 
