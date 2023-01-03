@@ -15,6 +15,12 @@ default_hash_key = bytes.fromhex(
     "47E5661335A4C5E0A94D69F3C737D54F2383791332939753EF24279608F6D72B"
 )
 
+MARKER_UNSIGNED = (
+    b"LibreTuyaAmebaZ2"
+    b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+)
+assert len(MARKER_UNSIGNED) == 32
+
 
 def mac(key: bytes, buf: bytes) -> bytes:
     h = HMAC.new(key, digestmod=SHA256)
@@ -209,22 +215,21 @@ FWImg = Struct(
 )
 
 
-def parse_fw(
-    file: typer.FileBinaryRead, hash_key: bytes = None, start_address: int = 0
-) -> None:
+def parse_fw(file: typer.FileBinaryRead, hash_key: bytes = None) -> None:
     offset = file.tell()
     parsed_fw = FWImg.parse_stream(file)
+
+    print(f"\n{parsed_fw}")
 
     if parsed_fw.ota_signature == b"\xff" * 32:
         return
 
-    print(f"\n{parsed_fw}")
-
     if hash_key:
-        file.seek(offset + 32 * 7)
-        digest = mac(hash_key, file.read(0x60))
-        if digest != parsed_fw.ota_signature:
-            print(f"ota_signature MISMATCH: computed={digest.hex()}")
+        if parsed_fw.ota_signature != MARKER_UNSIGNED:
+            file.seek(offset + 32 * 7)
+            digest = mac(hash_key, file.read(0x60))
+            if digest != parsed_fw.ota_signature:
+                print(f"ota_signature MISMATCH: computed={digest.hex()}")
 
         for img_idx, img in enumerate(parsed_fw.sub_imgs):
             if img.data is None:
@@ -232,7 +237,7 @@ def parse_fw(
             if not img.data.fst.flags.hashed:
                 return
 
-            hash_start = start_address if img_idx == 0 else img._start
+            hash_start = offset if img_idx == 0 else img._start
             file.seek(hash_start)
 
             off = img._start - hash_start
@@ -256,6 +261,17 @@ def main(file: typer.FileBinaryRead, fw: bool = False, hash_key_hex: str = None)
     print(f"{parsed_pt}")
     print(f"{file.tell()=:#x}")
 
+    assert parsed_pt.hdr.segment_size % 0x20 == 0
+    file.seek(0x20)
+    raw_pt = file.read(0x40 + 0x60 + parsed_pt.hdr.segment_size)
+    pt_digest = mac(default_hash_key, raw_pt)
+    if pt_digest != parsed_pt.hash:
+        print(
+            f"""\
+{file.tell()=:#x} {len(raw_pt)=}
+MISMATCH: computed={pt_digest.hex()}"""
+        )
+
     file.seek(parsed_pt.data.boot_record.start_address)
     parsed_bootimg = BootImg.parse_stream(file)
     print()
@@ -276,7 +292,7 @@ MISMATCH: computed={bootimg_digest.hex()}"""
         file.seek(rec.start_address)
 
         print(f"\n# {part_idx+1}")
-        parse_fw(file, rec.hash_key if rec.key_valid.hash else None, rec.start_address)
+        parse_fw(file, rec.hash_key if rec.key_valid.hash else None)
 
 
 if __name__ == "__main__":

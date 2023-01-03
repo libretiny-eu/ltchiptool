@@ -7,9 +7,11 @@ from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
 from .flash import AmebaZ2Flash
+from .binary import AmebaZ2Binary
 
 
 class AmebaZ2Main(
+    AmebaZ2Binary,
     AmebaZ2Flash,
     SocInterfaceCommon,
     ABC,
@@ -23,4 +25,6 @@ class AmebaZ2Main(
 
     @property
     def elf_has_dual_ota(self) -> bool:
-        return True
+        # target has dual ota, but requires only single elf
+        # flash pages are remapped
+        return False

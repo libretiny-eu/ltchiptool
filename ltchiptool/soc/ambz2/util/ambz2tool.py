@@ -317,6 +317,23 @@ class AmbZ2Tool:
                 raise RuntimeError(f"expected CAN, got {resp!r}")
         else:
             debug(f"XMODEM: transmitting to 0x{offset:X}")
+            # FIXME no progress here. send() can take a callback
+            if not self.xm.send(stream):
+                raise RuntimeError("XMODEM transmission failed")
+
+        self.pop_timeout()
+        self.link()
+
+    def ram_transmit(self, stream: BinaryIO, offset: int) -> None:
+        # increase timeout to read XMODEM bytes (RTL processes requests every ~1.0s)
+        self.push_timeout(2.0)
+
+        self.command(f"fwdram {offset:x}")
+
+        debug(f"XMODEM: transmitting to 0x{offset:X}")
+        # FIXME no progress here. send() can take a callback
+        if not self.xm.send(stream):
+            raise RuntimeError("XMODEM transmission failed")
 
         self.pop_timeout()
         self.link()
@@ -385,6 +402,51 @@ class AmbZ2Tool:
                         f"{hash_expected.hex()}, calculated: {hash_final.hex()}"
                     )
                 sha_size = 0
+
+    def memory_write(
+        self,
+        offset: int,
+        stream: BinaryIO,
+        use_flash: bool,
+        hash_check: bool = True,
+        chunk_size: int = 32 * 1024,
+    ) -> Generator[int, None, None]:
+        if not use_flash:
+            # can only check SHA of flash
+            hash_check = False
+
+        base = stream.tell()
+        length = None
+        hash_expected = None
+
+        if hash_check:
+            # on py >= 3.11 use:
+            # sha = hashlib.file_digest(stream, sha256)
+            sha = sha256()
+            while chunk := stream.read(chunk_size):
+                sha.update(chunk)
+
+            hash_expected = sha.digest()
+            length = stream.tell()
+            # rewind stream
+            stream.seek(base)
+
+        if use_flash:
+            self.flash_transmit(stream, offset)
+            yield stream.tell()  # FIXME
+        else:
+            self.ram_transmit(stream, offset)
+
+        if hash_expected:
+            assert length
+            debug(f"hash check: start={offset:#X}, count={length:#X}")
+            hash_final = self.flash_read_hash(offset, length)
+            if hash_final != hash_expected:
+                raise ValueError(
+                    f"Chip SHA256 value does not match expected value "
+                    f"(at {offset:#X}+{length:#X}). "
+                    f"Expected: {hash_expected.hex()}, calculated: {hash_final.hex()}"
+                )
 
 
 @click.command(
