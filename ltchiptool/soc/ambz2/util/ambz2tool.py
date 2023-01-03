@@ -436,6 +436,7 @@ class AmbZ2Tool:
             yield stream.tell()  # FIXME
         else:
             self.ram_transmit(stream, offset)
+            yield stream.tell()  # FIXME
 
         if hash_expected:
             assert length
