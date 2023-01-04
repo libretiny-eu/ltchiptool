@@ -5,7 +5,7 @@ import io
 from abc import ABC
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import BinaryIO, Generator, Optional, Union
+from typing import BinaryIO, Generator, Optional, Protocol, Union
 
 from Cryptodome.Hash import HMAC, SHA256
 
@@ -58,6 +58,9 @@ class PartitionRecord:
 
 PTABLE_PATTERN = bytes.fromhex("999996963FCC66FCC033CC03E5DC3162") + b"\xff" * 16
 PTABLE_SIZE = 32 + 32 + 32 + 96 + 32 + 64 * 3
+PTABLE_OFF_HDR = 0x20 * 7
+PTABLE_OFF_SERIAL = PTABLE_OFF_HDR + 0x14
+FLASH_BASE = 0x9800_0000
 
 
 def parse_ptable(b: bytes) -> tuple[PartitionRecord, PartitionRecord]:
@@ -89,6 +92,48 @@ def parse_ptable(b: bytes) -> tuple[PartitionRecord, PartitionRecord]:
         PartitionRecord.parse(b[o_records + i * 64 : o_records + i * 64 + 64])
         for i in fw_indexes
     )
+
+
+class Hasher(Protocol):
+    def update(self, msg: bytes):
+        ...
+
+    def digest(self) -> bytes:
+        ...
+
+
+def select_partition(amb: AmbZ2Tool) -> tuple[bytes, Hasher, int]:
+    # read and verify PTABLE
+    ptable_raw = b"".join(
+        chunk for chunk in amb.memory_read(0, PTABLE_SIZE, use_flash=True)
+    )
+    ptable = parse_ptable(ptable_raw)
+
+    # read partition serial numbers
+    serials = tuple(
+        next(amb.dump_words(FLASH_BASE + p.offset + PTABLE_OFF_SERIAL, 1))[0]
+        for p in ptable
+    )
+
+    # select partitions based on their serial number
+    if serials[1] > serials[0]:
+        current_index = 1
+        write_index = 0
+    else:
+        current_index = 0
+        write_index = 1
+    next_serial = serials[current_index] + 1
+    write_partition = ptable[write_index]
+    hash_key = write_partition.hash_key
+    flash_offset = write_partition.offset
+
+    hasher: Hasher
+    if hash_key:
+        hasher = HMAC.new(hash_key, digestmod=SHA256)
+    else:
+        hasher = SHA256.new()
+
+    return next_serial.to_bytes(4, "little"), hasher, flash_offset
 
 
 class AmebaZ2Flash(SocInterface, ABC):
@@ -172,54 +217,27 @@ class AmebaZ2Flash(SocInterface, ABC):
 
         :return: a generator yielding lengths of the chunks being written
         """
-        o_hdr = 0x20 * 7
-        o_serial = o_hdr + 0x14
 
         self.flash_connect()
         assert self.amb
 
         # TODO log status
+        next_serial, hasher, flash_offset = select_partition(self.amb)
 
-        # read and verify PTABLE
-        ptable_raw = b"".join(
-            chunk for chunk in self.amb.memory_read(0, PTABLE_SIZE, use_flash=True)
-        )
-        ptable = parse_ptable(ptable_raw)
-
-        # read partition serial numbers
-        serials = tuple(
-            next(self.amb.dump_words(0x9800_0000 + p.offset + o_serial, 1))[0]
-            for p in ptable
-        )
-
-        # select partitions based on their serial number
-        if serials[1] > serials[0]:
-            current_index = 1
-            write_index = 0
-        else:
-            current_index = 0
-            write_index = 1
-        next_serial = serials[current_index] + 1
-        write_partition = ptable[write_index]
-        hash_key = write_partition.hash_key
-        flash_offset = write_partition.offset
-
-        stream = io.BytesIO(data.read())
+        stream = io.BytesIO(data.read(length))
         buf = stream.getbuffer()
 
         # update serial number
-        buf[o_serial : o_serial + 4] = next_serial.to_bytes(4, "little")
+        buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
 
         # update hash
-        if hash_key:
-            hasher = HMAC.new(hash_key, digestmod=SHA256)
-        else:
-            hasher = SHA256.new()
-        hasher.update(buf[o_hdr : o_hdr + 0x60])
+        hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
         buf[0:32] = hasher.digest()
 
         # write to flash
-        yield from self.amb.memory_write(flash_offset, stream, use_flash=True)
+        yield from self.amb.memory_write(
+            flash_offset + offset, stream, use_flash=True, hash_check=verify
+        )
 
     def flash_write_uf2(
         self,
