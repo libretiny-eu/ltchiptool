@@ -98,25 +98,35 @@ class Image:
             raise ValueError("pubkeys have invalid length")
 
 
-def build_section(s: Section, img_index: int, sect_index: int, base_addr: int) -> bytearray:
+def build_section(
+    s: Section, img_index: int, sect_index: int, base_addr: int
+) -> bytearray:
     base_addr += LEN_HDR_SEC
     base_addr += LEN_MAPPING
 
-    mapping_base_actual = base_addr & 0x3fff
-    mapping_base_expected = s.section_base & 0x3fff
+    mapping_base_actual = base_addr & 0x3FFF
+    mapping_base_expected = s.section_base & 0x3FFF
 
     if s.type == SectionType.XIP and mapping_base_actual != mapping_base_expected:
-        if s.section_base & ~0xff800000 == 0:
+        if s.section_base & ~0xFF800000 == 0:
             assert mapping_base_actual > mapping_base_expected
             cutoff = mapping_base_actual - mapping_base_expected
 
             s.data = s.data[cutoff:]
             s.section_base += cutoff
 
-            info("cutting of %#x reserved data from section start, new base: %#x", cutoff, s.section_base)
+            info(
+                "cutting of %#x reserved data from section start, new base: %#x",
+                cutoff,
+                s.section_base,
+            )
 
         else:
-            error("base mismatch: placed at %#x, linked for %#x", base_addr, s.section_base)
+            error(
+                "base mismatch: placed at %#x, linked for %#x",
+                base_addr,
+                s.section_base,
+            )
 
     sect_hdr = pack(
         "<IIBBBB4x8sB7x16s16s32x",
@@ -204,7 +214,7 @@ def build(hash_key: bytes | None, image: Image) -> bytes:
 
     if hash_key:
         # ota_signature
-        buf[0:32] = mac(hash_key, buf[7 * 32:7 * 32 + LEN_HDR_IMG])
+        buf[0:32] = mac(hash_key, buf[7 * 32 : 7 * 32 + LEN_HDR_IMG])
     else:
         # marker for detect_file_type()
         buf[0:32] = MARKER_UNSIGNED
@@ -292,7 +302,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         args: list[str],
     ) -> dict[str, int | None]:
         assert not ota1 and not ota2
-        elfs = self.link2elf('', '', args)
+        elfs = self.link2elf("", "", args)
         assert elfs.keys() == {1}
         elf = elfs[1]
 
