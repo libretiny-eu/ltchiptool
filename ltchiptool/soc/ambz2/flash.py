@@ -215,7 +215,6 @@ class AmebaZ2Flash(SocInterface, ABC):
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
-        :return: a generator yielding lengths of the chunks being written
         :return: a generator, yielding then lengths of the chunks being written, or
         progress messages, as string
         """
