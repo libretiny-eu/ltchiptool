@@ -211,22 +211,24 @@ class AmebaZ2Flash(SocInterface, ABC):
         length: int,
         data: BinaryIO,
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+    ) -> Generator[int | str, None, None]:
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
         :return: a generator yielding lengths of the chunks being written
         """
 
+        yield "connecting..."
         self.flash_connect()
         assert self.amb
 
-        # TODO log status
+        yield "reading partition table..."
         next_serial, hasher, flash_offset = select_partition(self.amb)
 
         stream = io.BytesIO(data.read(length))
         buf = stream.getbuffer()
 
+        yield "updating serial number and OTA signature..."
         # update serial number
         buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
 
@@ -234,9 +236,14 @@ class AmebaZ2Flash(SocInterface, ABC):
         hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
         buf[0:32] = hasher.digest()
 
+        yield "writing to flash..."
         # write to flash
         yield from self.amb.memory_write(
-            flash_offset + offset, stream, use_flash=True, hash_check=verify
+            flash_offset + offset,
+            stream,
+            use_flash=True,
+            hash_check=verify,
+            progress=self.progress_callback,
         )
 
     def flash_write_uf2(

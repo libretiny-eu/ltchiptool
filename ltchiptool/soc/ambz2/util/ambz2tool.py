@@ -5,7 +5,7 @@ from hashlib import sha256
 from logging import debug, warning
 from math import ceil
 from time import time
-from typing import BinaryIO, Generator, List, Optional
+from typing import BinaryIO, Callable, Generator, List, Optional
 
 import click
 from serial import Serial
@@ -13,6 +13,8 @@ from xmodem import XMODEM
 
 from ltchiptool.util import log_copy_setup, verbose
 from ltchiptool.util.intbin import align_down
+
+_T_ProgressCB = Callable[[int], None] | None
 
 
 class AmbZ2FlashMode(IntEnum):
@@ -291,7 +293,19 @@ class AmbZ2Tool:
             raise RuntimeError(f"Unexpected response: {response}")
         return response[6 : 6 + 32]
 
-    def flash_transmit(self, stream: Optional[BinaryIO], offset: int) -> None:
+    def _build_callback(
+        self, progress: _T_ProgressCB
+    ) -> Optional[Callable[[int, int, int], None]]:
+        if not progress:
+            return None
+
+        pkt_size = 1024 if self.xm.mode == "xmodem1k" else 128
+
+        return lambda total_packets, success, error: progress(pkt_size * success)
+
+    def flash_transmit(
+        self, stream: Optional[BinaryIO], offset: int, progress: _T_ProgressCB = None
+    ) -> None:
         # set the flash_mode
         self.flash_init(configure=False)
 
@@ -317,22 +331,22 @@ class AmbZ2Tool:
                 raise RuntimeError(f"expected CAN, got {resp!r}")
         else:
             debug(f"XMODEM: transmitting to 0x{offset:X}")
-            # FIXME no progress here. send() can take a callback
-            if not self.xm.send(stream):
+            if not self.xm.send(stream, callback=self._build_callback(progress)):
                 raise RuntimeError("XMODEM transmission failed")
 
         self.pop_timeout()
         self.link()
 
-    def ram_transmit(self, stream: BinaryIO, offset: int) -> None:
+    def ram_transmit(
+        self, stream: BinaryIO, offset: int, progress: _T_ProgressCB = None
+    ) -> None:
         # increase timeout to read XMODEM bytes (RTL processes requests every ~1.0s)
         self.push_timeout(2.0)
 
         self.command(f"fwdram {offset:x}")
 
         debug(f"XMODEM: transmitting to 0x{offset:X}")
-        # FIXME no progress here. send() can take a callback
-        if not self.xm.send(stream):
+        if not self.xm.send(stream, callback=self._build_callback(progress)):
             raise RuntimeError("XMODEM transmission failed")
 
         self.pop_timeout()
@@ -410,6 +424,7 @@ class AmbZ2Tool:
         use_flash: bool,
         hash_check: bool = True,
         chunk_size: int = 32 * 1024,
+        progress: _T_ProgressCB = None,
     ) -> Generator[int, None, None]:
         if not use_flash:
             # can only check SHA of flash
@@ -432,11 +447,12 @@ class AmbZ2Tool:
             stream.seek(base)
 
         if use_flash:
-            self.flash_transmit(stream, offset)
-            yield stream.tell()  # FIXME
+            self.flash_transmit(stream, offset, progress=progress)
         else:
-            self.ram_transmit(stream, offset)
-            yield stream.tell()  # FIXME
+            self.ram_transmit(stream, offset, progress=progress)
+
+        # required to make this a generator and signal completion to the progress bar
+        yield stream.tell()
 
         if hash_expected:
             assert length

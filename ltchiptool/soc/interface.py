@@ -16,6 +16,7 @@ class SocInterface(ABC):
     baud: int = None
     link_timeout: float = 20.0
     read_timeout: float = 1.0
+    progress_callback: Optional[Callable[[int], None]] = None
 
     @classmethod
     def get(cls, family: Family) -> "SocInterface":
@@ -164,7 +165,7 @@ class SocInterface(ABC):
         length: int,
         data: BinaryIO,
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+    ) -> Generator[int | str, None, None]:
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 

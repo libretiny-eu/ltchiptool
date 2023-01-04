@@ -224,12 +224,16 @@ def cli(
         generator = soc.flash_write_raw(offset, length, data=file, verify=check)
 
     with click.progressbar(length=length, width=64) as bar:
+        def _update_progress(progress: int) -> None:
+            if bar.length == 0:
+                bar.length = data
+            else:
+                bar.update(data)
+        soc.progress_callback = _update_progress
+
         for data in generator:
             if isinstance(data, int):
-                if bar.length == 0:
-                    bar.length = data
-                else:
-                    bar.update(data)
+                _update_progress(data)
             elif isinstance(data, str):
                 bar.label = data
                 bar.render_progress()
