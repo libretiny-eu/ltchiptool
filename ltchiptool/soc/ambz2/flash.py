@@ -10,6 +10,7 @@ from typing import BinaryIO, Generator, Optional, Protocol, Union
 from Cryptodome.Hash import HMAC, SHA256
 
 from ltchiptool import SocInterface
+from ltchiptool.util.intbin import gen2bytes
 from uf2tool import UploadContext
 
 from .util.ambz2tool import AmbZ2Tool
@@ -104,9 +105,7 @@ class Hasher(Protocol):
 
 def select_partition(amb: AmbZ2Tool) -> tuple[bytes, Hasher, int]:
     # read and verify PTABLE
-    ptable_raw = b"".join(
-        chunk for chunk in amb.memory_read(0, PTABLE_SIZE, use_flash=True)
-    )
+    ptable_raw = gen2bytes(amb.memory_read(0, PTABLE_SIZE, use_flash=True))
     ptable = parse_ptable(ptable_raw)
 
     # read partition serial numbers
@@ -225,26 +224,26 @@ class AmebaZ2Flash(SocInterface, ABC):
         yield "reading partition table..."
         next_serial, hasher, flash_offset = select_partition(self.amb)
 
-        stream = io.BytesIO(data.read(length))
-        buf = stream.getbuffer()
+        with io.BytesIO(data.read(length)) as stream:
+            yield "updating serial number and OTA signature..."
 
-        yield "updating serial number and OTA signature..."
-        # update serial number
-        buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
+            with stream.getbuffer() as buf:
+                # update serial number
+                buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
 
-        # update hash
-        hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
-        buf[0:32] = hasher.digest()
+                # update hash
+                hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
+                buf[0:32] = hasher.digest()
 
-        yield "writing to flash..."
-        # write to flash
-        yield from self.amb.memory_write(
-            flash_offset + offset,
-            stream,
-            use_flash=True,
-            hash_check=verify,
-            progress=self.progress_callback,
-        )
+            yield "writing to flash..."
+            # write to flash
+            yield from self.amb.memory_write(
+                flash_offset + offset,
+                stream,
+                use_flash=True,
+                hash_check=verify,
+                progress=self.progress_callback,
+            )
 
     def flash_write_uf2(
         self,
