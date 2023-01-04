@@ -11,6 +11,7 @@ from Cryptodome.Hash import HMAC, SHA256
 
 from ltchiptool import SocInterface
 from ltchiptool.util.intbin import gen2bytes
+from ltchiptool.soc.ambz2.binary import MARKER_UNSIGNED
 from uf2tool import UploadContext
 
 from .util.ambz2tool import AmbZ2Tool
@@ -231,12 +232,13 @@ class AmebaZ2Flash(SocInterface, ABC):
             yield "updating serial number and OTA signature..."
 
             with stream.getbuffer() as buf:
-                # update serial number
-                buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
+                if buf[0:32] == MARKER_UNSIGNED:
+                    # update serial number
+                    buf[PTABLE_OFF_SERIAL : PTABLE_OFF_SERIAL + 4] = next_serial
 
-                # update hash
-                hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
-                buf[0:32] = hasher.digest()
+                    # update hash
+                    hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
+                    buf[0:32] = hasher.digest()
 
             yield f"OTA {ota_idx} ({flash_offset + offset:#X})"
             # write to flash
