@@ -143,6 +143,9 @@ class AmbZ2Tool:
         if resp != b"ping":
             raise RuntimeError(f"incorrect ping response: {resp!r}")
 
+    def disconnect(self) -> None:
+        self.command("disc")
+
     def link(self) -> None:
         end = time() + self.link_timeout
         while time() < end:

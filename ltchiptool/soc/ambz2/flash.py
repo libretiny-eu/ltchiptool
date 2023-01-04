@@ -103,7 +103,7 @@ class Hasher(Protocol):
         ...
 
 
-def select_partition(amb: AmbZ2Tool) -> tuple[bytes, Hasher, int]:
+def select_partition(amb: AmbZ2Tool) -> tuple[int, bytes, Hasher, int]:
     # read and verify PTABLE
     ptable_raw = gen2bytes(amb.memory_read(0, PTABLE_SIZE, use_flash=True))
     ptable = parse_ptable(ptable_raw)
@@ -132,7 +132,7 @@ def select_partition(amb: AmbZ2Tool) -> tuple[bytes, Hasher, int]:
     else:
         hasher = SHA256.new()
 
-    return next_serial.to_bytes(4, "little"), hasher, flash_offset
+    return write_index + 1, next_serial.to_bytes(4, "little"), hasher, flash_offset
 
 
 class AmebaZ2Flash(SocInterface, ABC):
@@ -215,6 +215,8 @@ class AmebaZ2Flash(SocInterface, ABC):
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
         :return: a generator yielding lengths of the chunks being written
+        :return: a generator, yielding then lengths of the chunks being written, or
+        progress messages, as string
         """
 
         yield "connecting..."
@@ -222,8 +224,9 @@ class AmebaZ2Flash(SocInterface, ABC):
         assert self.amb
 
         yield "reading partition table..."
-        next_serial, hasher, flash_offset = select_partition(self.amb)
+        ota_idx, next_serial, hasher, flash_offset = select_partition(self.amb)
 
+        yield f"OTA {ota_idx}"
         with io.BytesIO(data.read(length)) as stream:
             yield "updating serial number and OTA signature..."
 
@@ -235,7 +238,7 @@ class AmebaZ2Flash(SocInterface, ABC):
                 hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
                 buf[0:32] = hasher.digest()
 
-            yield "writing to flash..."
+            yield f"OTA {ota_idx} ({flash_offset + offset:#X})"
             # write to flash
             yield from self.amb.memory_write(
                 flash_offset + offset,
@@ -256,4 +259,15 @@ class AmebaZ2Flash(SocInterface, ABC):
         :return: a generator, yielding either the total writing length,
         then lengths of the chunks being written, or progress messages, as string
         """
-        raise NotImplementedError()
+        # collect continuous blocks of data
+        parts = ctx.collect()
+        # yield the total writing length (plus boot-from-flash command)
+        yield sum(len(part.getvalue()) for part in parts.values())
+
+        for offset, data in parts.items():
+            length = len(data.getvalue())
+            data.seek(0)
+            yield from self.flash_write_raw(offset, length, data, verify)
+
+        yield "Booting firmware"
+        self.amb.disconnect()
