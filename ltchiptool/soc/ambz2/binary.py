@@ -5,7 +5,7 @@ from abc import ABC
 from dataclasses import dataclass
 from enum import IntEnum
 from io import FileIO
-from logging import info, warning
+from logging import info, warning, error
 from struct import pack
 
 from elftools.elf.elffile import ELFFile
@@ -19,6 +19,7 @@ from ltchiptool.util.intbin import pad_data, pad_up
 LEN_HDR_IMG = 0x60
 LEN_HDR_SEC = 0x60
 LEN_FST = 0x60
+LEN_MAPPING = 0x20
 
 MARKER_UNSIGNED = (
     b"LibreTuyaAmebaZ2"
@@ -68,7 +69,7 @@ class Section:
     entry_point: int = 0xFFFFFFFF
 
     @property
-    def entry_hdr(self) -> bytes:
+    def mapping_hdr(self) -> bytes:
         return pad_data(
             pack("<III", len(self.data), self.section_base, self.entry_point), 32, 0xFF
         )
@@ -97,7 +98,26 @@ class Image:
             raise ValueError("pubkeys have invalid length")
 
 
-def build_section(s: Section) -> bytearray:
+def build_section(s: Section, img_index: int, sect_index: int, base_addr: int) -> bytearray:
+    base_addr += LEN_HDR_SEC
+    base_addr += LEN_MAPPING
+
+    mapping_base_actual = base_addr & 0x3fff
+    mapping_base_expected = s.section_base & 0x3fff
+
+    if s.type == SectionType.XIP and mapping_base_actual != mapping_base_expected:
+        if s.section_base & ~0xff800000 == 0:
+            assert mapping_base_actual > mapping_base_expected
+            cutoff = mapping_base_actual - mapping_base_expected
+
+            s.data = s.data[cutoff:]
+            s.section_base += cutoff
+
+            info("cutting of %#x reserved data from section start, new base: %#x", cutoff, s.section_base)
+
+        else:
+            error("base mismatch: placed at %#x, linked for %#x", base_addr, s.section_base)
+
     sect_hdr = pack(
         "<IIBBBB4x8sB7x16s16s32x",
         len(s.data) + 0x20,
@@ -113,10 +133,10 @@ def build_section(s: Section) -> bytearray:
     )
     assert len(sect_hdr) == LEN_HDR_SEC
 
-    return bytearray(sect_hdr + s.entry_hdr + pad_data(s.data, 32, 0x00))
+    return bytearray(sect_hdr + s.mapping_hdr + pad_data(s.data, 32, 0x00))
 
 
-def build_subimage(img: SubImage) -> bytearray:
+def build_subimage(img: SubImage, img_index: int, base_addr: int) -> bytearray:
     fst = pack(
         "<HHI8s4xBB10x32s16s16x",
         1,  # enc_algo
@@ -130,12 +150,18 @@ def build_subimage(img: SubImage) -> bytearray:
     )
 
     assert len(fst) == LEN_FST
-    sects = [build_section(s) for s in img.sections]
+    base_addr += LEN_HDR_IMG + LEN_FST
 
-    for sect in sects[:-1]:
-        sect[4:8] = len(sect).to_bytes(4, "little")
+    sects_raw = bytearray()
 
-    sects_raw = b"".join(sects)
+    for i, s in enumerate(img.sections):
+        sect_raw = build_section(s, img_index, i, base_addr)
+        if i < len(img.sections) - 1:
+            sect_raw[4:8] = len(sect_raw).to_bytes(4, "little")
+
+        base_addr += len(sect_raw)
+        sects_raw += sect_raw
+
     assert len(sects_raw) % 32 == 0, len(sects_raw)
 
     hdr = pack(
@@ -157,28 +183,28 @@ def build_subimage(img: SubImage) -> bytearray:
 
 
 def build(hash_key: bytes | None, image: Image) -> bytes:
-    sub_imgs = [build_subimage(sub) for sub in image.subs]
     buf = bytearray(32 + 32 * 6)
 
     # pubkeys
     buf[32 : 32 + 32 * 6] = b"".join(image.pubkeys)
 
-    for i, sub in enumerate(sub_imgs):
+    for i, sub_img in enumerate(image.subs):
+        sub_raw = build_subimage(sub_img, i, len(buf))
         # append hash placeholder
-        sub += b"\xAA" * 32
+        sub_raw += b"\xAA" * 32
 
         # only set next pointers and padding for all but last image
-        if i < len(sub_imgs) - 1:
-            padlen = pad_up(len(buf) + len(sub), 0x4000)
-            imglen_with_padding = len(sub) + padlen
-            sub[4:8] = imglen_with_padding.to_bytes(4, "little")
-            sub += b"\x87" * padlen
+        if i < len(image.subs) - 1:
+            padlen = pad_up(len(buf) + len(sub_raw), 0x4000)
+            imglen_with_padding = len(sub_raw) + padlen
+            sub_raw[4:8] = imglen_with_padding.to_bytes(4, "little")
+            sub_raw += b"\x87" * padlen
 
-        buf += sub
+        buf += sub_raw
 
     if hash_key:
         # ota_signature
-        buf[0:32] = mac(hash_key, sub_imgs[0][:LEN_HDR_IMG])
+        buf[0:32] = mac(hash_key, buf[7 * 32:7 * 32 + LEN_HDR_IMG])
     else:
         # marker for detect_file_type()
         buf[0:32] = MARKER_UNSIGNED
@@ -207,6 +233,9 @@ def from_elf(
             continue
 
         if seg_addr & 0xFFF0_0000 == 0x1000_0000:
+            if seg_addr == 0x1000_0000 and len(data) == 0x80:
+                info("dropping .ram.vector section")
+                continue
             # RAM
             ram_img.sections.append(
                 Section(
