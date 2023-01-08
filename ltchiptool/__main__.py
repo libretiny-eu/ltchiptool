@@ -13,6 +13,7 @@ COMMANDS = {
     "dump": "ltchiptool/commands/dumptool.py",
     "elf2bin": "ltchiptool/commands/elf2bin.py",
     "flash": "ltchiptool/commands/flash/__main__.py",
+    "gui": "ltchiptool/gui/__main__.py",
     "link2bin": "ltchiptool/commands/link2bin.py",
     "list": "ltchiptool/commands/list.py",
     "soc": "ltchiptool/commands/soc.py",

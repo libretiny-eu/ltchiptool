@@ -18,6 +18,10 @@ prettytable = "^3.3.0"
 bk7231tools = "^1.2.1"
 pycryptodomex = "^3.15.0"
 xmodem = "^0.4.6"
+wxPython = {version = "^4.2.0", optional = true}
+
+[tool.poetry.extras]
+gui = ["wxPython"]
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
