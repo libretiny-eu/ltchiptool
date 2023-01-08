@@ -2,41 +2,40 @@
 
 import logging
 import sys
-from logging import LogRecord, StreamHandler
+from logging import ERROR, LogRecord, StreamHandler, error
 from time import time
 
 import click
 
+from .cli import graph
+
 VERBOSE = logging.DEBUG // 2
-LOG_COLORS = {
-    "V": "bright_cyan",
-    "D": "bright_blue",
-    "I": "bright_green",
-    "W": "bright_yellow",
-    "E": "bright_red",
-    "C": "bright_magenta",
-}
-VERBOSITY_LEVEL = {
-    0: logging.INFO,
-    1: logging.DEBUG,
-    2: VERBOSE,
-}
 
 
 class LoggingHandler(StreamHandler):
     INSTANCE: "LoggingHandler" = None
+    LOG_COLORS = {
+        "V": "bright_cyan",
+        "D": "bright_blue",
+        "I": "bright_green",
+        "W": "bright_yellow",
+        "E": "bright_red",
+        "C": "bright_magenta",
+    }
 
-    time_start: float
-    time_prev: float
-    timed: bool = False
-    raw: bool = False
-    indent: int = 0
-
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        timed: bool = False,
+        raw: bool = False,
+        indent: int = 0,
+    ) -> None:
         super().__init__()
         LoggingHandler.INSTANCE = self
         self.time_start = time()
         self.time_prev = self.time_start
+        self.timed = timed
+        self.raw = raw
+        self.indent = indent
 
     def emit(self, record: LogRecord) -> None:
         message = record.getMessage()
@@ -49,7 +48,7 @@ class LoggingHandler(StreamHandler):
         elapsed_total = now - self.time_start
         elapsed_current = now - self.time_prev
 
-        log_color = color or LOG_COLORS[log_prefix]
+        log_color = color or self.LOG_COLORS[log_prefix]
 
         if self.indent:
             empty = (
@@ -66,31 +65,44 @@ class LoggingHandler(StreamHandler):
         elif not self.raw:
             message = f"{log_prefix}: {message}"
 
-        file = sys.stderr if log_prefix in "WEC" else sys.stdout
+        self.emit_raw(log_prefix, message, log_color)
+        self.time_prev += elapsed_current
 
+    def emit_raw(self, log_prefix: str, message: str, color: str):
+        file = sys.stderr if log_prefix in "WEC" else sys.stdout
         if self.raw:
             click.echo(message, file=file)
         else:
-            click.secho(message, file=file, fg=log_color)
-        self.time_prev += elapsed_current
+            click.secho(message, file=file, fg=color)
+
+    @staticmethod
+    def tb_echo(tb):
+        filename = tb.tb_frame.f_code.co_filename
+        name = tb.tb_frame.f_code.co_name
+        line = tb.tb_lineno
+        graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
+
+    @classmethod
+    def emit_exception(cls, e: Exception, full_traceback: bool = False):
+        error(f"{type(e).__name__}: {e}")
+        tb = e.__traceback__
+        while tb.tb_next:
+            if full_traceback:
+                cls.tb_echo(tb)
+            tb = tb.tb_next
+        cls.tb_echo(tb)
 
 
-def log_setup(verbosity: int, timed: bool, raw: bool, indent: int):
-    verbosity = min(verbosity, 2)
-    handler = LoggingHandler()
-    handler.timed = timed
-    handler.raw = raw
-    handler.indent = indent
-
+def log_setup(level: int, handler: LoggingHandler, setup_bars: bool = True):
     logging.addLevelName(VERBOSE, "VERBOSE")
     logger = logging.root
-    logger.setLevel(VERBOSITY_LEVEL[verbosity])
+    logger.setLevel(level)
     for h in logger.handlers:
         logger.removeHandler(h)
     logger.addHandler(handler)
 
     # make Click progress bars visible on non-TTY stdout
-    if sys.stdout.isatty():
+    if not setup_bars or sys.stdout.isatty():
         return
     # noinspection PyProtectedMember
     from click._termui_impl import ProgressBar

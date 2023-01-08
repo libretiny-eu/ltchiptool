@@ -24,7 +24,7 @@ from .fileio import (
     writejson,
     writetext,
 )
-from .logging import LoggingHandler, log_copy_setup, log_setup, verbose
+from .logging import VERBOSE, LoggingHandler, log_copy_setup, log_setup, verbose
 from .misc import sizeof, unpack_obj
 from .obj import get, has, pop, set_, str2enum
 from .slice import SliceLike, slice2int
@@ -39,6 +39,7 @@ __all__ = [
     "RecursiveDict",
     "SliceLike",
     "Toolchain",
+    "VERBOSE",
     "bitcat",
     "bitcatraw",
     "chext",
