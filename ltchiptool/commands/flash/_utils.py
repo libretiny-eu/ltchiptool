@@ -40,6 +40,7 @@ def get_file_type(
     ]
 ]:
     file_type = None
+    file_size = stat(file.name).st_size
     soc = None
     auto_offset = None
     auto_skip = None
@@ -57,10 +58,10 @@ def get_file_type(
                 break
 
     if file_type:
-        return file_type, None, None, None, None, None
+        return file_type, None, None, None, None, file_size
 
     # auto-detection - stage 2 - checking using SocInterface
-    file_size = stat(file.name).st_size
+    tpl = None
     if family is None:
         # check all families
         for f in Family.get_all():
@@ -72,8 +73,6 @@ def get_file_type(
             except NotImplementedError:
                 tpl = None
             if tpl:
-                file_type, auto_offset, auto_skip, auto_length = tpl
-            if file_type:
                 family = f
                 break
     else:
@@ -83,9 +82,19 @@ def get_file_type(
             tpl = soc.detect_file_type(file, length=file_size)
         except NotImplementedError:
             tpl = None
-        if tpl:
-            file_type, auto_offset, auto_skip, auto_length = tpl
 
+    if tpl:
+        file_type, auto_offset, auto_skip, auto_length = tpl
+    else:
+        auto_length = file_size
+
+    debug(
+        f"Detection: {file_type}, "
+        f"{family.short_name if family else None}, "
+        f"offset={auto_offset}, "
+        f"skip={auto_skip}, "
+        f"length={auto_length}",
+    )
     return file_type, family, soc, auto_offset, auto_skip, auto_length
 
 
