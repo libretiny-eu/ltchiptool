@@ -91,7 +91,7 @@ class LogPanel(BasePanel):
 
         self.delayed_lines = []
 
-        self.log: wx.TextCtrl = self.FindWindowByName("text_log")
+        self.Log: wx.TextCtrl = self.FindWindowByName("text_log")
         LoggingHandler.get().add_emitter(self.emit_raw)
         verbose("Hello World")
         debug("Hello World")
@@ -119,10 +119,13 @@ class LogPanel(BasePanel):
 
         wx_color = self.COLOR_MAP[color]
         if LoggingHandler.get().raw:
-            self.log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
+            self.Log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
         else:
-            self.log.SetDefaultStyle(wx.TextAttr(wx_color))
-        self.log.AppendText(f"{message}\n")
+            self.Log.SetDefaultStyle(wx.TextAttr(wx_color))
+        self.Log.AppendText(f"{message}\n")
+
+    def Clear(self):
+        self.Log.Clear()
 
     def OnShow(self):
         super().OnShow()
