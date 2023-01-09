@@ -6,29 +6,29 @@ from typing import Callable
 
 
 class BaseThread(Thread):
-    _stop: Event
+    _stop_flag: Event
     on_stop: Callable[["BaseThread"], None] = None
 
     def __init__(self):
         super().__init__()
-        self._stop = Event()
+        self._stop_flag = Event()
 
     def run_impl(self):
         pass
 
     def run(self):
         debug(f"Started {type(self).__name__}")
-        self._stop.clear()
+        self._stop_flag.clear()
         self.run_impl()
         if self.on_stop:
             self.on_stop(self)
         debug(f"Stopped {type(self).__name__}")
 
     def stop(self):
-        self._stop.set()
+        self._stop_flag.set()
 
     def should_run(self) -> bool:
-        return not self._stop.is_set()
+        return not self._stop_flag.is_set()
 
     def should_stop(self) -> bool:
-        return self._stop.is_set()
+        return self._stop_flag.is_set()

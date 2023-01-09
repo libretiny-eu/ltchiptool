@@ -63,10 +63,11 @@ class FlashPanel(BasePanel):
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
 
+    def OnShow(self):
+        super().OnShow()
         self.start_work(PortWatcher(self.on_ports_updated))
-        self.update()
 
-    def update(self, target: wx.Window = None):
+    def OnUpdate(self, target: wx.Window = None):
         if target in [self.File]:
             self.file = self.file
 
@@ -99,7 +100,7 @@ class FlashPanel(BasePanel):
                 if file_type == "UF2":
                     if not self.auto_detect:
                         self.auto_detect = True
-                        self.update()
+                        self.OnUpdate()
                         return
                 elif not file_type and self.auto_detect:
                     errors.append("File is unrecognized")
@@ -267,7 +268,7 @@ class FlashPanel(BasePanel):
             if dialog.ShowModal() == wx.ID_CANCEL:
                 return
             self.file = dialog.GetPath()
-            self.update()
+            self.OnUpdate()
 
     @only_target
     def on_start_click(self, button: wx.Button):

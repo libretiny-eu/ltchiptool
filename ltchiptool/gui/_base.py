@@ -18,12 +18,6 @@ class BasePanel(wx.Panel):
         self._components = []
         self._threads = []
 
-    def update(self, target: wx.Window = None):
-        pass
-
-    def _update(self, event: wx.Event):
-        self.update(event.EventObject)
-
     def start_work(self, thread: BaseThread):
         self._threads.append(thread)
         thread.on_stop = lambda t: self.on_work_stopped(t)
@@ -37,6 +31,20 @@ class BasePanel(wx.Panel):
     def on_work_stopped(self, t: BaseThread):
         self._threads.remove(t)
 
+    def OnShow(self):
+        self.OnUpdate()
+
+    def OnClose(self):
+        for t in list(self._threads):
+            t.stop()
+            t.join()
+
+    def _OnUpdate(self, event: wx.Event):
+        self.OnUpdate(event.EventObject)
+
+    def OnUpdate(self, target: wx.Window = None):
+        pass
+
     def LoadXRC(self, res: wx.xrc.XmlResource, name: str):
         panel = res.LoadPanel(self, name)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -49,25 +57,25 @@ class BasePanel(wx.Panel):
     def BindComboBox(self, name: str):
         window: wx.ComboBox = self.FindWindowByName(name)
         self._components.append(window)
-        window.Bind(wx.EVT_COMBOBOX, self._update)
+        window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
         return window
 
     def BindRadioButton(self, name: str):
         window: wx.RadioButton = self.FindWindowByName(name)
         self._components.append(window)
-        window.Bind(wx.EVT_RADIOBUTTON, self._update)
+        window.Bind(wx.EVT_RADIOBUTTON, self._OnUpdate)
         return window
 
     def BindCheckBox(self, name: str):
         window: wx.CheckBox = self.FindWindowByName(name)
         self._components.append(window)
-        window.Bind(wx.EVT_CHECKBOX, self._update)
+        window.Bind(wx.EVT_CHECKBOX, self._OnUpdate)
         return window
 
     def BindTextCtrl(self, name: str):
         window: wx.TextCtrl = self.FindWindowByName(name)
         self._components.append(window)
-        window.Bind(wx.EVT_TEXT, self._update)
+        window.Bind(wx.EVT_TEXT, self._OnUpdate)
         return window
 
     def BindButton(self, name: str, func: Callable[[wx.Event], None]):
@@ -83,7 +91,7 @@ class BasePanel(wx.Panel):
     def EnableAll(self):
         for window in self._components:
             window.Enable()
-        self.update()
+        self.OnUpdate()
 
     def DisableAll(self):
         for window in self._components:

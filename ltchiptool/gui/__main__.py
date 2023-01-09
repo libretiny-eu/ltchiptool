@@ -8,28 +8,37 @@ from ltchiptool import get_version
 from ltchiptool.util import LoggingHandler
 
 
-def gui():
-    import wx
-
-    from .log import GUILoggingHandler
-    from .main import MainFrame
-
-    app = wx.App()
-    frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
-    frm.Show()
-    handler: GUILoggingHandler = LoggingHandler.INSTANCE
-    handler.print_delayed()
-    app.MainLoop()
-
-
-@click.command(help="Start the GUI")
-def cli():
+def gui_entrypoint():
     try:
         import wx
     except ImportError:
         error("Cannot find wxPython or one of its dependencies")
         exit(1)
-    gui()
+
+    from .main import MainFrame
+
+    app = wx.App()
+    try:
+        frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
+        frm.Show()
+        app.MainLoop()
+    except Exception as e:
+        wx.MessageBox(
+            message=f"Exception during app initialization:\n{type(e).__name__}: {e}",
+            caption="Error",
+            style=wx.ICON_ERROR,
+        )
+        wx.Exit()
+        exit(1)
+
+
+@click.command(help="Start the GUI")
+def cli():
+    try:
+        gui_entrypoint()
+    except Exception as e:
+        LoggingHandler.get().emit_exception(e)
+        exit(1)
 
 
 if __name__ == "__main__":

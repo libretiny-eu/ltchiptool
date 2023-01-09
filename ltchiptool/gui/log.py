@@ -2,61 +2,16 @@
 import threading
 import time
 from logging import debug, error, info, warning
+from typing import List, Optional, Tuple
 
 import wx
 import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
 
-from ltchiptool.util import VERBOSE, LoggingHandler, log_setup, sizeof, verbose
+from ltchiptool.util import VERBOSE, LoggingHandler, sizeof, verbose
 
 from ._base import BasePanel
-
-
-class GUILoggingHandler(LoggingHandler):
-    COLOR_MAP = {
-        "black": wx.Colour(12, 12, 12),
-        "red": wx.Colour(197, 15, 31),
-        "green": wx.Colour(19, 161, 14),
-        "yellow": wx.Colour(193, 156, 0),
-        "blue": wx.Colour(0, 55, 218),
-        "magenta": wx.Colour(136, 23, 152),
-        "cyan": wx.Colour(58, 150, 221),
-        "white": wx.Colour(204, 204, 204),
-        "bright_black": wx.Colour(118, 118, 118),
-        "bright_red": wx.Colour(231, 72, 86),
-        "bright_green": wx.Colour(22, 198, 12),
-        "bright_yellow": wx.Colour(249, 241, 165),
-        "bright_blue": wx.Colour(59, 120, 255),
-        "bright_magenta": wx.Colour(180, 0, 158),
-        "bright_cyan": wx.Colour(97, 214, 214),
-        "bright_white": wx.Colour(242, 242, 242),
-    }
-
-    def __init__(self, log: wx.TextCtrl) -> None:
-        super().__init__()
-        self.log = log
-        self.delayed_lines = []
-
-    def emit_raw(self, log_prefix: str, message: str, color: str):
-        # delay non-main-thread logging until the app finishes initializing
-        is_main_thread = threading.current_thread() is threading.main_thread()
-        if not is_main_thread and self.delayed_lines is not None:
-            self.delayed_lines.append((log_prefix, message, color))
-            return
-
-        wx_color = self.COLOR_MAP[color]
-        if self.raw:
-            self.log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
-        else:
-            self.log.SetDefaultStyle(wx.TextAttr(wx_color))
-        self.log.AppendText(f"{message}\n")
-        super().emit_raw(log_prefix, message, color)
-
-    def print_delayed(self):
-        for log_prefix, message, color in self.delayed_lines:
-            self.emit_raw(log_prefix, message, color)
-        self.delayed_lines = None
 
 
 class GUIProgressBar(ProgressBar):
@@ -109,14 +64,35 @@ class GUIProgressBar(ProgressBar):
 
 
 class LogPanel(BasePanel):
+    COLOR_MAP = {
+        "black": wx.Colour(12, 12, 12),
+        "red": wx.Colour(197, 15, 31),
+        "green": wx.Colour(19, 161, 14),
+        "yellow": wx.Colour(193, 156, 0),
+        "blue": wx.Colour(0, 55, 218),
+        "magenta": wx.Colour(136, 23, 152),
+        "cyan": wx.Colour(58, 150, 221),
+        "white": wx.Colour(204, 204, 204),
+        "bright_black": wx.Colour(118, 118, 118),
+        "bright_red": wx.Colour(231, 72, 86),
+        "bright_green": wx.Colour(22, 198, 12),
+        "bright_yellow": wx.Colour(249, 241, 165),
+        "bright_blue": wx.Colour(59, 120, 255),
+        "bright_magenta": wx.Colour(180, 0, 158),
+        "bright_cyan": wx.Colour(97, 214, 214),
+        "bright_white": wx.Colour(242, 242, 242),
+    }
+
+    delayed_lines: Optional[List[Tuple[str, str, str]]]
+
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
         super().__init__(*args, **kw)
-
         self.LoadXRC(res, "LogPanel")
 
+        self.delayed_lines = []
+
         self.log: wx.TextCtrl = self.FindWindowByName("text_log")
-        self.handler = GUILoggingHandler(self.log)
-        self.set_level(VERBOSE)
+        LoggingHandler.get().add_emitter(self.emit_raw)
         verbose("Hello World")
         debug("Hello World")
         info("Hello World")
@@ -134,9 +110,26 @@ class LogPanel(BasePanel):
         GUIProgressBar.render_finish(GUIProgressBar)
         setattr(_termui_impl, "ProgressBar", GUIProgressBar)
 
-    def set_level(self, level: int) -> None:
-        log_setup(level=level, handler=self.handler, setup_bars=False)
+    def emit_raw(self, log_prefix: str, message: str, color: str):
+        # delay non-main-thread logging until the app finishes initializing
+        is_main_thread = threading.current_thread() is threading.main_thread()
+        if not is_main_thread and self.delayed_lines is not None:
+            self.delayed_lines.append((log_prefix, message, color))
+            return
 
-    def set_options(self, timed: bool, raw: bool) -> None:
-        self.handler.timed = timed
-        self.handler.raw = raw
+        wx_color = self.COLOR_MAP[color]
+        if LoggingHandler.get().raw:
+            self.log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
+        else:
+            self.log.SetDefaultStyle(wx.TextAttr(wx_color))
+        self.log.AppendText(f"{message}\n")
+
+    def OnShow(self):
+        super().OnShow()
+        for log_prefix, message, color in self.delayed_lines:
+            self.emit_raw(log_prefix, message, color)
+        self.delayed_lines = None
+
+    def OnClose(self):
+        super().OnClose()
+        LoggingHandler.get().clear_emitters()
