@@ -1,32 +1,41 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
-import logging
+import json
+import sys
 import threading
 from logging import debug, info
+from os import makedirs
+from os.path import dirname, isfile, join
 
 import wx
 import wx.adv
 import wx.xrc
+from click import get_app_dir
 
 from ltchiptool.util import LoggingHandler
 
+from ._base import BasePanel
 from ._utils import with_target
 from .flash import FlashPanel
 from .log import LogPanel
 
 
+# noinspection PyPep8Naming
 class MainFrame(wx.Frame):
+    panels: dict[str, BasePanel]
+
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        threading.excepthook = lambda a: LoggingHandler.get().emit_exception(
-            a.exc_value
-        )
+        sys.excepthook = self.OnException
+        threading.excepthook = self.OnException
 
         res = wx.xrc.XmlResource("d:\\Dev\\tuya\\wx\\wx.xrc")
 
+        self.config_file = join(get_app_dir("ltchiptool"), "config.json")
+
         # initialize logging
         self.Log = LogPanel(res, self)
-        # main notebook
+        # main window layout
         self.Notebook = wx.Notebook(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.Notebook, flag=wx.EXPAND)
@@ -34,14 +43,17 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer)
 
         try:
-            # main menu
-            menu_bar: wx.MenuBar = res.LoadMenuBar("MainMenuBar")
-            self.SetMenuBar(menu_bar)
+            self.SetMenuBar(res.LoadMenuBar("MainMenuBar"))
 
             self.Flash = FlashPanel(res, self.Notebook)
             self.Notebook.AddPage(self.Flash, "Flashing")
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
+
+        self.panels = dict(
+            log=self.Log,
+            flash=self.Flash,
+        )
 
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -50,17 +62,49 @@ class MainFrame(wx.Frame):
         self.SetSize((600, 800))
         self.SetMinSize((600, 600))
         self.CreateStatusBar()
-        self.SetStatusText("Hello world")
+
+    @property
+    def _settings(self) -> dict:
+        if not isfile(self.config_file):
+            return dict()
+        with open(self.config_file, "r") as f:
+            return json.load(f)
+
+    @_settings.setter
+    def _settings(self, value: dict):
+        makedirs(dirname(self.config_file), exist_ok=True)
+        with open(self.config_file, "w") as f:
+            json.dump(value, f, indent="\t")
+
+    def GetSettings(self) -> dict:
+        pass
+
+    def SetSettings(self, **kwargs):
+        pass
+
+    @staticmethod
+    def OnException(*args):
+        if isinstance(args[0], type):
+            LoggingHandler.get().emit_exception(args[1])
+        else:
+            LoggingHandler.get().emit_exception(args[0].exc_value)
 
     def OnShow(self, *_):
-        debug("MainFrame OnShow()")
-        self.Log.OnShow()
-        self.Flash.OnShow()
+        settings = self._settings
+        for name, panel in self.panels.items():
+            panel.SetSettings(**settings.get(name, {}))
+        if settings:
+            info(f"Loaded settings from {self.config_file}")
+        for name, panel in self.panels.items():
+            panel.OnShow()
 
     def OnClose(self, *_):
-        debug("MainFrame OnClose()")
-        self.Log.OnClose()
-        self.Flash.OnClose()
+        settings = dict()
+        for name, panel in self.panels.items():
+            panel.OnClose()
+            settings[name] = panel.GetSettings() or {}
+        self._settings = settings
+        info(f"Saved settings to {self.config_file}")
         self.Destroy()
 
     @with_target
@@ -73,19 +117,9 @@ class MainFrame(wx.Frame):
         match (title, label):
             case ("File", "Quit"):
                 self.Close(True)
-
-            case ("Logging", _) if label.startswith("Clear"):
-                self.Log.Clear()
-
-            case ("Logging", "Timed"):
-                LoggingHandler.get().timed = checked
-                info("Logging options changed")
-
-            case ("Logging", "Colors"):
-                LoggingHandler.get().raw = not checked
-                info("Logging options changed")
-
-            case ("Logging", ("Verbose" | "Debug" | "Info" | "Warning" | "Error") as l):
-                level = logging.getLevelName(l.upper())
-                LoggingHandler.get().level = level
-                logging.log(level, "Log level changed")
+            case ("Debug", "Print settings"):
+                for name, panel in self.panels.items():
+                    debug(f"Panel '{name}' settings: {panel.GetSettings()}")
+            case _:
+                for panel in self.panels.values():
+                    panel.OnMenu(title, label, checked)

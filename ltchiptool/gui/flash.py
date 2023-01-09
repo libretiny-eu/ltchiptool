@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import os
-from enum import Enum, auto
+from enum import Enum
 from logging import info
 from os.path import dirname, isfile
 from threading import Thread
@@ -23,14 +23,16 @@ from .work.ports import PortWatcher
 
 
 class FlashOp(Enum):
-    WRITE = auto()
-    READ = auto()
-    READ_ROM = auto()
+    WRITE = "write"
+    READ = "read"
+    READ_ROM = "read_rom"
 
 
 class FlashPanel(BasePanel):
     file_tuple: tuple | None = None
     ports: list[tuple[str, bool, str]]
+
+    delayed_port: str | None = None
 
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
         super().__init__(*args, **kw)
@@ -51,6 +53,14 @@ class FlashPanel(BasePanel):
             "button_start", self.on_start_click
         )
 
+        self.Baudrate = {
+            None: self.BindRadioButton("radio_baudrate_auto"),
+            115200: self.BindRadioButton("radio_baudrate_115200"),
+            230400: self.BindRadioButton("radio_baudrate_230400"),
+            460800: self.BindRadioButton("radio_baudrate_460800"),
+            921600: self.BindRadioButton("radio_baudrate_921600"),
+        }
+
         self.FileType: wx.TextCtrl = self.FindWindowByName("input_file_type")
 
         self.OffsetText: wx.StaticText = self.FindWindowByName("text_offset")
@@ -62,13 +72,51 @@ class FlashPanel(BasePanel):
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
 
+    def GetSettings(self) -> dict:
+        return dict(
+            port=self.port,
+            baudrate=self.baudrate,
+            operation=self.operation.value,
+            auto_detect=self.auto_detect,
+            family=self.family and self.family.short_name,
+            file=self.file,
+            offset=self.offset,
+            skip=self.skip,
+            length=self.length,
+        )
+
+    def SetSettings(
+        self,
+        port: str = None,
+        baudrate: int = None,
+        operation: str = FlashOp.WRITE.value,
+        auto_detect: bool = True,
+        family: str = None,
+        file: str = None,
+        offset: int = None,
+        skip: int = None,
+        length: int = None,
+    ):
+        self.port = port
+        self.baudrate = baudrate
+        self.operation = FlashOp(operation)
+        self.auto_detect = auto_detect
+        try:
+            self.family = Family.get(short_name=family)
+        except ValueError:
+            self.family = None
+        self.file = file
+        self.offset = offset
+        self.skip = skip
+        self.length = length
+
     def OnShow(self):
         super().OnShow()
         self.start_work(PortWatcher(self.on_ports_updated))
 
     def OnUpdate(self, target: wx.Window = None):
-        if target in [self.File]:
-            self.file = self.file
+        # if target in [self.File]:
+        #     self.file = self.file
 
         self.Family.Enable(self.operation != FlashOp.WRITE or not self.auto_detect)
         self.Offset.Enable(not self.auto_detect)
@@ -124,12 +172,14 @@ class FlashPanel(BasePanel):
                 self.offset = 0
                 self.length = 0x200000
 
-        verbose(f"Update: family={self.family}")
+        verbose(f"Update: port={self.port}, family={self.family}")
 
         if not self.family:
             errors.append("Choose the chip family")
         if not self.length:
             errors.append("Enter a correct length")
+        if not self.port:
+            errors.append("Choose a serial port")
 
         if errors:
             self.Start.SetNote(errors[0])
@@ -155,6 +205,22 @@ class FlashPanel(BasePanel):
             for port, _, description in self.ports:
                 if value == port:
                     self.Port.SetValue(description)
+                    return
+            self.delayed_port = value
+
+    @property
+    def baudrate(self):
+        for baudrate, radio in self.Baudrate.items():
+            if radio.GetValue():
+                return baudrate
+        return None
+
+    @baudrate.setter
+    def baudrate(self, value: int):
+        for baudrate, radio in self.Baudrate.items():
+            if baudrate == value:
+                radio.SetValue(True)
+                return
 
     @property
     def operation(self):
@@ -164,6 +230,16 @@ class FlashPanel(BasePanel):
             return FlashOp.READ
         if self.ReadROM.GetValue():
             return FlashOp.READ_ROM
+
+    @operation.setter
+    def operation(self, value: FlashOp):
+        match value:
+            case FlashOp.WRITE:
+                self.Write.SetValue(True)
+            case FlashOp.READ:
+                self.Read.SetValue(True)
+            case FlashOp.READ_ROM:
+                self.ReadROM.SetValue(True)
 
     @property
     def auto_detect(self):
@@ -191,8 +267,9 @@ class FlashPanel(BasePanel):
         return self.File.GetValue()
 
     @file.setter
-    def file(self, value: str):
-        self.File.ChangeValue(value)
+    def file(self, value: str | None):
+        value = value or ""
+        self.File.SetValue(value)
         if self.operation != FlashOp.WRITE:
             return
         if not isfile(value):
@@ -244,7 +321,7 @@ class FlashPanel(BasePanel):
         self.Length.SetValue(f"0x{value:X}")
 
     def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
-        user_port = self.port
+        user_port = self.port or self.delayed_port
         for port, is_usb, description in set(ports) - set(self.ports):
             info(f"Found new device: {description}")
             if user_port is None and is_usb:
@@ -254,6 +331,7 @@ class FlashPanel(BasePanel):
         self.Port.Set([port[2] for port in ports])
         self.ports = ports
         self.port = user_port
+        self.delayed_port = None
 
     @on_event
     def on_browse_click(self):

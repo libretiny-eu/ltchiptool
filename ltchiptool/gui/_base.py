@@ -31,6 +31,12 @@ class BasePanel(wx.Panel):
     def on_work_stopped(self, t: BaseThread):
         self._threads.remove(t)
 
+    def GetSettings(self) -> dict:
+        pass
+
+    def SetSettings(self, **kwargs):
+        pass
+
     def OnShow(self):
         self.OnUpdate()
 
@@ -38,6 +44,9 @@ class BasePanel(wx.Panel):
         for t in list(self._threads):
             t.stop()
             t.join()
+
+    def OnMenu(self, title: str, label: str, checked: bool):
+        pass
 
     def _OnUpdate(self, event: wx.Event):
         self.OnUpdate(event.EventObject)

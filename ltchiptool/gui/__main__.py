@@ -5,7 +5,7 @@ from logging import error
 import click
 
 from ltchiptool import get_version
-from ltchiptool.util import LoggingHandler
+from ltchiptool.util import VERBOSE, LoggingHandler
 
 
 def gui_entrypoint():
@@ -19,6 +19,7 @@ def gui_entrypoint():
 
     app = wx.App()
     try:
+        LoggingHandler.get().level = VERBOSE
         frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
         frm.Show()
         app.MainLoop()

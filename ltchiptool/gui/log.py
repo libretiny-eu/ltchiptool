@@ -1,15 +1,16 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-8.
 
+import logging
 import threading
 import time
-from logging import debug, error, info, warning
+from logging import INFO, info, log, warning
 
 import wx
 import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
 
-from ltchiptool.util import LoggingHandler, sizeof, verbose
+from ltchiptool.util import LoggingHandler, sizeof
 
 from ._base import BasePanel
 
@@ -93,11 +94,6 @@ class LogPanel(BasePanel):
 
         self.Log: wx.TextCtrl = self.FindWindowByName("text_log")
         LoggingHandler.get().add_emitter(self.emit_raw)
-        verbose("Hello World")
-        debug("Hello World")
-        info("Hello World")
-        warning("Hello World")
-        error("Hello World")
 
         GUIProgressBar.parent = self
         GUIProgressBar.elapsed = self.FindWindowByName("text_elapsed")
@@ -124,8 +120,42 @@ class LogPanel(BasePanel):
             self.Log.SetDefaultStyle(wx.TextAttr(wx_color))
         self.Log.AppendText(f"{message}\n")
 
-    def Clear(self):
-        self.Log.Clear()
+    def GetSettings(self) -> dict:
+        handler = LoggingHandler.get()
+        return dict(
+            level=handler.level,
+            timed=handler.timed,
+            raw=handler.raw,
+            full_traceback=handler.full_traceback,
+        )
+
+    def SetSettings(
+        self,
+        level: int = INFO,
+        timed: bool = False,
+        raw: bool = False,
+        full_traceback: bool = True,
+    ):
+        handler = LoggingHandler.get()
+        handler.level = level
+        handler.timed = timed
+        handler.raw = raw
+        handler.full_traceback = full_traceback
+        menu_bar: wx.MenuBar = self.TopLevelParent.MenuBar
+        menu: wx.Menu = menu_bar.GetMenu(menu_bar.FindMenu("Logging"))
+        if not menu:
+            warning(f"Couldn't find Logging menu")
+            return
+        level_name = logging.getLevelName(level).title()
+        for item in menu.GetMenuItems():
+            item: wx.MenuItem
+            match item.GetItemLabel():
+                case "Timed":
+                    item.Check(timed)
+                case "Colors":
+                    item.Check(not raw)
+                case _ if item.GetItemLabel() == level_name:
+                    item.Check()
 
     def OnShow(self):
         super().OnShow()
@@ -136,3 +166,20 @@ class LogPanel(BasePanel):
     def OnClose(self):
         super().OnClose()
         LoggingHandler.get().clear_emitters()
+
+    def OnMenu(self, title: str, label: str, checked: bool):
+        if title != "Logging":
+            return
+        match label:
+            case "Clear log window":
+                self.Log.Clear()
+            case "Timed":
+                LoggingHandler.get().timed = checked
+                info("Logging options changed")
+            case "Colors":
+                LoggingHandler.get().raw = not checked
+                info("Logging options changed")
+            case ("Verbose" | "Debug" | "Info" | "Warning" | "Error") as l:
+                level = logging.getLevelName(l.upper())
+                LoggingHandler.get().level = level
+                log(level, "Log level changed")
