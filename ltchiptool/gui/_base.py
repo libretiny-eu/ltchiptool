@@ -1,6 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
-from typing import Callable, List, Type
+from typing import Callable
 
 import wx
 import wx.xrc
@@ -10,8 +10,8 @@ from .work.base import BaseThread
 
 # noinspection PyPep8Naming
 class BasePanel(wx.Panel):
-    _components: List[wx.Window]
-    _threads: List[BaseThread]
+    _components: list[wx.Window]
+    _threads: list[BaseThread]
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -23,7 +23,7 @@ class BasePanel(wx.Panel):
         thread.on_stop = lambda t: self.on_work_stopped(t)
         thread.start()
 
-    def stop_work(self, cls: Type[BaseThread]):
+    def stop_work(self, cls: type[BaseThread]):
         for t in list(self._threads):
             if isinstance(t, cls):
                 t.stop()

@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-9.
 
 from time import sleep
-from typing import Callable, List, Tuple
+from typing import Callable
 
 from ltchiptool.util import list_serial_ports, verbose
 
@@ -17,7 +17,7 @@ class PortWatcher(BaseThread):
     See: https://docs.microsoft.com/en-us/windows/win32/devio/wm-devicechange
     """
 
-    def __init__(self, on_event: Callable[[List[Tuple[str, bool, str]]], None]):
+    def __init__(self, on_event: Callable[[list[tuple[str, bool, str]]], None]):
         super().__init__()
         self.on_event = on_event
 

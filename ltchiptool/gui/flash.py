@@ -6,7 +6,6 @@ from logging import info
 from os.path import dirname, isfile
 from threading import Thread
 from time import sleep
-from typing import List, Optional, Tuple
 
 import click
 import wx
@@ -30,8 +29,8 @@ class FlashOp(Enum):
 
 
 class FlashPanel(BasePanel):
-    file_tuple: Optional[tuple] = None
-    ports: List[Tuple[str, bool, str]]
+    file_tuple: tuple | None = None
+    ports: list[tuple[str, bool, str]]
 
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
         super().__init__(*args, **kw)
@@ -149,7 +148,7 @@ class FlashPanel(BasePanel):
         return self.ports[self.Port.GetSelection()][0]
 
     @port.setter
-    def port(self, value: Optional[str]):
+    def port(self, value: str | None):
         if value is None:
             self.Port.SetSelection(wx.NOT_FOUND)
         else:
@@ -182,7 +181,7 @@ class FlashPanel(BasePanel):
             return None
 
     @family.setter
-    def family(self, value: Optional[Family]):
+    def family(self, value: Family | None):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
             self.Family.SetValue(value.description)
@@ -244,7 +243,7 @@ class FlashPanel(BasePanel):
         value = value or 0
         self.Length.SetValue(f"0x{value:X}")
 
-    def on_ports_updated(self, ports: List[Tuple[str, bool, str]]):
+    def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
         user_port = self.port
         for port, is_usb, description in set(ports) - set(self.ports):
             info(f"Found new device: {description}")

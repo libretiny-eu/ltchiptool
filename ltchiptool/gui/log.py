@@ -1,15 +1,15 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-8.
+
 import threading
 import time
 from logging import debug, error, info, warning
-from typing import List, Optional, Tuple
 
 import wx
 import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
 
-from ltchiptool.util import VERBOSE, LoggingHandler, sizeof, verbose
+from ltchiptool.util import LoggingHandler, sizeof, verbose
 
 from ._base import BasePanel
 
@@ -83,7 +83,7 @@ class LogPanel(BasePanel):
         "bright_white": wx.Colour(242, 242, 242),
     }
 
-    delayed_lines: Optional[List[Tuple[str, str, str]]]
+    delayed_lines: list[tuple[str, str, str]] | None
 
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
         super().__init__(*args, **kw)
