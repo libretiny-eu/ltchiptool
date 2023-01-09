@@ -246,13 +246,15 @@ class FlashPanel(BasePanel):
 
     def on_ports_updated(self, ports: List[Tuple[str, bool, str]]):
         user_port = self.port
-        for _, _, description in set(ports) - set(self.ports):
+        for port, is_usb, description in set(ports) - set(self.ports):
             info(f"Found new device: {description}")
+            if user_port is None and is_usb:
+                user_port = port
         for _, _, description in set(self.ports) - set(ports):
             info(f"Device unplugged: {description}")
         self.Port.Set([port[2] for port in ports])
-        self.port = user_port
         self.ports = ports
+        self.port = user_port
 
     @on_event
     def on_browse_click(self):
