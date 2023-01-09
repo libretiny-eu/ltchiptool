@@ -9,6 +9,7 @@ import click
 from click import Command, Context, MultiCommand
 
 from .fileio import readtext
+from .misc import list_serial_ports
 
 
 def graph(level: int, *message, loglevel: int = INFO):
@@ -55,27 +56,12 @@ def parse_argfile(args: Iterable[str]) -> List[str]:
 
 
 def find_serial_port() -> Optional[str]:
-    from serial.tools.list_ports import comports
-
-    ports = {}
     graph(0, "Available COM ports:")
-    for port in comports():
-        is_usb = port.hwid.startswith("USB")
-        if is_usb:
-            description = (
-                f"{port.name} - {port.description} - "
-                f"VID={port.vid:04X} ({port.manufacturer}), "
-                f"PID={port.pid:04X} "
-            )
-        else:
-            description = f"{port.name} - {port.description} - HWID={port.hwid}"
-        ports[port.device] = [is_usb, description]
-
-    ports = sorted(ports.items(), key=lambda x: (not x[1][0], x[1][1]))
+    ports = list_serial_ports()
     if not ports:
         warning("No COM ports found! Use -d/--device to specify the port manually.")
         return None
-    for idx, (_, (is_usb, description)) in enumerate(ports):
+    for idx, (_, is_usb, description) in enumerate(ports):
         graph(1, description)
         if idx == 0:
             graph(2, "Selecting this port. To override, use -d/--device")

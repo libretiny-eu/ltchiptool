@@ -25,7 +25,7 @@ from .fileio import (
     writetext,
 )
 from .logging import VERBOSE, LoggingHandler, log_copy_setup, log_setup, verbose
-from .misc import sizeof, unpack_obj
+from .misc import list_serial_ports, sizeof, unpack_obj
 from .obj import get, has, pop, set_, str2enum
 from .slice import SliceLike, slice2int
 from .toolchain import Toolchain
@@ -49,6 +49,7 @@ __all__ = [
     "graph",
     "has",
     "isnewer",
+    "list_serial_ports",
     "log_copy_setup",
     "log_setup",
     "lt_find_path",

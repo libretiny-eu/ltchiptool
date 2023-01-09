@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
 
 from functools import update_wrapper
+from typing import List, Tuple
 
 from click import get_current_context
 
@@ -23,3 +24,22 @@ def unpack_obj(f):
         return f(*args, **data)
 
     return update_wrapper(new_func, f)
+
+
+def list_serial_ports() -> List[Tuple[str, bool, str]]:
+    from serial.tools.list_ports import comports
+
+    ports = []
+    for port in comports():
+        is_usb = port.hwid.startswith("USB")
+        if is_usb:
+            description = (
+                f"{port.name} - {port.description} - "
+                f"VID={port.vid:04X} ({port.manufacturer}), "
+                f"PID={port.pid:04X} "
+            )
+        else:
+            description = f"{port.name} - {port.description} - HWID={port.hwid}"
+        ports.append((port.device, is_usb, description))
+
+    return sorted(ports, key=lambda x: (not x[1], x[2]))
