@@ -6,7 +6,7 @@ from logging import info
 from os.path import dirname, isfile
 from threading import Thread
 from time import sleep
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import click
 import wx
@@ -20,6 +20,7 @@ from uf2tool.models import UF2
 
 from ._base import BasePanel
 from ._utils import on_event, only_target
+from .work.ports import PortWatcher
 
 
 class FlashOp(Enum):
@@ -29,12 +30,14 @@ class FlashOp(Enum):
 
 
 class FlashPanel(BasePanel):
+    file_tuple: Optional[tuple] = None
+    ports: List[Tuple[str, bool, str]]
+
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
         super().__init__(*args, **kw)
         self.LoadXRC(res, "FlashPanel")
 
-        self.baudrate: Optional[int] = None
-        self.file_tuple: Optional[tuple] = None
+        self.ports = []
 
         self.Port = self.BindComboBox("combo_port")
         self.Write = self.BindRadioButton("radio_write")
@@ -59,6 +62,8 @@ class FlashPanel(BasePanel):
         self.Length: wx.TextCtrl = self.FindWindowByName("input_length")
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
+
+        self.start_work(PortWatcher(self.on_ports_updated))
         self.update()
 
     def update(self, target: wx.Window = None):
@@ -135,6 +140,21 @@ class FlashPanel(BasePanel):
         else:
             self.Start.SetNote("")
             self.Start.Enable()
+
+    @property
+    def port(self):
+        if self.Port.GetSelection() == wx.NOT_FOUND:
+            return None
+        return self.ports[self.Port.GetSelection()][0]
+
+    @port.setter
+    def port(self, value: Optional[str]):
+        if value is None:
+            self.Port.SetSelection(wx.NOT_FOUND)
+        else:
+            for port, _, description in self.ports:
+                if value == port:
+                    self.Port.SetValue(description)
 
     @property
     def operation(self):
@@ -222,6 +242,16 @@ class FlashPanel(BasePanel):
     def length(self, value: int):
         value = value or 0
         self.Length.SetValue(f"0x{value:X}")
+
+    def on_ports_updated(self, ports: List[Tuple[str, bool, str]]):
+        user_port = self.port
+        for _, _, description in set(ports) - set(self.ports):
+            info(f"Found new device: {description}")
+        for _, _, description in set(self.ports) - set(ports):
+            info(f"Device unplugged: {description}")
+        self.Port.Set([port[2] for port in ports])
+        self.port = user_port
+        self.ports = ports
 
     @on_event
     def on_browse_click(self):
