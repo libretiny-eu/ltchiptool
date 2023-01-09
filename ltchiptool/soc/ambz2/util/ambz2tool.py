@@ -1,5 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-21.
 
+import logging
 from enum import IntEnum
 from hashlib import sha256
 from logging import debug, warning
@@ -11,7 +12,7 @@ import click
 from serial import Serial
 from xmodem import XMODEM
 
-from ltchiptool.util import log_copy_setup, verbose
+from ltchiptool.util import LoggingHandler, verbose
 from ltchiptool.util.intbin import align_down
 
 
@@ -47,7 +48,7 @@ class AmbZ2Tool:
         self.link_timeout = link_timeout
         self.read_timeout = read_timeout
 
-        log_copy_setup("xmodem.XMODEM")
+        LoggingHandler.get().attach(logging.getLogger("xmodem.XMODEM"))
         self.s = Serial(port, baudrate)
         self.xm = XMODEM(
             getc=lambda size, timeout=1: self.read(size) or None,

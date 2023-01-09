@@ -5,7 +5,12 @@ from logging import DEBUG, INFO
 import click
 from click import Context
 
-from ltchiptool.util import VERBOSE, LoggingHandler, get_multi_command_class, log_setup
+from ltchiptool.util import (
+    VERBOSE,
+    LoggingHandler,
+    get_multi_command_class,
+    log_setup_click_bars,
+)
 
 from .version import get_version
 
@@ -20,7 +25,6 @@ COMMANDS = {
     "uf2": "uf2tool/cli.py",
 }
 
-FULL_TRACEBACK: bool = False
 VERBOSITY_LEVEL = {
     0: INFO,
     1: DEBUG,
@@ -79,20 +83,20 @@ def cli_entrypoint(
     raw_log: bool,
     indent: int,
 ):
-    global FULL_TRACEBACK
-    FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
-    log_setup(
-        level=VERBOSITY_LEVEL[min(verbose, 2)],
-        handler=LoggingHandler(timed=timed, raw=raw_log, indent=indent),
-    )
+    logger = LoggingHandler.get()
+    logger.level = VERBOSITY_LEVEL[min(verbose, 2)]
+    logger.timed = timed
+    logger.raw = raw_log
+    logger.indent = indent
+    log_setup_click_bars()
 
 
 def cli():
     try:
         cli_entrypoint()
     except Exception as e:
-        LoggingHandler.INSTANCE.emit_exception(e, FULL_TRACEBACK)
+        LoggingHandler.get().emit_exception(e)
         exit(1)
 
 

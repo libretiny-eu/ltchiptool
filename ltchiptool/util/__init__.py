@@ -6,7 +6,6 @@ from .cli import (
     AutoIntParamType,
     DevicePortParamType,
     get_multi_command_class,
-    graph,
     parse_argfile,
 )
 from .crc16 import CRC16
@@ -24,7 +23,7 @@ from .fileio import (
     writejson,
     writetext,
 )
-from .logging import VERBOSE, LoggingHandler, log_copy_setup, log_setup, verbose
+from .logging import VERBOSE, LoggingHandler, graph, log_setup_click_bars, verbose
 from .misc import list_serial_ports, sizeof, unpack_obj
 from .obj import get, has, pop, set_, str2enum
 from .slice import SliceLike, slice2int
@@ -50,8 +49,7 @@ __all__ = [
     "has",
     "isnewer",
     "list_serial_ports",
-    "log_copy_setup",
-    "log_setup",
+    "log_setup_click_bars",
     "lt_find_path",
     "lt_read_json",
     "lt_set_path",

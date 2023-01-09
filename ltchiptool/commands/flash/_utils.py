@@ -144,7 +144,7 @@ def flash_link_interactive(
             # guide the user to connect the chip properly, or reset it manually
             soc.set_uart_params(port=port, baud=baud, link_timeout=link_timeout or 20.0)
             for line in _format_flash_guide(soc):
-                LoggingHandler.INSTANCE.emit_string("I", line, color="bright_blue")
+                LoggingHandler.get().emit_string("I", line, color="bright_blue")
         else:
             # give up after link_timeout
             raise TimeoutError("Timeout while linking with the chip")

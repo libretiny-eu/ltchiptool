@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-10-5.
 
 import shlex
-from logging import INFO, WARNING, log, warning
+from logging import WARNING, warning
 from os.path import basename, dirname, join
 from typing import Dict, Iterable, List, Optional
 
@@ -10,12 +10,6 @@ from click import Command, Context, MultiCommand
 
 from .fileio import readtext
 from .misc import list_serial_ports
-
-
-def graph(level: int, *message, loglevel: int = INFO):
-    prefix = (level - 1) * "|   " + "|-- " if level else ""
-    message = " ".join(str(m) for m in message)
-    log(loglevel, f"{prefix}{message}")
 
 
 def get_multi_command_class(cmds: Dict[str, str]):
