@@ -5,16 +5,20 @@ from logging import error
 import click
 
 from ltchiptool import get_version
+from ltchiptool.util import LoggingHandler
 
 
 def gui():
     import wx
 
+    from .log import GUILoggingHandler
     from .main import MainFrame
 
     app = wx.App()
     frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
     frm.Show()
+    handler: GUILoggingHandler = LoggingHandler.INSTANCE
+    handler.print_delayed()
     app.MainLoop()
 
 

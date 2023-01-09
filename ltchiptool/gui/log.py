@@ -1,5 +1,5 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-8.
-
+import threading
 import time
 from logging import debug, error, info, warning
 
@@ -36,8 +36,15 @@ class GUILoggingHandler(LoggingHandler):
     def __init__(self, log: wx.TextCtrl) -> None:
         super().__init__()
         self.log = log
+        self.delayed_lines = []
 
     def emit_raw(self, log_prefix: str, message: str, color: str):
+        # delay non-main-thread logging until the app finishes initializing
+        is_main_thread = threading.current_thread() is threading.main_thread()
+        if not is_main_thread and self.delayed_lines is not None:
+            self.delayed_lines.append((log_prefix, message, color))
+            return
+
         wx_color = self.COLOR_MAP[color]
         if self.raw:
             self.log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
@@ -45,6 +52,11 @@ class GUILoggingHandler(LoggingHandler):
             self.log.SetDefaultStyle(wx.TextAttr(wx_color))
         self.log.AppendText(f"{message}\n")
         super().emit_raw(log_prefix, message, color)
+
+    def print_delayed(self):
+        for log_prefix, message, color in self.delayed_lines:
+            self.emit_raw(log_prefix, message, color)
+        self.delayed_lines = None
 
 
 class GUIProgressBar(ProgressBar):
