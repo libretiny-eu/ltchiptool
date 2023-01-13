@@ -14,7 +14,7 @@ import wx.xrc
 
 from ltchiptool import Family
 from ltchiptool.commands.flash._utils import get_file_type
-from ltchiptool.util import LoggingHandler, verbose
+from ltchiptool.util import LoggingHandler, list_serial_ports, verbose
 from uf2tool.models import UF2, Tag
 
 from ._base import BasePanel
@@ -42,6 +42,7 @@ class FlashPanel(BasePanel):
         self.ports = []
 
         self.Port = self.BindComboBox("combo_port")
+        self.Rescan = self.BindButton("button_rescan", self.on_rescan_click)
         self.Write = self.BindRadioButton("radio_write")
         self.Read = self.BindRadioButton("radio_read")
         self.ReadROM = self.BindRadioButton("radio_read_rom")
@@ -385,6 +386,10 @@ class FlashPanel(BasePanel):
         self.ports = ports
         self.port = user_port
         self.delayed_port = None
+
+    @on_event
+    def on_rescan_click(self):
+        self.on_ports_updated(list_serial_ports())
 
     @on_event
     def on_browse_click(self):
