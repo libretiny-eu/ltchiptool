@@ -14,10 +14,10 @@ from click import get_app_dir
 
 from ltchiptool.util import LoggingHandler
 
-from ._base import BasePanel
-from ._utils import with_target
-from .flash import FlashPanel
-from .log import LogPanel
+from .panels.base import BasePanel
+from .panels.flash import FlashPanel
+from .panels.log import LogPanel
+from .utils import with_target
 
 
 # noinspection PyPep8Naming

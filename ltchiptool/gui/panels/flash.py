@@ -17,9 +17,9 @@ from ltchiptool.commands.flash._utils import get_file_type
 from ltchiptool.util import LoggingHandler, list_serial_ports, verbose
 from uf2tool.models import UF2, Tag
 
-from ._base import BasePanel
-from ._utils import int_or_zero, on_event, only_target
-from .work.ports import PortWatcher
+from ..utils import int_or_zero, on_event, only_target
+from ..work.ports import PortWatcher
+from .base import BasePanel
 
 
 class FlashOp(Enum):

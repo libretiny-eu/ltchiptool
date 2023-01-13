@@ -12,7 +12,7 @@ from click._termui_impl import ProgressBar
 
 from ltchiptool.util import LoggingHandler, sizeof
 
-from ._base import BasePanel
+from .base import BasePanel
 
 
 class GUIProgressBar(ProgressBar):
