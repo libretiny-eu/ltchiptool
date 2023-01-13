@@ -365,6 +365,7 @@ class FlashPanel(BasePanel):
 
     @length.setter
     def length(self, value: int | None):
+        value = value or 0
         if self.read_full:
             self.Length.SetValue("Entire chip")
         else:

@@ -29,7 +29,11 @@ class MainFrame(wx.Frame):
         sys.excepthook = self.OnException
         threading.excepthook = self.OnException
 
-        res = wx.xrc.XmlResource("d:\\Dev\\tuya\\wx\\wx.xrc")
+        xrc = join(dirname(__file__), "ltchiptool.xrc")
+        try:
+            res = wx.xrc.XmlResource(xrc)
+        except SystemError:
+            raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
 
         self.config_file = join(get_app_dir("ltchiptool"), "config.json")
 
