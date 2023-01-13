@@ -14,8 +14,8 @@ import wx.xrc
 
 from ltchiptool import Family
 from ltchiptool.commands.flash._utils import get_file_type
-from ltchiptool.util import verbose
-from uf2tool.models import UF2
+from ltchiptool.util import LoggingHandler, verbose
+from uf2tool.models import UF2, Tag
 
 from ._base import BasePanel
 from ._utils import int_or_zero, on_event, only_target
@@ -144,15 +144,16 @@ class FlashPanel(BasePanel):
                 errors.append("File does not exist")
             else:
                 file_type, family, _, offset, skip, length = self.file_tuple
+                is_uf2 = file_type and file_type.startswith("UF2")
                 self.FileType.ChangeValue(file_type or "Unrecognized")
-                self.AutoDetect.Enable(file_type != "UF2")
+                self.AutoDetect.Enable(not is_uf2)
                 if self.auto_detect:
                     self.family = family
                     self.offset = offset
                     self.skip = skip
                     self.length = length
 
-                if file_type == "UF2":
+                if is_uf2:
                     if not self.auto_detect:
                         self.auto_detect = True
                         self.OnUpdate()
@@ -312,10 +313,24 @@ class FlashPanel(BasePanel):
             with open(value, "rb") as f:
                 tpl = get_file_type(None, f)
                 if tpl[0] == "UF2":
-                    uf2 = UF2(f)
-                    uf2.read(block_tags=False)
-                    family = uf2.family
-                    tpl = tuple([tpl[0], family, *tpl[2:]])
+                    try:
+                        uf2 = UF2(f)
+                        uf2.read(block_tags=False)
+                        if Tag.FIRMWARE in uf2.tags and Tag.VERSION in uf2.tags:
+                            firmware = uf2.tags[Tag.FIRMWARE].decode()
+                            version = uf2.tags[Tag.VERSION].decode()
+                            file_type = f"UF2 - {firmware} {version}"
+                        elif Tag.BOARD in uf2.tags:
+                            board = uf2.tags[Tag.BOARD].decode()
+                            file_type = f"UF2 - {board}"
+                        else:
+                            file_type = "UF2"
+                        family = uf2.family
+                        tpl = tuple([file_type, family, *tpl[2:]])
+                    except ValueError as e:
+                        # catch UF2 parsing errors
+                        LoggingHandler.get().emit_exception(e)
+                        tpl = "Unrecognized UF2", None, None, None, None, 0
                 self.file_tuple = tpl
         self.DoUpdate(self.File)
 
