@@ -18,7 +18,7 @@ from ltchiptool.util import verbose
 from uf2tool.models import UF2
 
 from ._base import BasePanel
-from ._utils import on_event, only_target
+from ._utils import int_or_zero, on_event, only_target
 from .work.ports import PortWatcher
 
 
@@ -31,6 +31,7 @@ class FlashOp(Enum):
 class FlashPanel(BasePanel):
     file_tuple: tuple | None = None
     ports: list[tuple[str, bool, str]]
+    prev_read_full: bool = None
 
     delayed_port: str | None = None
 
@@ -61,14 +62,18 @@ class FlashPanel(BasePanel):
             921600: self.BindRadioButton("radio_baudrate_921600"),
         }
 
-        self.FileType: wx.TextCtrl = self.FindWindowByName("input_file_type")
+        self.FileTypeText = self.FindStaticText("text_file_type")
+        self.FileType = self.BindTextCtrl("input_file_type")
+        self.Offset = self.BindTextCtrl("input_offset")
+        self.SkipText = self.FindStaticText("text_skip")
+        self.Skip = self.BindTextCtrl("input_skip")
+        self.LengthText = self.FindStaticText("text_length")
+        self.Length = self.BindTextCtrl("input_length")
 
-        self.OffsetText: wx.StaticText = self.FindWindowByName("text_offset")
-        self.Offset: wx.TextCtrl = self.FindWindowByName("input_offset")
-        self.SkipText: wx.StaticText = self.FindWindowByName("text_skip")
-        self.Skip: wx.TextCtrl = self.FindWindowByName("input_skip")
-        self.LengthText: wx.StaticText = self.FindWindowByName("text_length")
-        self.Length: wx.TextCtrl = self.FindWindowByName("input_length")
+        self.Offset.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
+        self.Skip.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
+        self.Length.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
+        self.File.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
 
@@ -115,10 +120,13 @@ class FlashPanel(BasePanel):
         self.start_work(PortWatcher(self.on_ports_updated))
 
     def OnUpdate(self, target: wx.Window = None):
-        # if target in [self.File]:
-        #     self.file = self.file
+        if target == self.Write:
+            # perform file type detection again (in case of switching Read -> Write)
+            self.file = self.file
 
         self.Family.Enable(self.operation != FlashOp.WRITE or not self.auto_detect)
+        self.FileTypeText.Enable(self.operation == FlashOp.WRITE)
+        self.FileType.Enable(self.operation == FlashOp.WRITE)
         self.Offset.Enable(not self.auto_detect)
         self.SkipText.Enable(self.operation == FlashOp.WRITE)
         self.Skip.Enable(self.operation == FlashOp.WRITE and not self.auto_detect)
@@ -136,13 +144,13 @@ class FlashPanel(BasePanel):
                 errors.append("File does not exist")
             else:
                 file_type, family, _, offset, skip, length = self.file_tuple
-                self.offset = offset
-                self.skip = skip
-                self.length = length
-                self.FileType.SetValue(file_type or "Unrecognized")
+                self.FileType.ChangeValue(file_type or "Unrecognized")
                 self.AutoDetect.Enable(file_type != "UF2")
                 if self.auto_detect:
                     self.family = family
+                    self.offset = offset
+                    self.skip = skip
+                    self.length = length
 
                 if file_type == "UF2":
                     if not self.auto_detect:
@@ -153,7 +161,7 @@ class FlashPanel(BasePanel):
                     errors.append("File is unrecognized")
                 elif not file_type:
                     warnings.append("Warning: file is unrecognized")
-                    self.FileType.SetValue(file_type or "Raw")
+                    self.FileType.ChangeValue(file_type or "Raw")
                 elif not family and self.auto_detect:
                     errors.append("File is not directly flashable")
                 elif not offset and self.auto_detect:
@@ -170,13 +178,25 @@ class FlashPanel(BasePanel):
             self.skip = 0
             if self.auto_detect:
                 self.offset = 0
-                self.length = 0x200000
+                self.length = 0
+            else:
+                warnings.append("Using manual parameters")
 
-        verbose(f"Update: port={self.port}, family={self.family}")
+        verbose(
+            f"Update: read_full={self.read_full}, "
+            f"target={type(target).__name__}, "
+            f"port={self.port}, "
+            f"family={self.family}",
+        )
+
+        if self.prev_read_full is not self.read_full:
+            # switching "entire chip" reading - update input text
+            self.length = self.length or 0x200000
+            self.prev_read_full = self.read_full
 
         if not self.family:
             errors.append("Choose the chip family")
-        if not self.length:
+        if not self.length and not self.read_full:
             errors.append("Enter a correct length")
         if not self.port:
             errors.append("Choose a serial port")
@@ -190,6 +210,13 @@ class FlashPanel(BasePanel):
         else:
             self.Start.SetNote("")
             self.Start.Enable()
+
+    def OnBlur(self, event: wx.FocusEvent):
+        event.Skip()
+        self.offset = self.offset
+        self.skip = self.skip
+        self.length = self.length
+        self.file = self.file
 
     @property
     def port(self):
@@ -205,6 +232,7 @@ class FlashPanel(BasePanel):
             for port, _, description in self.ports:
                 if value == port:
                     self.Port.SetValue(description)
+                    self.DoUpdate(self.Port)
                     return
             self.delayed_port = value
 
@@ -236,10 +264,13 @@ class FlashPanel(BasePanel):
         match value:
             case FlashOp.WRITE:
                 self.Write.SetValue(True)
+                self.DoUpdate(self.Write)
             case FlashOp.READ:
                 self.Read.SetValue(True)
+                self.DoUpdate(self.Read)
             case FlashOp.READ_ROM:
                 self.ReadROM.SetValue(True)
+                self.DoUpdate(self.ReadROM)
 
     @property
     def auto_detect(self):
@@ -248,6 +279,7 @@ class FlashPanel(BasePanel):
     @auto_detect.setter
     def auto_detect(self, value: bool):
         self.AutoDetect.SetValue(value)
+        self.DoUpdate(self.AutoDetect)
 
     @property
     def family(self):
@@ -261,15 +293,17 @@ class FlashPanel(BasePanel):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
             self.Family.SetValue(value.description)
+        self.DoUpdate(self.Family)
 
     @property
     def file(self):
         return self.File.GetValue()
 
+    # noinspection PyTypeChecker
     @file.setter
     def file(self, value: str | None):
         value = value or ""
-        self.File.SetValue(value)
+        self.File.ChangeValue(value)
         if self.operation != FlashOp.WRITE:
             return
         if not isfile(value):
@@ -283,12 +317,12 @@ class FlashPanel(BasePanel):
                     family = uf2.family
                     tpl = tuple([tpl[0], family, *tpl[2:]])
                 self.file_tuple = tpl
+        self.DoUpdate(self.File)
 
     @property
     def offset(self):
         text: str = self.Offset.GetValue().strip() or "0"
-        value = int(text, 0)
-        self.Offset.SetValue(f"0x{value:X}")
+        value = int_or_zero(text)
         return value
 
     @offset.setter
@@ -299,8 +333,7 @@ class FlashPanel(BasePanel):
     @property
     def skip(self):
         text: str = self.Skip.GetValue().strip() or "0"
-        value = int(text, 0)
-        self.Skip.SetValue(f"0x{value:X}")
+        value = int_or_zero(text)
         return value
 
     @skip.setter
@@ -311,14 +344,19 @@ class FlashPanel(BasePanel):
     @property
     def length(self):
         text: str = self.Length.GetValue().strip() or "0"
-        value = int(text, 0)
-        self.Length.SetValue(f"0x{value:X}")
+        value = int_or_zero(text)
         return value
 
     @length.setter
-    def length(self, value: int):
-        value = value or 0
-        self.Length.SetValue(f"0x{value:X}")
+    def length(self, value: int | None):
+        if self.read_full:
+            self.Length.SetValue("Entire chip")
+        else:
+            self.Length.SetValue(f"0x{value:X}")
+
+    @property
+    def read_full(self):
+        return self.length == 0 and self.auto_detect and self.operation != FlashOp.WRITE
 
     def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
         user_port = self.port or self.delayed_port
@@ -347,7 +385,6 @@ class FlashPanel(BasePanel):
             if dialog.ShowModal() == wx.ID_CANCEL:
                 return
             self.file = dialog.GetPath()
-            self.OnUpdate()
 
     @only_target
     def on_start_click(self, button: wx.Button):

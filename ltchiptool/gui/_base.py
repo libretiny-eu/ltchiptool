@@ -12,6 +12,7 @@ from .work.base import BaseThread
 class BasePanel(wx.Panel):
     _components: list[wx.Window]
     _threads: list[BaseThread]
+    _in_update: bool = False
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -48,8 +49,21 @@ class BasePanel(wx.Panel):
     def OnMenu(self, title: str, label: str, checked: bool):
         pass
 
-    def _OnUpdate(self, event: wx.Event):
-        self.OnUpdate(event.EventObject)
+    def _OnUpdate(self, event: wx.Event | None):
+        if self._in_update:
+            event.Skip()
+            return
+        self._in_update = True
+        event.Skip()
+        self.OnUpdate(event.GetEventObject() if event else None)
+        self._in_update = False
+
+    def DoUpdate(self, target: wx.Window = None):
+        if self._in_update:
+            return
+        self._in_update = True
+        self.OnUpdate(target)
+        self._in_update = False
 
     def OnUpdate(self, target: wx.Window = None):
         pass

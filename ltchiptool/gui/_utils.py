@@ -21,3 +21,12 @@ def on_event(
     func: Callable[[object], None],
 ) -> Callable[[wx.Event], None]:
     return lambda self, event: func(self)
+
+
+def int_or_zero(value: str) -> int:
+    try:
+        return int(value, 0)
+    except ValueError:
+        if value.startswith("0"):
+            return int_or_zero(value.lstrip("0"))
+        return 0
