@@ -83,11 +83,25 @@ class MainFrame(wx.Frame):
         with open(self.config_file, "w") as f:
             json.dump(value, f, indent="\t")
 
+    # noinspection PyPropertyAccess
     def GetSettings(self) -> dict:
-        pass
+        pos: wx.Point = self.GetPosition()
+        size: wx.Size = self.GetSize()
+        return dict(
+            pos=[pos.x, pos.y],
+            size=[size.x, size.y],
+        )
 
-    def SetSettings(self, **kwargs):
-        pass
+    def SetSettings(
+        self,
+        pos: tuple[int, int] = None,
+        size: tuple[int, int] = None,
+        **_,
+    ):
+        if pos:
+            self.SetPosition(pos)
+        if size:
+            self.SetSize(size)
 
     @staticmethod
     def OnException(*args):
@@ -98,6 +112,7 @@ class MainFrame(wx.Frame):
 
     def OnShow(self, *_):
         settings = self._settings
+        self.SetSettings(**settings.get("main", {}))
         for name, panel in self.panels.items():
             panel.SetSettings(**settings.get(name, {}))
         if settings:
@@ -106,7 +121,9 @@ class MainFrame(wx.Frame):
             panel.OnShow()
 
     def OnClose(self, *_):
-        settings = dict()
+        settings = dict(
+            main=self.GetSettings(),
+        )
         for name, panel in self.panels.items():
             panel.OnClose()
             settings[name] = panel.GetSettings() or {}
@@ -147,6 +164,7 @@ class MainFrame(wx.Frame):
                     error("LT file 'families.json' not found")
 
             case ("Debug", "Print settings"):
+                debug(f"Main settings: {self.GetSettings()}")
                 for name, panel in self.panels.items():
                     debug(f"Panel '{name}' settings: {panel.GetSettings()}")
 

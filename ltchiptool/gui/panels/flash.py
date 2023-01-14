@@ -103,6 +103,7 @@ class FlashPanel(BasePanel):
         offset: int = None,
         skip: int = None,
         length: int = None,
+        **_,
     ):
         self.port = port
         self.baudrate = baudrate

@@ -48,9 +48,9 @@ class GUIProgressBar(ProgressBar):
         pct = self.format_pct()
         pos = sizeof(self.pos)
         length = sizeof(self.length)
-        self.progress.Label = f"{pct} ({pos} / {length})"
-        self.time_elapsed.Label = self.format_time()
-        self.time_left.Label = self.format_eta() or "--:--:--"
+        self.progress.SetLabel(f"{pct} ({pos} / {length})")
+        self.time_elapsed.SetLabel(self.format_time())
+        self.time_left.SetLabel(self.format_eta() or "--:--:--")
         self.bar.SetRange(self.length)
         self.bar.SetValue(self.pos)
         self.parent.Layout()
@@ -136,6 +136,7 @@ class LogPanel(BasePanel):
         timed: bool = False,
         raw: bool = False,
         full_traceback: bool = True,
+        **_,
     ):
         handler = LoggingHandler.get()
         handler.level = level
