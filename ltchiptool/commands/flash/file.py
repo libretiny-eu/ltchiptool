@@ -1,7 +1,8 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
-from io import SEEK_SET, FileIO
+from io import SEEK_SET
 from logging import debug, info
+from typing import IO
 
 import click
 from click import File
@@ -28,7 +29,7 @@ from ._utils import get_file_type
     type=AutoIntParamType(),
 )
 def cli(
-    file: FileIO,
+    file: IO[bytes],
     family: Family,
     skip: int,
 ):

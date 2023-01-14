@@ -1,8 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-05-27.
 
 from binascii import crc32
-from io import FileIO
-from typing import Tuple
+from typing import IO, Tuple
 
 from ltchiptool import Family
 
@@ -16,7 +15,7 @@ class UF2Writer:
     uf2: UF2
     family: Family
 
-    def __init__(self, output: FileIO, family: Family):
+    def __init__(self, output: IO[bytes], family: Family):
         self.uf2 = UF2(output)
         self.uf2.family = family
         self.family = family

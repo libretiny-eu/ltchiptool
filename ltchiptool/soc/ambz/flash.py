@@ -2,7 +2,7 @@
 
 from abc import ABC
 from io import BytesIO
-from typing import BinaryIO, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
@@ -97,7 +97,7 @@ class AmebaZFlash(SocInterface, ABC):
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
     ) -> Generator[int, None, None]:
         self.flash_connect()

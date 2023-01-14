@@ -4,7 +4,7 @@ import logging
 from abc import ABC
 from binascii import crc32
 from logging import DEBUG, debug
-from typing import BinaryIO, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Union
 
 from bk7231tools.serial import BK7231Serial
 
@@ -141,7 +141,7 @@ class BK72XXFlash(SocInterface, ABC):
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
     ) -> Generator[int, None, None]:
         self.flash_connect()

@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
-from io import FileIO
 from time import time
+from typing import IO
 
 import click
 from click import File
@@ -65,7 +65,7 @@ from ._utils import flash_link_interactive
 )
 def cli(
     family: Family,
-    file: FileIO,
+    file: IO[bytes],
     device: str,
     baudrate: int,
     offset: int,

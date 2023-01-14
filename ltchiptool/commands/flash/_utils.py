@@ -1,9 +1,8 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
-from io import FileIO
 from logging import debug
 from os import stat
-from typing import List, Optional, Tuple
+from typing import IO, List, Optional, Tuple
 
 from prettytable import PrettyTable
 
@@ -29,7 +28,7 @@ FILE_TYPES = {
 
 def get_file_type(
     family: Optional[Family],
-    file: FileIO,
+    file: IO[bytes],
 ) -> Optional[
     Tuple[
         str,

@@ -1,7 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import FileIO
 from os.path import basename
 from struct import unpack
 from typing import IO, Dict, Optional, Tuple
@@ -99,7 +98,7 @@ class AmebaZBinary(SocInterface, ABC):
 
     def detect_file_type(
         self,
-        file: FileIO,
+        file: IO[bytes],
         length: int,
     ) -> Optional[Tuple[str, Optional[int], int, int]]:
         data = peek(file, size=64)

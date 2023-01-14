@@ -1,8 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import FileIO
-from typing import BinaryIO, Dict, Generator, List, Optional, Tuple, Union
+from typing import IO, Dict, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.util.logging import graph
@@ -96,7 +95,7 @@ class SocInterface(ABC):
 
     def detect_file_type(
         self,
-        file: FileIO,
+        file: IO[bytes],
         length: int,
     ) -> Optional[Tuple[str, Optional[int], int, int]]:
         """
@@ -162,7 +161,7 @@ class SocInterface(ABC):
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
     ) -> Generator[int, None, None]:
         """

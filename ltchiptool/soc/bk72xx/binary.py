@@ -2,11 +2,11 @@
 
 from abc import ABC
 from datetime import datetime
-from io import SEEK_SET, BytesIO, FileIO
+from io import SEEK_SET, BytesIO
 from logging import warning
 from os import stat
 from os.path import basename
-from typing import Dict, Optional, Tuple, Union
+from typing import IO, Dict, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.crc16 import CRC16
@@ -170,7 +170,7 @@ class BK72XXBinary(SocInterface, ABC):
 
     def detect_file_type(
         self,
-        file: FileIO,
+        file: IO[bytes],
         length: int,
     ) -> Optional[Tuple[str, Optional[int], int, int]]:
         data = peek(file, size=96)

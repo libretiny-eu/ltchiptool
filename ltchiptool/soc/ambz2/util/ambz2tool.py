@@ -6,7 +6,7 @@ from hashlib import sha256
 from logging import debug, warning
 from math import ceil
 from time import time
-from typing import BinaryIO, Generator, List, Optional
+from typing import IO, Generator, List, Optional
 
 import click
 from serial import Serial
@@ -287,7 +287,7 @@ class AmbZ2Tool:
             raise RuntimeError(f"Unexpected response: {response}")
         return response[6 : 6 + 32]
 
-    def flash_transmit(self, stream: Optional[BinaryIO], offset: int) -> None:
+    def flash_transmit(self, stream: Optional[IO[bytes]], offset: int) -> None:
         # set the flash_mode
         self.flash_init(configure=False)
 

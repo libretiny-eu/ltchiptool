@@ -1,9 +1,10 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
-from io import SEEK_CUR, SEEK_SET, FileIO
+from io import SEEK_CUR, SEEK_SET
 from logging import debug, fatal
 from os import stat
 from time import time
+from typing import IO
 
 import click
 from click import File
@@ -71,7 +72,7 @@ from ._utils import flash_link_interactive, get_file_type
     default=True,
 )
 def cli(
-    file: FileIO,
+    file: IO[bytes],
     device: str,
     baudrate: int,
     family: Family,
