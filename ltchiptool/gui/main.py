@@ -119,6 +119,8 @@ class MainFrame(wx.Frame):
             # apparently EVT_MENU fires on certain key-presses too
             return
         item: wx.MenuItem = target.FindItemById(event.GetId())
+        if not item:
+            return
         title = target.GetTitle()
         label = item.GetItemLabel()
         checked = item.IsChecked()

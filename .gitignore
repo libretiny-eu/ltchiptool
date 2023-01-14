@@ -393,3 +393,7 @@ pip-selfcheck.json
 *.crc
 *.bat
 *.ota
+
+# PyInstaller-related
+!*.spec
+gui-win32.txt

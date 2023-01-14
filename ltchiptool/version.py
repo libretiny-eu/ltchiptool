@@ -24,3 +24,18 @@ def get_version() -> Optional[str]:
         return version("ltchiptool")
     except PackageNotFoundError:
         return None
+
+
+def get_description() -> Optional[str]:
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        pyproject = join(sys._MEIPASS, "pyproject.toml")
+    else:
+        pyproject = join(dirname(__file__), "..", "pyproject.toml")
+
+    if isfile(pyproject):
+        with open(pyproject, "r", encoding="utf-8") as f:
+            text = f.read()
+            ver = re.search(r"description\s?=\s?\"(.+?)\"", text)
+            if ver:
+                return ver.group(1)
+    return None
