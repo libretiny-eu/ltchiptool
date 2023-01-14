@@ -17,13 +17,15 @@ class UF2:
     seq: int = 0
 
     family: Family = None
-    tags: Dict[Tag, bytes] = {}
-    data: List[Block] = []
+    tags: Dict[Tag, bytes]
+    data: List[Block]
 
     md5: md5
 
     def __init__(self, f: IO[bytes]) -> None:
         self.f = f
+        self.tags = {}
+        self.data = []
         self.md5 = md5()
 
     def store(
