@@ -198,7 +198,7 @@ class BK72XXBinary(SocInterface, ABC):
         try:
             rbl = RBL.deserialize(data)
             if rbl.encryption or rbl.compression:
-                return Detection.make_unsupported("Beken OTA")
+                return Detection.make("Beken OTA", 0x132000, 0, length)
         except ValueError:
             # no OTA RBL - continue checking
             pass
