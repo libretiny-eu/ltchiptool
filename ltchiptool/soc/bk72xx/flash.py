@@ -4,7 +4,7 @@ import logging
 from abc import ABC
 from binascii import crc32
 from logging import DEBUG, debug
-from typing import IO, Generator, List, Optional, Union
+from typing import IO, Callable, Generator, List, Optional, Union
 
 from bk7231tools.serial import BK7231Serial
 
@@ -143,25 +143,26 @@ class BK72XXFlash(SocInterface, ABC):
         length: int,
         data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         self.flash_connect()
-        yield from self.bk.program_flash(
+        for chunk_len in self.bk.program_flash(
             io=data,
             io_size=length,
             start=offset,
             crc_check=verify,
-        )
+        ):
+            callback(chunk_len, length, "")
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
-
-        # yield the total writing length
-        yield sum(len(part.getvalue()) for part in parts.values())
+        total = sum(len(part.getvalue()) for part in parts.values())
 
         # connect to chip
         self.flash_connect()
@@ -170,15 +171,17 @@ class BK72XXFlash(SocInterface, ABC):
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            yield f"Writing (0x{offset:06X})"
-            yield from self.bk.program_flash(
+            progress = f"Writing (0x{offset:06X})"
+            for chunk_len in self.bk.program_flash(
                 io=data,
                 io_size=length,
                 start=offset,
                 crc_check=verify,
                 dry_run=False,
                 really_erase=True,
-            )
-        yield "Booting firmware"
+            ):
+                callback(chunk_len, total, progress)
+
+        callback(0, total, "Booting firmware")
         # reboot the chip
         self.bk.reboot_chip()

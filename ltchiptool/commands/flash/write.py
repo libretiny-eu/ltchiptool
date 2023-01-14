@@ -169,11 +169,18 @@ def cli(
     flash_link_interactive(soc, device, baudrate, timeout)
 
     graph(0, f"Writing '{file.name}'")
+    bar = click.progressbar(length=0, width=64)
+
+    def callback(chunk: int, total: int, message: str):
+        bar.length = total
+        bar.update(chunk)
+        if bar.label != message:
+            bar.label = message
+            bar.render_progress()
+
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
-        generator = soc.flash_write_uf2(ctx, verify=check)
-        # make UF2 generator yield the total length first
-        detection.length = 0
+        soc.flash_write_uf2(ctx, verify=check, callback=callback)
     else:
         if offset is not None:
             detection.offset = offset
@@ -213,23 +220,14 @@ def cli(
         file.seek(detection.skip, SEEK_SET)
         tell = file.tell()
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
-        generator = soc.flash_write_raw(
+        soc.flash_write_raw(
             offset=detection.offset,
             length=detection.length,
             data=file,
             verify=check,
+            callback=callback,
         )
-
-    with click.progressbar(length=detection.length, width=64) as bar:
-        for data in generator:
-            if isinstance(data, int):
-                if bar.length == 0:
-                    bar.length = data
-                else:
-                    bar.update(data)
-            elif isinstance(data, str):
-                bar.label = data
-                bar.render_progress()
+    bar.render_finish()
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

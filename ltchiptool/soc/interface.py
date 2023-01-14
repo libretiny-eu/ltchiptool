@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import IO, Dict, Generator, List, Optional, Union
+from typing import IO, Callable, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.util.logging import graph
@@ -153,6 +153,10 @@ class SocInterface(ABC):
         """
         Read 'length' bytes from the flash, starting at 'offset'.
 
+        :param offset: start memory offset
+        :param length: length of data to read
+        :param verify: whether to verify checksums
+        :param use_rom: whether to read from ROM instead of Flash
         :return: a generator yielding the chunks being read
         """
         raise NotImplementedError()
@@ -163,11 +167,16 @@ class SocInterface(ABC):
         length: int,
         data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
-        :return: a generator yielding lengths of the chunks being written
+        :param offset: start memory offset
+        :param length: length of data to write
+        :param data: IO stream of data to write
+        :param verify: whether to verify checksums
+        :param callback: write progress handler: (chunk length, total length, message)
         """
         raise NotImplementedError()
 
@@ -175,11 +184,13 @@ class SocInterface(ABC):
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         """
         Upload an UF2 package to the chip.
 
-        :return: a generator, yielding either the total writing length,
-        then lengths of the chunks being written, or progress messages, as string
+        :param ctx: UF2 uploading context
+        :param verify: whether to verify checksums
+        :param callback: write progress handler: (chunk length, total length, message)
         """
         raise NotImplementedError()

@@ -2,9 +2,10 @@
 
 from abc import ABC
 from io import BytesIO
-from typing import IO, Generator, List, Optional, Union
+from typing import IO, Callable, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
+from ltchiptool.util.fileio import iowrap
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
 from uf2tool import UploadContext
 
@@ -99,10 +100,12 @@ class AmebaZFlash(SocInterface, ABC):
         length: int,
         data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         self.flash_connect()
         offset |= 0x8000000
-        success = yield from self.rtl.WriteBlockFlash(data, offset, length)
+        data = iowrap(data, lambda chunk: callback(len(chunk), length, ""))
+        success = self.rtl.WriteBlockFlash(data, offset, length)
         if not success:
             raise ValueError(f"Failed to write to 0x{offset:X}")
 
@@ -110,7 +113,8 @@ class AmebaZFlash(SocInterface, ABC):
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
+        callback: Callable[[int, int, str], None] = lambda *_: None,
+    ) -> None:
         # read system data to get active OTA index
         system = gen2bytes(self.flash_read_raw(0x9000, 256))
         if len(system) != 256:
@@ -132,18 +136,18 @@ class AmebaZFlash(SocInterface, ABC):
 
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
-        # yield the total writing length (plus boot-from-flash command)
-        yield sum(len(part.getvalue()) for part in parts.values()) + 4
+        total = sum(len(part.getvalue()) for part in parts.values()) + 4
 
-        yield f"OTA {ota_idx}"
+        callback(0, total, f"OTA {ota_idx}")
         # write blocks to flash
         for offset, data in parts.items():
             length = len(data.getvalue())
+            progress = f"OTA {ota_idx} (0x{offset:06X})"
             data.seek(0)
-            yield f"OTA {ota_idx} (0x{offset:06X})"
-            yield from self.flash_write_raw(offset, length, data, verify)
+            data = iowrap(data, lambda chunk: callback(len(chunk), total, progress))
+            self.flash_write_raw(offset, length, data, verify)
 
-        yield "Booting firmware"
+        callback(4, total, "Booting firmware")
         # [0x10002000] = 0x00005405
         stream = BytesIO(inttole32(0x00005405))
-        yield from self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)
+        self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)
