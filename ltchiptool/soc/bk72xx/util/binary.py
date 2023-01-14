@@ -7,7 +7,8 @@ from typing import Union
 
 from Cryptodome.Cipher import AES
 
-from ltchiptool.util import CRC16, BitInt
+from ltchiptool.util.bitint import BitInt
+from ltchiptool.util.crc16 import CRC16
 from ltchiptool.util.intbin import (
     ByteGenerator,
     ByteSource,

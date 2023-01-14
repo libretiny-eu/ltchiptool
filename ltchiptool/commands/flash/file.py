@@ -8,7 +8,7 @@ from click import File
 
 from ltchiptool import Family
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import AutoIntParamType
+from ltchiptool.util.cli import AutoIntParamType
 
 from ._utils import get_file_type
 

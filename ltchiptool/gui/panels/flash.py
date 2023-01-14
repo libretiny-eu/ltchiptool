@@ -14,11 +14,12 @@ import wx.xrc
 
 from ltchiptool import Family
 from ltchiptool.commands.flash._utils import get_file_type
-from ltchiptool.util import LoggingHandler, list_serial_ports, verbose
+from ltchiptool.gui.utils import int_or_zero, on_event, only_target
+from ltchiptool.gui.work.ports import PortWatcher
+from ltchiptool.util.cli import list_serial_ports
+from ltchiptool.util.logging import LoggingHandler, verbose
 from uf2tool.models import UF2, Tag
 
-from ..utils import int_or_zero, on_event, only_target
-from ..work.ports import PortWatcher
 from .base import BasePanel
 
 

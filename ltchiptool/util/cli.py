@@ -9,6 +9,7 @@ import click
 from click import Command, Context, MultiCommand
 
 from .fileio import readtext
+from .logging import graph
 from .misc import list_serial_ports
 
 

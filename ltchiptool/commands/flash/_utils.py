@@ -8,7 +8,8 @@ from typing import List, Optional, Tuple
 from prettytable import PrettyTable
 
 from ltchiptool import Family, SocInterface
-from ltchiptool.util import LoggingHandler, graph, peek
+from ltchiptool.util.fileio import peek
+from ltchiptool.util.logging import LoggingHandler, graph
 
 FILE_TYPES = {
     "UF2": [

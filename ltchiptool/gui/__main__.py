@@ -5,7 +5,7 @@ from logging import error
 import click
 
 from ltchiptool import get_version
-from ltchiptool.util import VERBOSE, LoggingHandler
+from ltchiptool.util.logging import VERBOSE, LoggingHandler
 
 
 def gui_entrypoint():

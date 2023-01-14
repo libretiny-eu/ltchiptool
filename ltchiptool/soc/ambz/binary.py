@@ -7,8 +7,9 @@ from struct import unpack
 from typing import IO, Dict, Optional, Tuple
 
 from ltchiptool import SocInterface
-from ltchiptool.util import chname, graph, isnewer, peek, readbin
+from ltchiptool.util.fileio import chname, isnewer, peek, readbin
 from ltchiptool.util.intbin import inttole32
+from ltchiptool.util.logging import graph
 
 
 def write_header(f: IO[bytes], start: int, end: int):

@@ -5,7 +5,7 @@ from typing import List, Union
 
 import click
 
-from ltchiptool.util import lt_find_path, lt_read_json
+from ltchiptool.util.env import lt_find_path, lt_read_json
 
 LT_FAMILIES: List["Family"] = []
 

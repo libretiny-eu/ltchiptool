@@ -10,7 +10,7 @@ import click
 
 from ltchiptool import Board
 from ltchiptool.models import BoardParamType
-from ltchiptool.util import CRC16
+from ltchiptool.util.crc16 import CRC16
 
 
 @click.group(help="Capture or process device dumps")

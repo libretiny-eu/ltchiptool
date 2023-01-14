@@ -5,7 +5,7 @@ from io import FileIO
 from typing import BinaryIO, Dict, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import Board, Family
-from ltchiptool.util import graph
+from ltchiptool.util.logging import graph
 from uf2tool import UploadContext
 
 

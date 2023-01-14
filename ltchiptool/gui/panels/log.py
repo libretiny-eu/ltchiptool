@@ -10,7 +10,8 @@ import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
 
-from ltchiptool.util import LoggingHandler, sizeof
+from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.misc import sizeof
 
 from .base import BasePanel
 

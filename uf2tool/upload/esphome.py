@@ -16,8 +16,8 @@ from socket import (
 )
 from typing import Tuple, Union
 
-from ltchiptool.util import graph, verbose
 from ltchiptool.util.intbin import inttobe32
+from ltchiptool.util.logging import graph, verbose
 
 OTA_MAGIC = b"\x6C\x26\xF7\x5C\x45"
 

@@ -12,8 +12,8 @@ import click
 from serial import Serial
 from xmodem import XMODEM
 
-from ltchiptool.util import LoggingHandler, verbose
 from ltchiptool.util.intbin import align_down
+from ltchiptool.util.logging import LoggingHandler, verbose
 
 
 class AmbZ2FlashMode(IntEnum):

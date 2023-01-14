@@ -10,7 +10,9 @@ from click import File
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import AutoIntParamType, DevicePortParamType, graph, sizeof
+from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
+from ltchiptool.util.logging import graph
+from ltchiptool.util.misc import sizeof
 
 from ._utils import flash_link_interactive, get_file_type
 

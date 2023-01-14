@@ -4,7 +4,7 @@ import click
 from prettytable import PrettyTable
 
 from ltchiptool import Board, Family
-from ltchiptool.util import sizeof
+from ltchiptool.util.misc import sizeof
 
 
 @click.group(help="List boards, families, etc.")

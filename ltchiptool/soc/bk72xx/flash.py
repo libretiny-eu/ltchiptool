@@ -9,8 +9,8 @@ from typing import BinaryIO, Generator, List, Optional, Union
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
-from ltchiptool.util import VERBOSE, verbose
 from ltchiptool.util.intbin import inttole32
+from ltchiptool.util.logging import VERBOSE, verbose
 from uf2tool import UploadContext
 
 BK72XX_GUIDE = [

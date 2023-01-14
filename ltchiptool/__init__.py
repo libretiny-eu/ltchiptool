@@ -3,6 +3,7 @@
 from . import util
 from .models import Board, Family
 from .soc import SocInterface
+from .util.env import lt_set_path
 from .version import get_version
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "SocInterface",
     "cli",
     "get_version",
+    "lt_set_path",
     "util",
 ]
 

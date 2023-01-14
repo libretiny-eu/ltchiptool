@@ -9,8 +9,11 @@ from os.path import basename
 from typing import Dict, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util import CRC16, chext, chname, graph, isnewer, peek, str2enum
+from ltchiptool.util.crc16 import CRC16
+from ltchiptool.util.fileio import chext, chname, isnewer, peek
 from ltchiptool.util.intbin import betoint, gen2bytes, inttobe32, pad_data
+from ltchiptool.util.logging import graph
+from ltchiptool.util.obj import str2enum
 
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
 

@@ -3,7 +3,8 @@
 from time import sleep
 from typing import Callable
 
-from ltchiptool.util import list_serial_ports, verbose
+from ltchiptool.util.cli import list_serial_ports
+from ltchiptool.util.logging import verbose
 
 from .base import BaseThread
 

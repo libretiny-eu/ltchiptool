@@ -5,12 +5,8 @@ from logging import DEBUG, INFO
 import click
 from click import Context
 
-from ltchiptool.util import (
-    VERBOSE,
-    LoggingHandler,
-    get_multi_command_class,
-    log_setup_click_bars,
-)
+from ltchiptool.util.cli import get_multi_command_class
+from ltchiptool.util.logging import VERBOSE, LoggingHandler, log_setup_click_bars
 
 from .version import get_version
 

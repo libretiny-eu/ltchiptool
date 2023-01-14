@@ -12,7 +12,8 @@ import wx.adv
 import wx.xrc
 from click import get_app_dir
 
-from ltchiptool.util import LoggingHandler, lt_find_json, lt_find_path
+from ltchiptool.util.env import lt_find_json, lt_find_path
+from ltchiptool.util.logging import LoggingHandler
 
 from .panels.base import BasePanel
 from .panels.flash import FlashPanel

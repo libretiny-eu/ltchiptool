@@ -5,7 +5,7 @@ from typing import Callable
 import wx
 import wx.xrc
 
-from ..work.base import BaseThread
+from ltchiptool.gui.work.base import BaseThread
 
 
 # noinspection PyPep8Naming
