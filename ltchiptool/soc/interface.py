@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import IO, Dict, Generator, List, Optional, Tuple, Union
+from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.util.logging import graph
@@ -97,11 +97,11 @@ class SocInterface(ABC):
         self,
         file: IO[bytes],
         length: int,
-    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+    ) -> Optional["Detection"]:
         """
         Check if the file is flashable to this SoC.
 
-        :return: a tuple: (file type, offset, skip, length), or None if type unknown
+        :return: a Detection object with results, or None if type unknown
         """
         raise NotImplementedError()
 

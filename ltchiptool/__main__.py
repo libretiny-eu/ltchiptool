@@ -85,6 +85,7 @@ def cli_entrypoint(
     logger.timed = timed
     logger.raw = raw_log
     logger.indent = indent
+    logger.full_traceback = traceback
     log_setup_click_bars()
 
 

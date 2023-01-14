@@ -10,8 +10,8 @@ from click import File
 from ltchiptool import Family
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType
-
-from ._utils import get_file_type
+from ltchiptool.util.detection import Detection
+from ltchiptool.util.logging import verbose
 
 
 @click.command(short_help="Detect file type")
@@ -45,9 +45,14 @@ def cli(
     if skip is not None:
         # ignore the skipped bytes entirely
         file.seek(skip, SEEK_SET)
-    file_type, family, _, offset, skip, length = get_file_type(family, file)
-    info(f"{file.name}: {file_type or 'Unrecognized'}")
-    debug(f"\tfamily={family}")
-    debug(f"\toffset={offset}")
-    debug(f"\tskip={skip}")
-    debug(f"\tlength={length}")
+    detection = Detection.perform(file, family)
+    info(f"{detection.name}: {detection.title} ({detection.type})")
+    verbose(f"\tdetection={detection}")
+    if detection.family is not None:
+        debug(f"\tfamily={detection.family}")
+    if detection.offset is not None:
+        debug(f"\toffset=0x{detection.offset:X}")
+    if detection.skip is not None:
+        debug(f"\tskip=0x{detection.skip:X}")
+    if detection.length is not None:
+        debug(f"\tlength=0x{detection.length:X}")

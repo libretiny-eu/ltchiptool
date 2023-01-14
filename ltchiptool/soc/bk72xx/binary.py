@@ -6,10 +6,11 @@ from io import SEEK_SET, BytesIO
 from logging import warning
 from os import stat
 from os.path import basename
-from typing import IO, Dict, Optional, Tuple, Union
+from typing import IO, Dict, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.crc16 import CRC16
+from ltchiptool.util.detection import Detection
 from ltchiptool.util.fileio import chext, chname, isnewer, peek
 from ltchiptool.util.intbin import betoint, gen2bytes, inttobe32, pad_data
 from ltchiptool.util.logging import graph
@@ -18,8 +19,12 @@ from ltchiptool.util.obj import str2enum
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
 
 
-def calc_offset(addr: int) -> int:
+def to_offset(addr: int) -> int:
     return int(addr + (addr // 32) * 2)
+
+
+def to_address(offs: int) -> int:
+    return int(offs - (offs // 34) * 2)
 
 
 def check_app_code_crc(data: bytes) -> Union[bool, None]:
@@ -52,9 +57,9 @@ class BK72XXBinary(SocInterface, ABC):
 
         nmap = toolchain.nm(input)
         app_addr = nmap["_vector_start"]
-        app_offs = calc_offset(app_addr)
+        app_offs = to_offset(app_addr)
         app_size = int(rbl_size, 16)
-        rbl_offs = app_offs + int(app_size // 32 * 34) - 102
+        rbl_offs = app_offs + to_offset(app_size) - 102
 
         # build output names
         out_rbl = chname(input, f"{mcu}_app_0x{app_offs:06X}.rbl")
@@ -172,7 +177,7 @@ class BK72XXBinary(SocInterface, ABC):
         self,
         file: IO[bytes],
         length: int,
-    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+    ) -> Optional[Detection]:
         data = peek(file, size=96)
         if not data:
             return None
@@ -180,22 +185,20 @@ class BK72XXBinary(SocInterface, ABC):
 
         # app firmware file - opcodes encrypted for 0x10000
         app_code = check_app_code_crc(data)
-        if app_code is None:
-            pass
-        elif app_code:
-            return "Beken CRC App", 0x11000, 0, min(length, 0x121000)
-        elif not app_code:
-            return "Beken Encrypted App", None, 0, 0
+        if app_code is True:
+            return Detection.make("Beken CRC/UA App", 0x11000, 0, min(length, 0x121000))
+        if app_code is False:
+            return Detection.make_unsupported("Beken Encrypted App")
 
         # raw firmware binary
         if data[0:8] == b"\x0E\x00\x00\xEA\x14\xF0\x9F\xE5":
-            return "Raw ARM Binary", None, 0, 0
+            return Detection.make_unsupported("Raw ARM Binary")
 
         # RBL file for OTA - 'download' partition
         try:
             rbl = RBL.deserialize(data)
             if rbl.encryption or rbl.compression:
-                return "Beken OTA", None, 0, 0
+                return Detection.make_unsupported("Beken OTA")
         except ValueError:
             # no OTA RBL - continue checking
             pass
@@ -209,7 +212,7 @@ class BK72XXBinary(SocInterface, ABC):
 
         # CRC is okay, but it's not app file - try to find bootloader RBL
         # read RBL+CRC and app opcodes
-        data = peek(file, size=34 * 4, seek=0x10F9A)
+        data = peek(file, size=34 * 4, seek=to_offset(0x10000 - 0x60))
         if not data:
             return None
 
@@ -227,12 +230,17 @@ class BK72XXBinary(SocInterface, ABC):
         app_code = check_app_code_crc(data[34 * 3 : 34 * 4])
         if app_code:
             blocks = length // 1024
-            if blocks == 2048:
+            if length == to_offset(0x10000 + 0x108700):
+                name = "Beken QIO Firmware"
+            elif length == 0x100000:
+                name = "Beken QIO (OBK T) Firmware"
+            elif blocks == 2048:
                 name = "Beken Full Dump"
             elif blocks == 1192:
                 name = "Beken BL+APP Dump"
             else:
                 name = "Beken Incomplete Dump"
-            return name, 0x11000, 0x11000, min(length - 0x11000, 0x121000)
+            length = min(length - 0x11000, 0x121000)
+            return Detection.make(name, 0x11000, 0x11000, length)
 
         return None

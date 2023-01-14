@@ -2,7 +2,7 @@
 
 import os
 from enum import Enum
-from logging import info
+from logging import debug, info
 from os.path import dirname, isfile
 from threading import Thread
 from time import sleep
@@ -13,12 +13,11 @@ import wx.adv
 import wx.xrc
 
 from ltchiptool import Family
-from ltchiptool.commands.flash._utils import get_file_type
-from ltchiptool.gui.utils import int_or_zero, on_event, only_target
+from ltchiptool.gui.utils import int_or_zero, on_event, only_target, with_target
 from ltchiptool.gui.work.ports import PortWatcher
 from ltchiptool.util.cli import list_serial_ports
-from ltchiptool.util.logging import LoggingHandler, verbose
-from uf2tool.models import UF2, Tag
+from ltchiptool.util.detection import Detection
+from ltchiptool.util.logging import verbose
 
 from .base import BasePanel
 
@@ -30,7 +29,7 @@ class FlashOp(Enum):
 
 
 class FlashPanel(BasePanel):
-    file_tuple: tuple | None = None
+    detection: Detection | None = None
     ports: list[tuple[str, bool, str]]
     prev_read_full: bool = None
 
@@ -72,9 +71,6 @@ class FlashPanel(BasePanel):
         self.LengthText = self.FindStaticText("text_length")
         self.Length = self.BindTextCtrl("input_length")
 
-        self.Offset.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
-        self.Skip.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
-        self.Length.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
         self.File.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
@@ -127,60 +123,69 @@ class FlashPanel(BasePanel):
             # perform file type detection again (in case of switching Read -> Write)
             self.file = self.file
 
-        self.Family.Enable(self.operation != FlashOp.WRITE or not self.auto_detect)
-        self.FileTypeText.Enable(self.operation == FlashOp.WRITE)
-        self.FileType.Enable(self.operation == FlashOp.WRITE)
-        self.Offset.Enable(not self.auto_detect)
-        self.SkipText.Enable(self.operation == FlashOp.WRITE)
-        self.Skip.Enable(self.operation == FlashOp.WRITE and not self.auto_detect)
-        self.Length.Enable(not self.auto_detect)
+        writing = self.operation == FlashOp.WRITE
+        reading = not writing
+        auto = self.auto_detect
+        manual = not auto
+        is_uf2 = self.detection is not None and self.detection.is_uf2
+        need_offset = self.detection is not None and self.detection.need_offset
+
+        self.Family.Enable(reading or manual)
+        self.FileTypeText.Enable(writing)
+        self.FileType.Enable(writing)
+        self.Offset.Enable(manual or writing and need_offset)
+        self.SkipText.Enable(writing)
+        self.Skip.Enable(writing and manual)
+        self.Length.Enable(manual)
+        self.AutoDetect.Enable(reading or not is_uf2)
 
         errors = []
         warnings = []
 
-        if self.operation == FlashOp.WRITE:
+        if writing:
             self.FileText.SetLabel("Input file")
             self.LengthText.SetLabel("Writing length")
             if not self.file:
                 errors.append("Choose an input file")
-            elif self.file_tuple is None:
+            elif self.detection is None:
                 errors.append("File does not exist")
             else:
-                file_type, family, _, offset, skip, length = self.file_tuple
-                is_uf2 = file_type and file_type.startswith("UF2")
-                self.FileType.ChangeValue(file_type or "Unrecognized")
-                self.AutoDetect.Enable(not is_uf2)
-                if self.auto_detect:
-                    self.family = family
-                    self.offset = offset
-                    self.skip = skip
-                    self.length = length
-
-                if is_uf2:
-                    if not self.auto_detect:
-                        self.auto_detect = True
-                        self.OnUpdate()
-                        return
-                elif not file_type and self.auto_detect:
-                    errors.append("File is unrecognized")
-                elif not file_type:
-                    warnings.append("Warning: file is unrecognized")
-                    self.FileType.ChangeValue(file_type or "Raw")
-                elif not family and self.auto_detect:
-                    errors.append("File is not directly flashable")
-                elif not offset and self.auto_detect:
-                    errors.append(f"File is not flashable to '{family.description}'")
-                elif not (family and offset):
-                    warnings.append("Warning: file is not flashable")
-                elif not self.auto_detect:
+                self.FileType.ChangeValue(self.detection.title)
+                if manual and is_uf2:
+                    self.auto_detect = auto = True
+                if auto:
+                    self.family = self.detection.family
+                    if not need_offset:
+                        self.offset = self.detection.offset
+                    self.skip = self.detection.skip
+                    self.length = self.detection.length
+                else:
                     warnings.append("Warning: using custom options")
+
+                match self.detection.type:
+                    case Detection.Type.UNRECOGNIZED:
+                        errors.append("File is unrecognized")
+                    case Detection.Type.RAW:
+                        warnings.append("Warning: file is unrecognized")
+                    case Detection.Type.UNSUPPORTED:
+                        errors.append("File is not directly flashable")
+                    case Detection.Type.UNSUPPORTED_HERE:
+                        errors.append(
+                            f"File is not flashable to "
+                            f"'{self.detection.family.description}'",
+                        )
+                    case Detection.Type.UNSUPPORTED_UF2:
+                        errors.append("UF2 family unrecognized")
+                    case Detection.Type.VALID_NEED_OFFSET:
+                        warnings.append("Custom start offset needed")
         else:
             self.FileText.SetLabel("Output file")
             self.LengthText.SetLabel("Reading length")
+            self.FileType.ChangeValue("")
             if not self.file:
                 errors.append("Choose an output file")
             self.skip = 0
-            if self.auto_detect:
+            if auto:
                 self.offset = 0
                 self.length = 0
             else:
@@ -215,12 +220,11 @@ class FlashPanel(BasePanel):
             self.Start.SetNote("")
             self.Start.Enable()
 
-    def OnBlur(self, event: wx.FocusEvent):
+    @with_target
+    def OnBlur(self, event: wx.FocusEvent, target: wx.Window):
         event.Skip()
-        self.offset = self.offset
-        self.skip = self.skip
-        self.length = self.length
-        self.file = self.file
+        if target == self.File:
+            self.file = self.file
 
     @property
     def port(self):
@@ -310,31 +314,14 @@ class FlashPanel(BasePanel):
         self.File.ChangeValue(value)
         if self.operation != FlashOp.WRITE:
             return
+        if self.detection and self.detection.name == value:
+            return
         if not isfile(value):
-            self.file_tuple = None
+            self.detection = None
         else:
             with open(value, "rb") as f:
-                tpl = get_file_type(None, f)
-                if tpl[0] == "UF2":
-                    try:
-                        uf2 = UF2(f)
-                        uf2.read(block_tags=False)
-                        if Tag.FIRMWARE in uf2.tags and Tag.VERSION in uf2.tags:
-                            firmware = uf2.tags[Tag.FIRMWARE].decode()
-                            version = uf2.tags[Tag.VERSION].decode()
-                            file_type = f"UF2 - {firmware} {version}"
-                        elif Tag.BOARD in uf2.tags:
-                            board = uf2.tags[Tag.BOARD].decode()
-                            file_type = f"UF2 - {board}"
-                        else:
-                            file_type = "UF2"
-                        family = uf2.family
-                        tpl = tuple([file_type, family, *tpl[2:]])
-                    except ValueError as e:
-                        # catch UF2 parsing errors
-                        LoggingHandler.get().emit_exception(e)
-                        tpl = "Unrecognized UF2", None, None, None, None, 0
-                self.file_tuple = tpl
+                self.detection = Detection.perform(f)
+        debug(f"Detection: {str(self.detection)}")
         self.DoUpdate(self.File)
 
     @property
@@ -411,15 +398,15 @@ class FlashPanel(BasePanel):
 
     @only_target
     def on_start_click(self, button: wx.Button):
-        info("Start click")
+        info(f"Start click: {self.offset=}, {self.skip=}, {self.length=}")
         self.DisableAll()
         enable_all = self.EnableAll
 
         class X(Thread):
             def run(self) -> None:
                 with click.progressbar(length=0x200000) as bar:
-                    for i in range(0x100):
-                        bar.update(0x200000 // 0x100)
+                    for i in range(0x40):
+                        bar.update(0x200000 // 0x40)
                         sleep(0.05)
                 enable_all()
 
