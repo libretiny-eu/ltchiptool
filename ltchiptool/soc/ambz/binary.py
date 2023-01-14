@@ -127,7 +127,19 @@ class AmebaZBinary(SocInterface, ABC):
                 )
             return Detection.make(f"Realtek AmebaZ {type}-XIP Unknown", offset=None)
 
-        # stage 1 - check full dump file
+        # stage 1 - check Realtek OTA 1+2 file
+        if data[0x08:0x0C] == b"OTA1" and data[0x20:0x24] == b"OTA2":
+            if data[0x38:0x40] != b"81958711":
+                return Detection.make_unsupported("Realtek OTA Package Invalid")
+            xip_length, skip, start = unpack("<III", data[0x14:0x20])
+            return Detection.make(
+                type_name=f"Realtek OTA Package",
+                offset=start & ~0x8000020,
+                skip=skip,
+                length=length,
+            )
+
+        # stage 2 - check full dump file
         tpl = check_bootloader_binary(data)
         if not tpl:
             # no bootloader at 0x0, nothing to do
