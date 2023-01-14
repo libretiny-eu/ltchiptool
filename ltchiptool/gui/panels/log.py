@@ -24,6 +24,8 @@ class GUIProgressBar(ProgressBar):
     time_elapsed: wx.StaticText
     time_left: wx.StaticText
     bar: wx.Gauge
+    log: wx.TextCtrl
+    scrolled: bool = False
 
     def format_time(self) -> str:
         t = int(time.time() - self.start)
@@ -54,6 +56,9 @@ class GUIProgressBar(ProgressBar):
         self.bar.SetRange(self.length)
         self.bar.SetValue(self.pos)
         self.parent.Layout()
+        if not self.scrolled:
+            self.log.AppendText("")
+            self.scrolled = True
 
     def render_finish(self) -> None:
         self.elapsed.Hide()
@@ -103,6 +108,7 @@ class LogPanel(BasePanel):
         GUIProgressBar.time_elapsed = self.FindWindowByName("text_time_elapsed")
         GUIProgressBar.time_left = self.FindWindowByName("text_time_left")
         GUIProgressBar.bar = self.FindWindowByName("progress_bar")
+        GUIProgressBar.log = self.Log
         # noinspection PyTypeChecker
         GUIProgressBar.render_finish(GUIProgressBar)
         setattr(_termui_impl, "ProgressBar", GUIProgressBar)
