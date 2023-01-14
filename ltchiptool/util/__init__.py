@@ -10,7 +10,7 @@ from .cli import (
 )
 from .crc16 import CRC16
 from .dict import RecursiveDict, merge_dicts
-from .env import lt_find_path, lt_read_json, lt_set_path
+from .env import lt_find_json, lt_find_path, lt_read_json, lt_set_path
 from .fileio import (
     chext,
     chname,
@@ -50,6 +50,7 @@ __all__ = [
     "isnewer",
     "list_serial_ports",
     "log_setup_click_bars",
+    "lt_find_json",
     "lt_find_path",
     "lt_read_json",
     "lt_set_path",

@@ -3,6 +3,10 @@
 	<object class="wxMenuBar" name="MainMenuBar">
 		<object class="wxMenu" name="m_menu">
 			<label>File</label>
+			<object class="wxMenuItem" name="menu_item">
+				<label>Find LibreTuya</label>
+			</object>
+			<object class="separator" name="separator" />
 			<object class="wxMenuItem" name="wxID_EXIT">
 				<label>Quit</label>
 			</object>

@@ -104,10 +104,11 @@ class LoggingHandler(StreamHandler):
 
     def emit_raw(self, log_prefix: str, message: str, color: str):
         file = sys.stderr if log_prefix in "WEC" else sys.stdout
-        if self.raw:
-            click.echo(message, file=file)
-        else:
-            click.secho(message, file=file, fg=color)
+        if file:
+            if self.raw:
+                click.echo(message, file=file)
+            else:
+                click.secho(message, file=file, fg=color)
         for emitter in self.emitters:
             emitter(log_prefix, message, color)
 
@@ -130,7 +131,7 @@ class LoggingHandler(StreamHandler):
 
 def log_setup_click_bars():
     # make Click progress bars visible on non-TTY stdout
-    if sys.stdout.isatty():
+    if sys.stdout and sys.stdout.isatty():
         return
     # noinspection PyProtectedMember
     from click._termui_impl import ProgressBar

@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import json
+import sys
 from os.path import dirname, expanduser, isdir, isfile, join
 from typing import Dict, Union
 
@@ -51,7 +52,11 @@ def lt_find_json(name: str) -> str:
             return path
     except FileNotFoundError as e:
         # LT can't be found, fallback to local copies
-        path = join(dirname(__file__), "..", name)
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            path = join(sys._MEIPASS, name)
+        else:
+            path = join(dirname(__file__), "..", name)
+
         if not isfile(path):
             # no local copy, raise the original exception
             raise e

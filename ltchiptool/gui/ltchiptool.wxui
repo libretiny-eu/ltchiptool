@@ -11,6 +11,11 @@
         label="File">
         <node
           class="wxMenuItem"
+          label="Find LibreTuya" />
+        <node
+          class="separator" />
+        <node
+          class="wxMenuItem"
           id="wxID_EXIT"
           label="Quit"
           var_name="menu_item_2" />
