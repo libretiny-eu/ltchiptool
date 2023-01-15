@@ -1,5 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-15.
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import IO, Generator, List, Optional
 
@@ -13,6 +14,20 @@ class FlashOp(Enum):
     WRITE = "write"
     READ = "read"
     READ_ROM = "read_rom"
+
+
+@dataclass
+class FlashConnection:
+    port: str
+    baudrate: Optional[int] = None
+    link_baudrate: Optional[int] = None
+    timeout: Optional[float] = None
+    link_timeout: float = 20.0
+    linked: bool = False
+
+    def fill_baudrate(self, baudrate: int) -> None:
+        self.link_baudrate = self.link_baudrate or baudrate
+        self.baudrate = self.baudrate or self.link_baudrate or baudrate
 
 
 class ProgressCallback:

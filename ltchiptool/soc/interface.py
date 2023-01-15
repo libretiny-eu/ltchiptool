@@ -4,18 +4,14 @@ from abc import ABC
 from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
-from ltchiptool.util.flash import ProgressCallback
-from ltchiptool.util.logging import graph
+from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from uf2tool import UploadContext
 
 
 class SocInterface(ABC):
     family: Family = None
     board: Board = None
-    port: str = None
-    baud: int = None
-    link_timeout: float = 20.0
-    read_timeout: float = 1.0
+    conn: FlashConnection = None
 
     @classmethod
     def get(cls, family: Family) -> "SocInterface":
@@ -38,23 +34,6 @@ class SocInterface(ABC):
 
     def set_board(self, board: Board):
         self.board = board
-        if board:
-            self.baud = self.baud or board["upload.speed"] or 115200
-
-    def set_uart_params(
-        self,
-        port: str,
-        baud: int = None,
-        link_timeout: float = None,
-        read_timeout: float = None,
-    ):
-        self.port = port or self.port
-        self.baud = baud or self.baud or 115200
-        self.link_timeout = link_timeout or self.link_timeout
-        self.read_timeout = read_timeout or self.read_timeout
-
-    def print_protocol(self):
-        graph(1, f"Connecting on {self.port} @ {self.baud}")
 
     #####################################################
     # Abstract methods - implemented by the SoC modules #
@@ -110,8 +89,16 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_set_connection(self, connection: FlashConnection) -> None:
+        """Configure device connection parameters."""
+        raise NotImplementedError()
+
     def flash_build_protocol(self, force: bool = False) -> None:
         """Create an instance of flashing protocol class. Only used internally."""
+        raise NotImplementedError()
+
+    def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
+        """Change device connection timeout values."""
         raise NotImplementedError()
 
     def flash_hw_reset(self) -> None:

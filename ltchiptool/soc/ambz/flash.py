@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import ProgressCallback
+from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
 from uf2tool import UploadContext
 
@@ -35,38 +35,52 @@ AMEBAZ_GUIDE = [
 
 class AmebaZFlash(SocInterface, ABC):
     rtl: Optional[RTLXMD] = None
-    is_linked: bool = False
-    baud: int = RTL_ROM_BAUD
+
+    def flash_set_connection(self, connection: FlashConnection) -> None:
+        if self.conn:
+            self.flash_disconnect()
+        self.conn = connection
+        self.conn.fill_baudrate(RTL_ROM_BAUD)
 
     def flash_build_protocol(self, force: bool = False) -> None:
         if not force and self.rtl:
             return
         self.flash_disconnect()
         self.rtl = RTLXMD(
-            port=self.port,
-            baud=self.baud,
-            timeout=self.read_timeout,
-            sync_timeout=self.link_timeout,
+            port=self.conn.port,
+            baud=self.conn.link_baudrate,
+            timeout=0.1,
         )
+        self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
+
+    def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
+        self.flash_build_protocol()
+        if timeout:
+            # noinspection PyProtectedMember
+            self.rtl._port.timeout = timeout
+            self.conn.timeout = timeout
+        if link_timeout:
+            self.rtl.sync_timeout = link_timeout
+            self.conn.link_timeout = link_timeout
 
     def flash_hw_reset(self) -> None:
         self.flash_build_protocol()
         self.rtl.connect()
 
     def flash_connect(self) -> None:
-        if self.rtl and self.is_linked:
+        if self.rtl and self.conn.linked:
             return
         self.flash_build_protocol()
         if not self.rtl.sync():
-            raise TimeoutError(f"Failed to connect on port {self.port}")
-        self.is_linked = True
+            raise TimeoutError(f"Failed to connect on port {self.conn.port}")
+        self.conn.linked = True
 
     def flash_disconnect(self) -> None:
         if self.rtl:
             # noinspection PyProtectedMember
             self.rtl._port.close()
         self.rtl = None
-        self.is_linked = False
+        self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         return "Realtek RTL87xxB"

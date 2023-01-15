@@ -151,6 +151,8 @@ class AmbZ2Tool:
         raise TimeoutError("Timeout while linking")
 
     def change_baudrate(self, baudrate: int) -> None:
+        if self.s.baudrate == baudrate:
+            return
         self.ping()
         self.command(f"ucfg {baudrate} 0 0")
         # change Serial port baudrate

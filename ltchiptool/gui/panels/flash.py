@@ -390,7 +390,12 @@ class FlashPanel(BasePanel):
 
     @on_event
     def on_start_click(self):
-        if self.operation == FlashOp.WRITE and self.detection and self.detection.soc:
+        if (
+            self.operation == FlashOp.WRITE
+            and self.auto_detect
+            and self.detection
+            and self.detection.soc
+        ):
             soc = self.detection.soc
         else:
             soc = SocInterface.get(self.family)

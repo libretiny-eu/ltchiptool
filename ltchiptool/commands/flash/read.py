@@ -9,7 +9,7 @@ from click import File
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
-from ltchiptool.util.flash import ClickProgressCallback
+from ltchiptool.util.flash import ClickProgressCallback, FlashConnection
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 
@@ -48,7 +48,7 @@ from ._utils import flash_link_interactive
 @click.option(
     "-t",
     "--timeout",
-    help="Timeout for operations in seconds (default: 20.0)",
+    help="Chip connection timeout in seconds (default: 20.0)",
     type=float,
     default=None,
 )
@@ -90,7 +90,8 @@ def cli(
     """
     time_start = time()
     soc = SocInterface.get(family)
-    flash_link_interactive(soc, device, baudrate, timeout)
+    soc.flash_set_connection(FlashConnection(device, baudrate))
+    flash_link_interactive(soc, timeout)
 
     if rom:
         max_length = soc.flash_get_rom_size()

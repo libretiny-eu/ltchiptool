@@ -12,7 +12,7 @@ from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
 from ltchiptool.util.detection import Detection
-from ltchiptool.util.flash import ClickProgressCallback
+from ltchiptool.util.flash import ClickProgressCallback, FlashConnection
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 
@@ -62,7 +62,7 @@ from ._utils import flash_link_interactive
 @click.option(
     "-t",
     "--timeout",
-    help="Timeout for operations in seconds (default: 20.0)",
+    help="Chip connection timeout in seconds (default: 20.0)",
     type=float,
     default=None,
 )
@@ -167,7 +167,8 @@ def cli(
         return
     if not soc:
         soc = SocInterface.get(family)
-    flash_link_interactive(soc, device, baudrate, timeout)
+    soc.flash_set_connection(FlashConnection(device, baudrate))
+    flash_link_interactive(soc, timeout)
 
     graph(0, f"Writing '{file.name}'")
     callback = ClickProgressCallback()

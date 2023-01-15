@@ -4,7 +4,12 @@ from logging import debug
 from time import sleep
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import ClickProgressCallback, FlashOp, format_flash_guide
+from ltchiptool.util.flash import (
+    ClickProgressCallback,
+    FlashConnection,
+    FlashOp,
+    format_flash_guide,
+)
 from ltchiptool.util.logging import LoggingHandler
 
 from .base import BaseThread
@@ -43,17 +48,12 @@ class FlashThread(BaseThread):
         self.callback = ClickProgressCallback()
         with self.callback:
             self._link()
-            if self.should_stop():
-                return
             self._transfer()
+        self.soc.flash_disconnect()
 
     def _link(self):
-        self.soc.set_uart_params(
-            port=self.port,
-            baud=self.baudrate,
-            read_timeout=0.5,
-            link_timeout=0.5,
-        )
+        self.soc.flash_set_connection(FlashConnection(self.port, self.baudrate))
+        self.soc.flash_change_timeout(link_timeout=0.5)
         elapsed = 0
         while self.should_run():
             match elapsed:
@@ -72,6 +72,7 @@ class FlashThread(BaseThread):
                 debug("Connecting")
                 self.soc.flash_disconnect()
                 self.soc.flash_connect()
+                self.callback.on_message("Connection successful!")
                 break
             except TimeoutError:
                 elapsed += 1
