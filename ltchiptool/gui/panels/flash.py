@@ -46,6 +46,9 @@ class FlashPanel(BasePanel):
         self.Start: wx.adv.CommandLinkButton = self.BindButton(
             "button_start", self.on_start_click
         )
+        self.Cancel: wx.adv.CommandLinkButton = self.BindButton(
+            "button_cancel", self.on_cancel_click
+        )
 
         self.Baudrate = {
             None: self.BindRadioButton("radio_baudrate_auto"),
@@ -64,6 +67,7 @@ class FlashPanel(BasePanel):
         self.Length = self.BindTextCtrl("input_length")
 
         self.File.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
+        self.Cancel.SetNote("")
 
         self.Family.Set([f.description for f in Family.get_all() if f.name])
 
@@ -211,6 +215,8 @@ class FlashPanel(BasePanel):
         else:
             self.Start.SetNote("")
             self.Start.Enable()
+
+        self.Cancel.Disable()
 
     @with_target
     def OnBlur(self, event: wx.FocusEvent, target: wx.Window):
@@ -409,5 +415,12 @@ class FlashPanel(BasePanel):
             offset=self.offset,
             skip=self.skip,
             length=self.length,
+            on_chip_info=self.Start.SetNote,
         )
         self.start_work(work, freeze_ui=True)
+        self.Start.SetNote("")
+        self.Cancel.Enable()
+
+    @on_event
+    def on_cancel_click(self):
+        self.stop_work(FlashThread)

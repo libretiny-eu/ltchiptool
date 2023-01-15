@@ -364,13 +364,30 @@
             row="3" />
         </node>
         <node
-          class="wxCommandLinkButton"
-          main_label="Start"
-          note="-"
-          var_name="button_start"
+          class="wxGridSizer"
+          var_name="sizer_buttons"
+          border_size="0"
           column="1"
           flags="wxEXPAND"
-          row="7" />
+          row="7">
+          <node
+            class="wxCommandLinkButton"
+            main_label="Start"
+            note="-"
+            var_name="button_start"
+            column="1"
+            flags="wxEXPAND"
+            row="7" />
+          <node
+            class="wxCommandLinkButton"
+            main_label="Cancel"
+            note="-"
+            var_name="button_cancel"
+            disabled="1"
+            column="1"
+            flags="wxEXPAND"
+            row="7" />
+        </node>
       </node>
     </node>
   </node>

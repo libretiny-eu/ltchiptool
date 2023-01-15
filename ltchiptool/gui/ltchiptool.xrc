@@ -412,10 +412,29 @@
 				<cellpos>7,1</cellpos>
 				<cellspan>1,1</cellspan>
 				<flag>wxALL|wxEXPAND</flag>
-				<border>5</border>
-				<object class="wxCommandLinkButton" name="button_start">
-					<label>Start</label>
-					<note>-</note>
+				<border>0</border>
+				<object class="wxGridSizer" name="sizer_buttons">
+					<rows>0</rows>
+					<cols>2</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxCommandLinkButton" name="button_start">
+							<label>Start</label>
+							<note>-</note>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxCommandLinkButton" name="button_cancel">
+							<label>Cancel</label>
+							<note>-</note>
+							<enabled>0</enabled>
+						</object>
+					</object>
 				</object>
 			</object>
 		</object>

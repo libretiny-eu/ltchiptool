@@ -2,6 +2,7 @@
 
 from logging import debug
 from time import sleep
+from typing import Callable
 
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import (
@@ -28,6 +29,7 @@ class FlashThread(BaseThread):
         offset: int,
         skip: int,
         length: int | None,
+        on_chip_info: Callable[[str], None],
     ):
         super().__init__()
         self.port = port
@@ -38,6 +40,7 @@ class FlashThread(BaseThread):
         self.offset = offset
         self.skip = skip
         self.length = length
+        self.on_chip_info = on_chip_info
 
     def run_impl(self):
         debug(
@@ -76,8 +79,14 @@ class FlashThread(BaseThread):
                 break
             except TimeoutError:
                 elapsed += 1
+        if self.should_stop():
+            return
+        chip_info = self.soc.flash_get_chip_info_string()
+        self.on_chip_info(f"Chip info: {chip_info}")
 
     def _transfer(self):
+        if self.should_stop():
+            return
         self.callback.on_message(None)
         self.callback.on_total(50)
         for _ in range(50):
