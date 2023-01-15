@@ -3,7 +3,7 @@
 import json
 from io import SEEK_CUR, BytesIO
 from os.path import dirname, getmtime, isfile, join
-from typing import IO, Callable, List, Optional, Union
+from typing import IO, List, Optional, Union
 
 
 def chname(path: str, name: str) -> str:
@@ -89,15 +89,3 @@ def peek(file: IO[bytes], size: int, seek: int = 0) -> Optional[bytes]:
     except OSError:
         pass
     return None
-
-
-def iowrap(io: IO[bytes], callback: Callable[[bytes], Optional[bytes]]) -> IO[bytes]:
-    _read = io.read
-
-    def read(n: int = -1):
-        data = _read(n)
-        data = callback(data) or data
-        return data
-
-    io.read = read
-    return io

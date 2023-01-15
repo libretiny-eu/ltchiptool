@@ -12,6 +12,7 @@ from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
 from ltchiptool.util.detection import Detection
+from ltchiptool.util.flash import ClickProgressCallback
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 
@@ -169,15 +170,7 @@ def cli(
     flash_link_interactive(soc, device, baudrate, timeout)
 
     graph(0, f"Writing '{file.name}'")
-    bar = click.progressbar(length=0, width=64)
-
-    def callback(chunk: int, total: int, message: str):
-        bar.length = total
-        bar.update(chunk)
-        if bar.label != message:
-            bar.label = message
-            bar.render_progress()
-
+    callback = ClickProgressCallback()
     if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
         soc.flash_write_uf2(ctx, verify=check, callback=callback)
@@ -220,6 +213,7 @@ def cli(
         file.seek(detection.skip, SEEK_SET)
         tell = file.tell()
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
+        callback.on_total(detection.length)
         soc.flash_write_raw(
             offset=detection.offset,
             length=detection.length,
@@ -227,7 +221,7 @@ def cli(
             verify=check,
             callback=callback,
         )
-    bar.render_finish()
+    callback.finish()
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

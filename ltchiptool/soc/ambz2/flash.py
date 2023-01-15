@@ -4,6 +4,7 @@ from abc import ABC
 from typing import Generator, Optional
 
 from ltchiptool import SocInterface
+from ltchiptool.util.flash import ProgressCallback
 
 from .util.ambz2tool import AmbZ2Tool
 
@@ -64,12 +65,14 @@ class AmebaZ2Flash(SocInterface, ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
-        yield from self.amb.memory_read(
+        gen = self.amb.memory_read(
             offset=offset,
             length=length,
             use_flash=not use_rom,
             hash_check=verify,
             yield_size=1024,
         )
+        yield from callback.update_with(gen)

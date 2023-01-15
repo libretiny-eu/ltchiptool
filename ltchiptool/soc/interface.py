@@ -1,9 +1,10 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import IO, Callable, Dict, Generator, List, Optional, Union
+from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
+from ltchiptool.util.flash import ProgressCallback
 from ltchiptool.util.logging import graph
 from uf2tool import UploadContext
 
@@ -149,6 +150,7 @@ class SocInterface(ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         """
         Read 'length' bytes from the flash, starting at 'offset'.
@@ -157,6 +159,7 @@ class SocInterface(ABC):
         :param length: length of data to read
         :param verify: whether to verify checksums
         :param use_rom: whether to read from ROM instead of Flash
+        :param callback: reading progress callback
         :return: a generator yielding the chunks being read
         """
         raise NotImplementedError()
@@ -167,7 +170,7 @@ class SocInterface(ABC):
         length: int,
         data: IO[bytes],
         verify: bool = True,
-        callback: Callable[[int, int, str], None] = lambda *_: None,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
@@ -176,7 +179,7 @@ class SocInterface(ABC):
         :param length: length of data to write
         :param data: IO stream of data to write
         :param verify: whether to verify checksums
-        :param callback: write progress handler: (chunk length, total length, message)
+        :param callback: writing progress callback
         """
         raise NotImplementedError()
 
@@ -184,13 +187,13 @@ class SocInterface(ABC):
         self,
         ctx: UploadContext,
         verify: bool = True,
-        callback: Callable[[int, int, str], None] = lambda *_: None,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         """
         Upload an UF2 package to the chip.
 
         :param ctx: UF2 uploading context
         :param verify: whether to verify checksums
-        :param callback: write progress handler: (chunk length, total length, message)
+        :param callback: writing progress callback
         """
         raise NotImplementedError()

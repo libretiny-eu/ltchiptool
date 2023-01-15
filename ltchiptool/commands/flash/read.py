@@ -9,6 +9,7 @@ from click import File
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
+from ltchiptool.util.flash import ClickProgressCallback
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 
@@ -110,10 +111,15 @@ def cli(
     else:
         graph(0, f"Reading {sizeof(length)} @ 0x{offset:X} to '{file.name}'")
 
-    with click.progressbar(length=length, width=64) as bar:
-        for chunk in soc.flash_read_raw(offset, length, verify=check, use_rom=rom):
+    with ClickProgressCallback(length) as callback:
+        for chunk in soc.flash_read_raw(
+            offset,
+            length,
+            verify=check,
+            use_rom=rom,
+            callback=callback,
+        ):
             file.write(chunk)
-            bar.update(len(chunk))
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

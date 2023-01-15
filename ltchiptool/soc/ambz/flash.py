@@ -2,10 +2,10 @@
 
 from abc import ABC
 from io import BytesIO
-from typing import IO, Callable, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util.fileio import iowrap
+from ltchiptool.util.flash import ProgressCallback
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
 from uf2tool import UploadContext
 
@@ -86,11 +86,13 @@ class AmebaZFlash(SocInterface, ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         if use_rom:
             self.flash_get_rom_size()
         self.flash_connect()
-        success = yield from self.rtl.ReadBlockFlashGenerator(offset, length)
+        gen = self.rtl.ReadBlockFlashGenerator(offset, length)
+        success = yield from callback.update_with(gen)
         if not success:
             raise ValueError(f"Failed to read from 0x{offset:X}")
 
@@ -100,12 +102,13 @@ class AmebaZFlash(SocInterface, ABC):
         length: int,
         data: IO[bytes],
         verify: bool = True,
-        callback: Callable[[int, int, str], None] = lambda *_: None,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         self.flash_connect()
         offset |= 0x8000000
-        data = iowrap(data, lambda chunk: callback(len(chunk), length, ""))
+        callback.attach(data)
         success = self.rtl.WriteBlockFlash(data, offset, length)
+        callback.detach(data)
         if not success:
             raise ValueError(f"Failed to write to 0x{offset:X}")
 
@@ -113,7 +116,7 @@ class AmebaZFlash(SocInterface, ABC):
         self,
         ctx: UploadContext,
         verify: bool = True,
-        callback: Callable[[int, int, str], None] = lambda *_: None,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         # read system data to get active OTA index
         system = gen2bytes(self.flash_read_raw(0x9000, 256))
@@ -131,23 +134,24 @@ class AmebaZFlash(SocInterface, ABC):
             part_addr = ctx.get_offset("ota2", 0)
             if ota2_addr != part_addr:
                 raise ValueError(
-                    f"Invalid OTA2 address on chip - found {ota2_addr}, expected {part_addr}"
+                    f"Invalid OTA2 address on chip - "
+                    f"found {ota2_addr}, expected {part_addr}",
                 )
 
         # collect continuous blocks of data
         parts = ctx.collect(ota_idx=ota_idx)
-        total = sum(len(part.getvalue()) for part in parts.values()) + 4
+        callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
 
-        callback(0, total, f"OTA {ota_idx}")
+        callback.on_message(f"OTA {ota_idx}")
         # write blocks to flash
         for offset, data in parts.items():
             length = len(data.getvalue())
-            progress = f"OTA {ota_idx} (0x{offset:06X})"
+            callback.on_message(f"OTA {ota_idx} (0x{offset:06X})")
             data.seek(0)
-            data = iowrap(data, lambda chunk: callback(len(chunk), total, progress))
-            self.flash_write_raw(offset, length, data, verify)
+            self.flash_write_raw(offset, length, data, verify, callback)
 
-        callback(4, total, "Booting firmware")
+        callback.on_message("Booting firmware")
         # [0x10002000] = 0x00005405
         stream = BytesIO(inttole32(0x00005405))
         self.rtl.WriteBlockSRAM(stream, 0x10002000, 4)
+        callback.on_update(4)
