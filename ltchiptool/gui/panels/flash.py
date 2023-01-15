@@ -1,6 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import os
+from datetime import datetime
 from logging import debug, info
 from os.path import dirname, isfile
 
@@ -14,6 +15,7 @@ from ltchiptool.gui.work.flash import FlashThread
 from ltchiptool.gui.work.ports import PortWatcher
 from ltchiptool.util.cli import list_serial_ports
 from ltchiptool.util.detection import Detection
+from ltchiptool.util.fileio import chname
 from ltchiptool.util.flash import FlashOp
 from ltchiptool.util.logging import verbose
 
@@ -24,7 +26,8 @@ class FlashPanel(BasePanel):
     detection: Detection | None = None
     ports: list[tuple[str, bool, str]]
     prev_read_full: bool = None
-
+    prev_file: str | None = None
+    auto_file: str | None = None
     delayed_port: str | None = None
 
     def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
@@ -82,6 +85,7 @@ class FlashPanel(BasePanel):
             offset=self.offset,
             skip=self.skip,
             length=self.length,
+            prev_file=self.prev_file,
         )
 
     def SetSettings(
@@ -95,6 +99,7 @@ class FlashPanel(BasePanel):
         offset: int = None,
         skip: int = None,
         length: int = None,
+        prev_file: str = None,
         **_,
     ):
         self.port = port
@@ -109,22 +114,37 @@ class FlashPanel(BasePanel):
         self.offset = offset
         self.skip = skip
         self.length = length
+        self.prev_file = prev_file
 
     def OnShow(self):
         super().OnShow()
         self.start_work(PortWatcher(self.on_ports_updated))
 
     def OnUpdate(self, target: wx.Window = None):
-        if target == self.Write:
-            # perform file type detection again (in case of switching Read -> Write)
-            self.file = self.file
-
         writing = self.operation == FlashOp.WRITE
         reading = not writing
         auto = self.auto_detect
         manual = not auto
         is_uf2 = self.detection is not None and self.detection.is_uf2
         need_offset = self.detection is not None and self.detection.need_offset
+
+        match target:
+            case self.Read | self.ReadROM if self.file:
+                # generate a new filename for reading, to prevent
+                # accidentally overwriting firmware files
+                if not self.prev_file:
+                    self.prev_file = self.file
+                self.file = self.make_dump_filename()
+            case self.Family if reading and self.file == self.auto_file:
+                # regenerate the filename after changing family
+                self.file = self.make_dump_filename()
+            case self.Write:
+                # restore filename previously used for writing
+                if self.prev_file and not isfile(self.file):
+                    self.file = self.prev_file
+                    self.prev_file = None
+                # perform file type detection again (in case of switching Read -> Write)
+                self.file = self.file
 
         self.Family.Enable(reading or manual)
         self.FileTypeText.Enable(writing)
@@ -361,6 +381,16 @@ class FlashPanel(BasePanel):
     @property
     def read_full(self):
         return self.length == 0 and self.auto_detect and self.operation != FlashOp.WRITE
+
+    def make_dump_filename(self):
+        if not self.file:
+            return
+        date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
+        filename = f"ltchiptool_{self.family.code}_{date}{rom}.bin"
+        self.auto_file = chname(self.file, filename)
+        verbose(f"Generated dump filename: {self.auto_file}")
+        return self.auto_file
 
     def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
         user_port = self.port or self.delayed_port
