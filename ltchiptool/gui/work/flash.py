@@ -1,8 +1,9 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-15.
 
 from logging import debug
-from time import sleep
 from typing import Callable
+
+import wx
 
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import (
@@ -12,6 +13,7 @@ from ltchiptool.util.flash import (
     format_flash_guide,
 )
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.misc import sizeof
 
 from .base import BaseThread
 
@@ -50,8 +52,18 @@ class FlashThread(BaseThread):
         )
         self.callback = ClickProgressCallback()
         with self.callback:
-            self._link()
-            self._transfer()
+            try:
+                self._link()
+                if self.operation == FlashOp.WRITE:
+                    pass
+                else:
+                    self._do_read()
+            except Exception as e:
+                wx.MessageBox(
+                    message=str(e),
+                    caption="Error",
+                    style=wx.ICON_ERROR,
+                )
         self.soc.flash_disconnect()
 
     def _link(self):
@@ -84,11 +96,34 @@ class FlashThread(BaseThread):
         chip_info = self.soc.flash_get_chip_info_string()
         self.on_chip_info(f"Chip info: {chip_info}")
 
-    def _transfer(self):
+    def _do_read(self):
         if self.should_stop():
             return
         self.callback.on_message(None)
-        self.callback.on_total(50)
-        for _ in range(50):
-            sleep(0.1)
-            self.callback.on_update(1)
+
+        if self.operation == FlashOp.READ_ROM:
+            max_length = self.soc.flash_get_rom_size()
+        else:
+            max_length = self.soc.flash_get_size()
+
+        self.length = self.length or (max_length - self.offset)
+
+        if self.offset + self.length > max_length:
+            raise ValueError(
+                f"Reading length {sizeof(self.length)} @ 0x{self.offset:X} is more "
+                f"than chip capacity ({sizeof(max_length)})",
+            )
+
+        file = open(self.file, "wb")
+        self.callback.on_total(self.length)
+        for chunk in self.soc.flash_read_raw(
+            offset=self.offset,
+            length=self.length,
+            verify=True,
+            use_rom=self.operation == FlashOp.READ_ROM,
+            callback=self.callback,
+        ):
+            file.write(chunk)
+            if self.should_stop():
+                break
+        file.close()

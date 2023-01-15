@@ -86,6 +86,7 @@ class FlashPanel(BasePanel):
             skip=self.skip,
             length=self.length,
             prev_file=self.prev_file,
+            auto_file=self.auto_file,
         )
 
     def SetSettings(
@@ -100,6 +101,7 @@ class FlashPanel(BasePanel):
         skip: int = None,
         length: int = None,
         prev_file: str = None,
+        auto_file: str = None,
         **_,
     ):
         self.port = port
@@ -115,6 +117,7 @@ class FlashPanel(BasePanel):
         self.skip = skip
         self.length = length
         self.prev_file = prev_file
+        self.auto_file = auto_file
 
     def OnShow(self):
         super().OnShow()
@@ -129,7 +132,7 @@ class FlashPanel(BasePanel):
         need_offset = self.detection is not None and self.detection.need_offset
 
         match target:
-            case self.Read | self.ReadROM if self.file:
+            case (self.Read | self.ReadROM) if self.file:
                 # generate a new filename for reading, to prevent
                 # accidentally overwriting firmware files
                 if not self.prev_file:
@@ -387,7 +390,10 @@ class FlashPanel(BasePanel):
             return
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
-        filename = f"ltchiptool_{self.family.code}_{date}{rom}.bin"
+        if self.family:
+            filename = f"ltchiptool_{self.family.code}_{date}{rom}.bin"
+        else:
+            filename = f"ltchiptool_dump_{date}{rom}.bin"
         self.auto_file = chname(self.file, filename)
         verbose(f"Generated dump filename: {self.auto_file}")
         return self.auto_file
@@ -435,6 +441,18 @@ class FlashPanel(BasePanel):
             soc = self.detection.soc
         else:
             soc = SocInterface.get(self.family)
+
+        if self.operation != FlashOp.WRITE:
+            if self.file == self.auto_file:
+                self.file = self.make_dump_filename()
+            if isfile(self.file):
+                btn = wx.MessageBox(
+                    message=f"File already exists. Do you want to overwrite it?",
+                    caption="Warning",
+                    style=wx.ICON_WARNING | wx.YES_NO,
+                )
+                if btn != wx.YES:
+                    return
 
         work = FlashThread(
             port=self.port,

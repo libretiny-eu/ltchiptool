@@ -66,8 +66,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
-        self.SetSize((600, 800))
-        self.SetMinSize((600, 600))
+        self.SetSize((700, 800))
+        self.SetMinSize((600, 700))
         self.CreateStatusBar()
 
     @property

@@ -114,8 +114,8 @@ def cli(
 
     with ClickProgressCallback(length) as callback:
         for chunk in soc.flash_read_raw(
-            offset,
-            length,
+            offset=offset,
+            length=length,
             verify=check,
             use_rom=rom,
             callback=callback,
