@@ -1,31 +1,23 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import os
-from enum import Enum
 from logging import debug, info
 from os.path import dirname, isfile
-from threading import Thread
-from time import sleep
 
-import click
 import wx
 import wx.adv
 import wx.xrc
 
-from ltchiptool import Family
+from ltchiptool import Family, SocInterface
 from ltchiptool.gui.utils import int_or_zero, on_event, only_target, with_target
+from ltchiptool.gui.work.flash import FlashThread
 from ltchiptool.gui.work.ports import PortWatcher
 from ltchiptool.util.cli import list_serial_ports
 from ltchiptool.util.detection import Detection
+from ltchiptool.util.flash import FlashOp
 from ltchiptool.util.logging import verbose
 
 from .base import BasePanel
-
-
-class FlashOp(Enum):
-    WRITE = "write"
-    READ = "read"
-    READ_ROM = "read_rom"
 
 
 class FlashPanel(BasePanel):
@@ -396,18 +388,21 @@ class FlashPanel(BasePanel):
                 return
             self.file = dialog.GetPath()
 
-    @only_target
-    def on_start_click(self, button: wx.Button):
-        info(f"Start click: {self.offset=}, {self.skip=}, {self.length=}")
-        self.DisableAll()
-        enable_all = self.EnableAll
+    @on_event
+    def on_start_click(self):
+        if self.operation == FlashOp.WRITE and self.detection and self.detection.soc:
+            soc = self.detection.soc
+        else:
+            soc = SocInterface.get(self.family)
 
-        class X(Thread):
-            def run(self) -> None:
-                with click.progressbar(length=0x200000) as bar:
-                    for i in range(0x40):
-                        bar.update(0x200000 // 0x40)
-                        sleep(0.05)
-                enable_all()
-
-        X().start()
+        work = FlashThread(
+            port=self.port,
+            baudrate=self.baudrate,
+            operation=self.operation,
+            file=self.file,
+            soc=soc,
+            offset=self.offset,
+            skip=self.skip,
+            length=self.length,
+        )
+        self.start_work(work, freeze_ui=True)

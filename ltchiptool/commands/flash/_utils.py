@@ -1,40 +1,10 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
 from logging import debug
-from typing import List
-
-from prettytable import PrettyTable
 
 from ltchiptool import SocInterface
+from ltchiptool.util.flash import format_flash_guide
 from ltchiptool.util.logging import LoggingHandler, graph
-
-
-def _format_flash_guide(soc: SocInterface) -> List[str]:
-    guide = []
-    dash_line = "-" * 6
-    empty_line = " " * 6
-    for item in soc.flash_get_guide():
-        if isinstance(item, str):
-            if guide:
-                guide.append(" ")
-            guide += item.splitlines()
-        elif isinstance(item, list):
-            table = PrettyTable()
-            left, right = item[0]
-            left = left.rjust(6)
-            right = right.ljust(6)
-            table.field_names = [left, "", right]
-            table.align[left] = "r"
-            table.align[right] = "l"
-            for left, right in item[1:]:
-                table.add_row([left, dash_line if left and right else "", right])
-            if guide:
-                guide.append("")
-            for line in table.get_string().splitlines():
-                line = line[1:-1]
-                line = line.replace(f"-+-{dash_line}-+-", f"-+ {empty_line} +-")
-                guide.append(f"    {line}")
-    return guide
 
 
 def flash_link_interactive(
@@ -54,7 +24,7 @@ def flash_link_interactive(
         elif stage == 2:
             # guide the user to connect the chip properly, or reset it manually
             soc.set_uart_params(port=port, baud=baud, link_timeout=link_timeout or 20.0)
-            for line in _format_flash_guide(soc):
+            for line in format_flash_guide(soc):
                 LoggingHandler.get().emit_string("I", line, color="bright_blue")
         else:
             # give up after link_timeout

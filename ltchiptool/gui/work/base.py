@@ -4,6 +4,8 @@ from logging import debug
 from threading import Event, Thread
 from typing import Callable
 
+from ltchiptool.util.logging import LoggingHandler
+
 
 class BaseThread(Thread):
     _stop_flag: Event
@@ -19,7 +21,12 @@ class BaseThread(Thread):
     def run(self):
         debug(f"Started {type(self).__name__}")
         self._stop_flag.clear()
-        self.run_impl()
+
+        try:
+            self.run_impl()
+        except Exception as e:
+            LoggingHandler.get().emit_exception(e)
+
         if self.on_stop:
             self.on_stop(self)
         debug(f"Stopped {type(self).__name__}")

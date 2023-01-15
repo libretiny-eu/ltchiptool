@@ -13,15 +13,24 @@ class BasePanel(wx.Panel):
     _components: list[wx.Window]
     _threads: list[BaseThread]
     _in_update: bool = False
+    is_closing: bool = False
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._components = []
         self._threads = []
 
-    def start_work(self, thread: BaseThread):
+    def start_work(self, thread: BaseThread, freeze_ui: bool = False):
         self._threads.append(thread)
-        thread.on_stop = lambda t: self.on_work_stopped(t)
+
+        def on_stop(t: BaseThread):
+            self.on_work_stopped(t)
+            if freeze_ui:
+                self.EnableAll()
+
+        thread.on_stop = on_stop
+        if freeze_ui:
+            self.DisableAll()
         thread.start()
 
     def stop_work(self, cls: type[BaseThread]):
@@ -42,6 +51,7 @@ class BasePanel(wx.Panel):
         self.OnUpdate()
 
     def OnClose(self):
+        self.is_closing = True
         for t in list(self._threads):
             t.stop()
             t.join()
@@ -112,10 +122,14 @@ class BasePanel(wx.Panel):
         return window
 
     def EnableAll(self):
+        if self.is_closing:
+            return
         for window in self._components:
             window.Enable()
         self.OnUpdate()
 
     def DisableAll(self):
+        if self.is_closing:
+            return
         for window in self._components:
             window.Disable()

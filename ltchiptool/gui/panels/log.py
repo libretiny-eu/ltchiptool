@@ -17,7 +17,7 @@ from .base import BasePanel
 
 
 class GUIProgressBar(ProgressBar):
-    parent: wx.Window
+    parent: BasePanel
     elapsed: wx.StaticText
     progress: wx.StaticText
     left: wx.StaticText
@@ -40,6 +40,8 @@ class GUIProgressBar(ProgressBar):
         return f"{hours:02}:{minutes:02}:{seconds:02}"
 
     def render_progress(self) -> None:
+        if self.parent.is_closing:
+            return
         self.elapsed.Show()
         self.progress.Show()
         self.left.Show()
@@ -50,17 +52,29 @@ class GUIProgressBar(ProgressBar):
         pct = self.format_pct()
         pos = sizeof(self.pos)
         length = sizeof(self.length)
-        self.progress.SetLabel(f"{pct} ({pos} / {length})")
+
+        if self.length == 0:
+            self.progress.SetLabel(self.label or "")
+            self.bar.Pulse()
+        else:
+            if self.label:
+                self.progress.SetLabel(f"{self.label} - {pct} ({pos} / {length})")
+            else:
+                self.progress.SetLabel(f"{pct} ({pos} / {length})")
+            self.bar.SetRange(self.length)
+            self.bar.SetValue(self.pos)
+
         self.time_elapsed.SetLabel(self.format_time())
         self.time_left.SetLabel(self.format_eta() or "--:--:--")
-        self.bar.SetRange(self.length)
-        self.bar.SetValue(self.pos)
+
         self.parent.Layout()
         if not self.scrolled:
             self.log.AppendText("")
             self.scrolled = True
 
     def render_finish(self) -> None:
+        if self.parent.is_closing:
+            return
         self.elapsed.Hide()
         self.progress.Hide()
         self.left.Hide()
@@ -118,6 +132,8 @@ class LogPanel(BasePanel):
         is_main_thread = threading.current_thread() is threading.main_thread()
         if not is_main_thread and self.delayed_lines is not None:
             self.delayed_lines.append((log_prefix, message, color))
+            return
+        if self.is_closing:
             return
 
         wx_color = self.COLOR_MAP[color]

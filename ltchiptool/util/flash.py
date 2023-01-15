@@ -1,10 +1,18 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-15.
 
-from typing import IO, Generator
+from enum import Enum
+from typing import IO, Generator, List, Optional
 
 import click
+from prettytable import PrettyTable
 
 from .intbin import ByteGenerator
+
+
+class FlashOp(Enum):
+    WRITE = "write"
+    READ = "read"
+    READ_ROM = "read_rom"
 
 
 class ProgressCallback:
@@ -14,7 +22,7 @@ class ProgressCallback:
     def on_total(self, total: int) -> None:
         pass
 
-    def on_message(self, message: str) -> None:
+    def on_message(self, message: Optional[str]) -> None:
         pass
 
     def update_from(self, gen: Generator[int, None, None]) -> None:
@@ -61,7 +69,7 @@ class ClickProgressCallback(ProgressCallback):
         self.bar.length = total
         self.bar.render_progress()
 
-    def on_message(self, message: str) -> None:
+    def on_message(self, message: Optional[str]) -> None:
         self.bar.label = message
         self.bar.render_progress()
 
@@ -74,3 +82,31 @@ class ClickProgressCallback(ProgressCallback):
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.bar.render_finish()
+
+
+def format_flash_guide(soc) -> List[str]:
+    guide = []
+    dash_line = "-" * 6
+    empty_line = " " * 6
+    for item in soc.flash_get_guide():
+        if isinstance(item, str):
+            if guide:
+                guide.append(" ")
+            guide += item.splitlines()
+        elif isinstance(item, list):
+            table = PrettyTable()
+            left, right = item[0]
+            left = left.rjust(6)
+            right = right.ljust(6)
+            table.field_names = [left, "", right]
+            table.align[left] = "r"
+            table.align[right] = "l"
+            for left, right in item[1:]:
+                table.add_row([left, dash_line if left and right else "", right])
+            if guide:
+                guide.append("")
+            for line in table.get_string().splitlines():
+                line = line[1:-1]
+                line = line.replace(f"-+-{dash_line}-+-", f"-+ {empty_line} +-")
+                guide.append(f"    {line}")
+    return guide
