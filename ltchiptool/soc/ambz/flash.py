@@ -9,7 +9,7 @@ from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
 from uf2tool import UploadContext
 
-from .util.rtltool import RTL_ROM_BAUD, RTLXMD
+from .util.rtltool import CAN, RTL_ROM_BAUD, RTLXMD
 
 AMEBAZ_GUIDE = [
     "Connect UART2 of the Realtek chip to the USB-TTL adapter:",
@@ -33,6 +33,7 @@ AMEBAZ_GUIDE = [
 ]
 
 
+# noinspection PyProtectedMember
 class AmebaZFlash(SocInterface, ABC):
     rtl: Optional[RTLXMD] = None
 
@@ -56,7 +57,6 @@ class AmebaZFlash(SocInterface, ABC):
     def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
         self.flash_build_protocol()
         if timeout:
-            # noinspection PyProtectedMember
             self.rtl._port.timeout = timeout
             self.conn.timeout = timeout
         if link_timeout:
@@ -71,14 +71,16 @@ class AmebaZFlash(SocInterface, ABC):
         if self.rtl and self.conn.linked:
             return
         self.flash_build_protocol()
+        # try to exit interrupted write operations
+        self.rtl._port.write(CAN)
         if not self.rtl.sync():
             raise TimeoutError(f"Failed to connect on port {self.conn.port}")
         self.conn.linked = True
 
     def flash_disconnect(self) -> None:
         if self.rtl:
-            # noinspection PyProtectedMember
             self.rtl._port.close()
+            self.rtl._port = None
         self.rtl = None
         self.conn.linked = False
 

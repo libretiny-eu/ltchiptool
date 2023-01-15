@@ -66,12 +66,21 @@ class FlashThread(BaseThread):
                 else:
                     self._do_read()
             except Exception as e:
-                wx.MessageBox(
-                    message=str(e),
-                    caption="Error",
-                    style=wx.ICON_ERROR,
-                )
+                print(e)
+                if self.should_run():
+                    # show exceptions only if not cancelled
+                    wx.MessageBox(
+                        message=str(e),
+                        caption="Error",
+                        style=wx.ICON_ERROR,
+                    )
         self.soc.flash_disconnect()
+
+    def stop(self):
+        super().stop()
+        if self.ctx:
+            # try to break UF2 flashing
+            self.soc.flash_disconnect()
 
     def _link(self):
         self.soc.flash_set_connection(FlashConnection(self.port, self.baudrate))
@@ -118,9 +127,17 @@ class FlashThread(BaseThread):
 
         file = open(self.file, "rb")
         size = stat(self.file).st_size
+        _read = file.read
+
+        def read(n: int = -1) -> bytes | None:
+            if self.should_stop():
+                return None
+            return _read(n)
+
+        file.read = read
 
         if self.skip + self.length > size:
-            raise ValueError(f"File is too small")
+            raise ValueError(f"File is too small (requested to write too much data)")
 
         max_length = self.soc.flash_get_size()
         if self.offset > max_length - self.length:

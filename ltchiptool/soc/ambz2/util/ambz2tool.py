@@ -65,6 +65,7 @@ class AmbZ2Tool:
 
     def close(self) -> None:
         self.s.close()
+        self.s = None
 
     def write(self, data: bytes) -> None:
         verbose(f"<- TX: {data}")

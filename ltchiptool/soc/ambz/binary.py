@@ -136,7 +136,7 @@ class AmebaZBinary(SocInterface, ABC):
                 type_name=f"Realtek OTA Package",
                 offset=start & ~0x8000020,
                 skip=skip,
-                length=length,
+                length=xip_length,
             )
 
         # stage 2 - check full dump file
