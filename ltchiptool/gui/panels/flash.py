@@ -143,7 +143,7 @@ class FlashPanel(BasePanel):
                 self.file = self.make_dump_filename()
             case self.Write:
                 # restore filename previously used for writing
-                if self.prev_file and not isfile(self.file):
+                if self.prev_file:
                     self.file = self.prev_file
                     self.prev_file = None
                 # perform file type detection again (in case of switching Read -> Write)
@@ -432,15 +432,12 @@ class FlashPanel(BasePanel):
 
     @on_event
     def on_start_click(self):
-        if (
-            self.operation == FlashOp.WRITE
-            and self.auto_detect
-            and self.detection
-            and self.detection.soc
-        ):
-            soc = self.detection.soc
+        if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
+            soc = self.detection.soc or SocInterface.get(self.family)
+            ctx = self.detection.ctx
         else:
             soc = SocInterface.get(self.family)
+            ctx = None
 
         if self.operation != FlashOp.WRITE:
             if self.file == self.auto_file:
@@ -463,6 +460,8 @@ class FlashPanel(BasePanel):
             offset=self.offset,
             skip=self.skip,
             length=self.length,
+            verify=True,
+            ctx=ctx,
             on_chip_info=self.Start.SetNote,
         )
         self.start_work(work, freeze_ui=True)
