@@ -17,6 +17,7 @@ from ltchiptool.util.flash import (
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 from uf2tool import UploadContext
+from uf2tool.models import UF2
 
 from .base import BaseThread
 
@@ -35,7 +36,7 @@ class FlashThread(BaseThread):
         skip: int,
         length: int | None,
         verify: bool,
-        ctx: UploadContext | None,
+        uf2: UF2 | None,
         on_chip_info: Callable[[str], None],
     ):
         super().__init__()
@@ -48,7 +49,7 @@ class FlashThread(BaseThread):
         self.skip = skip
         self.length = length
         self.verify = verify
-        self.ctx = ctx
+        self.uf2 = uf2
         self.on_chip_info = on_chip_info
 
     def run_impl(self):
@@ -78,7 +79,7 @@ class FlashThread(BaseThread):
 
     def stop(self):
         super().stop()
-        if self.ctx:
+        if self.uf2:
             # try to break UF2 flashing
             self.soc.flash_disconnect()
 
@@ -117,9 +118,10 @@ class FlashThread(BaseThread):
             return
         self.callback.on_message(None)
 
-        if self.ctx:
+        if self.uf2:
+            ctx = UploadContext(self.uf2)
             self.soc.flash_write_uf2(
-                ctx=self.ctx,
+                ctx=ctx,
                 verify=self.verify,
                 callback=self.callback,
             )

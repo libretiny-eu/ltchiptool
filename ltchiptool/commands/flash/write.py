@@ -15,6 +15,7 @@ from ltchiptool.util.detection import Detection
 from ltchiptool.util.flash import ClickProgressCallback, FlashConnection
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
+from uf2tool import UploadContext
 
 from ._utils import flash_link_interactive
 
@@ -157,7 +158,7 @@ def cli(
         graph(0, f"Detected file type: {detection.title}")
     family = detection.family
     soc = detection.soc
-    ctx = detection.ctx
+    uf2 = detection.uf2
 
     # 1. file type found using SocInterface
     # 2. flashing in Raw mode (-f + -s)
@@ -172,7 +173,8 @@ def cli(
 
     graph(0, f"Writing '{file.name}'")
     callback = ClickProgressCallback()
-    if ctx:
+    if uf2:
+        ctx = UploadContext(uf2)
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
         soc.flash_write_uf2(ctx, verify=check, callback=callback)
     else:

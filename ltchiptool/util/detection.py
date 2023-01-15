@@ -5,9 +5,8 @@ from enum import Enum
 from os import SEEK_CUR, stat
 from typing import IO, Optional
 
-from ltchiptool import Family, SocInterface
-from uf2tool import UploadContext
-from uf2tool.models import UF2
+from ltchiptool import Board, Family, SocInterface
+from uf2tool.models import UF2, Tag
 
 from .fileio import peek
 
@@ -50,7 +49,7 @@ class Detection:
 
     family: Optional[Family] = None
     soc: Optional[SocInterface] = None
-    ctx: Optional[UploadContext] = None
+    uf2: Optional[UF2] = None
 
     def __post_init__(self):
         if not self.length:
@@ -145,18 +144,20 @@ def _detect_file(file: IO[bytes], family: Family = None) -> Detection:
         uf2_type = Detection.Type.VALID_UF2
         try:
             uf2.read(block_tags=False)
-            ctx = UploadContext(uf2)
-            if ctx.fw_name and ctx.fw_version:
-                file_type = f"UF2 - {ctx.fw_name} {ctx.fw_version}"
-            elif ctx.board_name:
+            fw_name = uf2.tags.get(Tag.FIRMWARE, b"").decode()
+            fw_version = uf2.tags.get(Tag.VERSION, b"").decode()
+            board_name = uf2.tags.get(Tag.BOARD, b"").decode()
+            if fw_name and fw_version:
+                file_type = f"UF2 - {fw_name} {fw_version}"
+            elif board_name:
                 try:
-                    file_type = f"UF2 - {ctx.board.title}"
+                    board = Board(board_name)
+                    file_type = f"UF2 - {board.title}"
                 except FileNotFoundError:
-                    file_type = f"UF2 - {ctx.board_name}"
+                    file_type = f"UF2 - {board_name}"
             else:
                 file_type = "UF2 - unknown board"
         except ValueError:
-            ctx = None
             uf2_type = Detection.Type.UNSUPPORTED_UF2
             file_type = "UF2 - unrecognized family"
 
@@ -165,8 +166,8 @@ def _detect_file(file: IO[bytes], family: Family = None) -> Detection:
             size=file_size,
             type=uf2_type,
             file_type=file_type,
-            family=ctx.uf2.family if ctx else None,
-            ctx=ctx,
+            family=uf2.family,
+            uf2=uf2,
         )
     elif file_type == "Tuya UG":
         wrap_type = file_type
