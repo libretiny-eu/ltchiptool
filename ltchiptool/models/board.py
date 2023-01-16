@@ -7,14 +7,10 @@ from typing import List, Optional, Tuple, Union
 
 import click
 
-from ltchiptool.util import (
-    RecursiveDict,
-    Toolchain,
-    lt_find_path,
-    lt_read_json,
-    merge_dicts,
-    readjson,
-)
+from ltchiptool.util.dict import RecursiveDict, merge_dicts
+from ltchiptool.util.env import lt_find_path, lt_read_json
+from ltchiptool.util.fileio import readjson
+from ltchiptool.util.toolchain import Toolchain
 
 from .family import Family
 

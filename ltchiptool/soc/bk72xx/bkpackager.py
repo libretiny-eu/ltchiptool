@@ -8,10 +8,10 @@ sys.path.append(join(dirname(__file__), "..", "..", ".."))
 sys.path.append(dirname(__file__))
 
 from argparse import ArgumentParser, FileType
-from io import SEEK_SET, FileIO
+from io import SEEK_SET
 from os import stat
 from time import time
-from typing import List, Union
+from typing import IO, List, Union
 
 import click
 from util import RBL, BekenBinary, OTACompression, OTAEncryption
@@ -116,7 +116,7 @@ def main(*argv):
 
     args = parser.parse_args(argv)
     bk = BekenBinary(getattr(args, "coeffs", None))
-    f: FileIO = args.input
+    f: IO[bytes] = args.input
     size = stat(args.input.name).st_size
     start = time()
     gen: Union[ByteGenerator, None] = None

@@ -1,9 +1,9 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-10.
 
 import json
-from io import SEEK_CUR, BytesIO, FileIO
+from io import SEEK_CUR, BytesIO
 from os.path import dirname, getmtime, isfile, join
-from typing import List, Optional, Union
+from typing import IO, List, Optional, Union
 
 
 def chname(path: str, name: str) -> str:
@@ -78,7 +78,7 @@ def writetext(file: str, data: Union[str, bytes, List[str]]):
             f.write(data)
 
 
-def peek(file: FileIO, size: int, seek: int = 0) -> Optional[bytes]:
+def peek(file: IO[bytes], size: int, seek: int = 0) -> Optional[bytes]:
     try:
         if seek:
             file.seek(seek, SEEK_CUR)

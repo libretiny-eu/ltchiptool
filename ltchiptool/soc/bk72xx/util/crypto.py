@@ -2,7 +2,7 @@
 
 from typing import List, Tuple
 
-from ltchiptool.util import BitInt, bitcatraw
+from ltchiptool.util.bitint import BitInt, bitcatraw
 
 
 def pn15(addr: int) -> int:

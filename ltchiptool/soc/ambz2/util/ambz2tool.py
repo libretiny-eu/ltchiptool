@@ -1,18 +1,19 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-21.
 
+import logging
 from enum import IntEnum
 from hashlib import sha256
 from logging import debug, warning
 from math import ceil
 from time import time
-from typing import BinaryIO, Generator, List, Optional
+from typing import IO, Generator, List, Optional
 
 import click
 from serial import Serial
 from xmodem import XMODEM
 
-from ltchiptool.util import log_copy_setup, verbose
 from ltchiptool.util.intbin import align_down
+from ltchiptool.util.logging import LoggingHandler, verbose
 
 
 class AmbZ2FlashMode(IntEnum):
@@ -47,7 +48,7 @@ class AmbZ2Tool:
         self.link_timeout = link_timeout
         self.read_timeout = read_timeout
 
-        log_copy_setup("xmodem.XMODEM")
+        LoggingHandler.get().attach(logging.getLogger("xmodem.XMODEM"))
         self.s = Serial(port, baudrate)
         self.xm = XMODEM(
             getc=lambda size, timeout=1: self.read(size) or None,
@@ -64,6 +65,7 @@ class AmbZ2Tool:
 
     def close(self) -> None:
         self.s.close()
+        self.s = None
 
     def write(self, data: bytes) -> None:
         verbose(f"<- TX: {data}")
@@ -150,6 +152,8 @@ class AmbZ2Tool:
         raise TimeoutError("Timeout while linking")
 
     def change_baudrate(self, baudrate: int) -> None:
+        if self.s.baudrate == baudrate:
+            return
         self.ping()
         self.command(f"ucfg {baudrate} 0 0")
         # change Serial port baudrate
@@ -286,7 +290,7 @@ class AmbZ2Tool:
             raise RuntimeError(f"Unexpected response: {response}")
         return response[6 : 6 + 32]
 
-    def flash_transmit(self, stream: Optional[BinaryIO], offset: int) -> None:
+    def flash_transmit(self, stream: Optional[IO[bytes]], offset: int) -> None:
         # set the flash_mode
         self.flash_init(configure=False)
 

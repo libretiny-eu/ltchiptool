@@ -283,7 +283,6 @@ class RTLXMD:
                 if not data:  # end of stream
                     print("send: at EOF")
                     return False
-                yield len(data)
                 data = data.ljust(packet_size, b"\xFF")
                 pkt = (
                     struct.pack("<BBBI", ord(cmd), sequence, 0xFF - sequence, offset)

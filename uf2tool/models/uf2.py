@@ -1,9 +1,9 @@
 # Copyright (c) Kuba Szczodrzyński 2022-05-27.
 
 from hashlib import md5
-from io import BytesIO, FileIO
+from io import BytesIO
 from logging import info
-from typing import Dict, List
+from typing import IO, Dict, List
 
 from ltchiptool import Family
 from ltchiptool.util.intbin import align_down, align_up, intto8, inttole16, inttole32
@@ -13,17 +13,19 @@ from .enums import Tag
 
 
 class UF2:
-    f: FileIO
+    f: IO[bytes]
     seq: int = 0
 
     family: Family = None
-    tags: Dict[Tag, bytes] = {}
-    data: List[Block] = []
+    tags: Dict[Tag, bytes]
+    data: List[Block]
 
     md5: md5
 
-    def __init__(self, f: FileIO) -> None:
+    def __init__(self, f: IO[bytes]) -> None:
         self.f = f
+        self.tags = {}
+        self.data = []
         self.md5 = md5()
 
     def store(
