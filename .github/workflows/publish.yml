@@ -111,11 +111,12 @@ jobs:
           move python\python310._pth_ python\python310._pth
 
       - name: Copy LT data snapshot
+        shell: cmd
         run: |
-          mkdir -p ltchiptool/boards/_base
-          cp libretuya/families.json ltchiptool/
-          cp libretuya/boards/*.json ltchiptool/boards/
-          cp -r libretuya/boards/_base/ ltchiptool/boards/
+          mkdir ltchiptool\boards\_base
+          copy libretuya\families.json ltchiptool\
+          copy libretuya\boards\*.json ltchiptool\boards\
+          xcopy /S libretuya\boards\_base ltchiptool\boards\
 
       - name: Build GUI with PyInstaller
         shell: cmd
