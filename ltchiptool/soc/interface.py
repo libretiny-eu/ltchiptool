@@ -28,6 +28,15 @@ class SocInterface(ABC):
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
+    @classmethod
+    def get_family_codes(cls) -> List[str]:
+        """Return family codes (or parent codes) implemented in SocInterface."""
+        return [
+            "bk72xx",
+            "ambz",
+            "ambz2",
+        ]
+
     #########################
     # Common helper methods #
     #########################

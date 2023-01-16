@@ -72,7 +72,14 @@ class FlashPanel(BasePanel):
         self.File.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
         self.Cancel.SetNote("")
 
-        self.Family.Set([f.description for f in Family.get_all() if f.name])
+        families = set()
+        family_codes = SocInterface.get_family_codes()
+        for family in Family.get_all():
+            if family.code in family_codes:
+                families.add(family.description)
+            if family.parent_code in family_codes:
+                families.add(family.parent_description)
+        self.Family.Set(sorted(families))
 
     def GetSettings(self) -> dict:
         return dict(
@@ -313,7 +320,7 @@ class FlashPanel(BasePanel):
     @property
     def family(self):
         try:
-            return Family.get(description=self.Family.GetValue())
+            return Family.get(description=self.Family.GetValue(), by_parent=True)
         except ValueError:
             return None
 
@@ -322,6 +329,7 @@ class FlashPanel(BasePanel):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
             self.Family.SetValue(value.description)
+            self.Family.SetValue(value.parent_description)
         self.DoUpdate(self.Family)
 
     @property
