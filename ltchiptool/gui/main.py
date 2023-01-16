@@ -41,6 +41,7 @@ class MainFrame(wx.Frame):
             raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
 
         self.config_file = join(get_app_dir("ltchiptool"), "config.json")
+        self.loaded = False
         self.panels = {}
 
         # initialize logging
@@ -59,6 +60,7 @@ class MainFrame(wx.Frame):
             self.Flash = FlashPanel(res, self.Notebook)
             self.panels["flash"] = self.Flash
             self.Notebook.AddPage(self.Flash, "Flashing")
+            self.loaded = True
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
 
@@ -121,6 +123,10 @@ class MainFrame(wx.Frame):
             panel.OnShow()
 
     def OnClose(self, *_):
+        if not self.loaded:
+            # avoid writing partial settings in case of loading failure
+            self.Destroy()
+            return
         settings = dict(
             main=self.GetSettings(),
         )
