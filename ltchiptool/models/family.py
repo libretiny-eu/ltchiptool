@@ -14,6 +14,7 @@ class Family:
     id: int
     short_name: str
     description: str
+    parent_description: str = None
     name: str = None
     parent: str = None
     code: str = None
@@ -73,6 +74,8 @@ class Family:
             if name and family.parent == name.lower():
                 return family
             if code and family.parent_code == code.lower():
+                return family
+            if description and family.parent_description == description:
                 return family
         if any:
             raise ValueError(f"Family not found - {any}")
