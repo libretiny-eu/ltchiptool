@@ -33,8 +33,10 @@ class MainFrame(wx.Frame):
 
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             xrc = join(sys._MEIPASS, "ltchiptool.xrc")
+            icon = join(sys._MEIPASS, "ltchiptool.ico")
         else:
             xrc = join(dirname(__file__), "ltchiptool.xrc")
+            icon = join(dirname(__file__), "ltchiptool.ico")
 
         try:
             res = wx.xrc.XmlResource(xrc)
@@ -94,6 +96,7 @@ class MainFrame(wx.Frame):
 
         self.SetSize((700, 800))
         self.SetMinSize((600, 700))
+        self.SetIcon(wx.Icon(icon, wx.BITMAP_TYPE_ICO))
         self.CreateStatusBar()
 
     @property

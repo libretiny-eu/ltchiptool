@@ -398,3 +398,5 @@ pip-selfcheck.json
 !*.spec
 gui-win32.txt
 ltchiptool.txt
+ltchiptool/families.json
+ltchiptool/boards/

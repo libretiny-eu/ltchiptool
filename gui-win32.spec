@@ -7,6 +7,7 @@ a = Analysis(
         ("ltchiptool/boards/", "./boards/"),
         ("ltchiptool/families.json", "."),
         ("ltchiptool/gui/ltchiptool-192x192.png", "."),
+        ("ltchiptool/gui/ltchiptool.ico", "."),
         ("ltchiptool/gui/ltchiptool.xrc", "."),
         ("pyproject.toml", "."),
     ],
@@ -24,5 +25,6 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=["ltchiptool\\gui\\ltchiptool.ico"],
     version="gui-win32.txt",
 )

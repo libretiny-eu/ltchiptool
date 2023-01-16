@@ -4,15 +4,22 @@ if __name__ == "__main__":
     import re
     import socket
     from datetime import datetime
-    from os import rename
+    from os import rename, unlink
+    from os.path import isfile
+    from shutil import copy
 
     import PyInstaller.__main__
 
+    from ltchiptool.util.env import lt_find_json
     from ltchiptool.version import get_description, get_version
 
     version = get_version()
     version_tuple = ", ".join(re.sub(r"[^\d.]", "", version).split("."))
     description = get_description()
+
+    if not isfile("ltchiptool/families.json"):
+        families = lt_find_json("families.json")
+        copy(families, "ltchiptool/families.json")
 
     with open(__file__, "r") as f:
         code = f.read()
@@ -28,6 +35,8 @@ if __name__ == "__main__":
 
     PyInstaller.__main__.run([__file__.replace(".py", ".spec")])
 
+    if isfile(f"dist/ltchiptool-v{version}.exe"):
+        unlink(f"dist/ltchiptool-v{version}.exe")
     rename("dist/ltchiptool.exe", f"dist/ltchiptool-v{version}.exe")
 
     exit()
