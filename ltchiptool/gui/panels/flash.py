@@ -185,13 +185,11 @@ class FlashPanel(BasePanel):
                         self.offset = self.detection.offset
                     self.skip = self.detection.skip
                     self.length = self.detection.length
-                else:
-                    warnings.append("Warning: using custom options")
 
                 match self.detection.type:
-                    case Detection.Type.UNRECOGNIZED:
+                    case Detection.Type.UNRECOGNIZED if auto:
                         errors.append("File is unrecognized")
-                    case Detection.Type.RAW:
+                    case Detection.Type.UNRECOGNIZED:
                         warnings.append("Warning: file is unrecognized")
                     case Detection.Type.UNSUPPORTED:
                         errors.append("File is not directly flashable")
@@ -204,6 +202,9 @@ class FlashPanel(BasePanel):
                         errors.append("UF2 family unrecognized")
                     case Detection.Type.VALID_NEED_OFFSET:
                         warnings.append("Custom start offset needed")
+
+                if manual:
+                    warnings.append("Warning: using custom options")
         else:
             self.FileText.SetLabel("Output file")
             self.LengthText.SetLabel("Reading length")

@@ -11,7 +11,6 @@ if __name__ == "__main__":
     import PyInstaller.__main__
 
     from ltchiptool.util.env import lt_find_json
-    from ltchiptool.version import get_description, get_version
 
     with open("pyproject.toml", "r", encoding="utf-8") as f:
         text = f.read()
