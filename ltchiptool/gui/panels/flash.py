@@ -75,10 +75,10 @@ class FlashPanel(BasePanel):
         families = set()
         family_codes = SocInterface.get_family_codes()
         for family in Family.get_all():
-            if family.code in family_codes:
+            if family.code in family_codes and family.description:
                 families.add(family.description)
             if family.parent_code in family_codes:
-                families.add(family.parent_description)
+                families.add(family.parent_description or family.description)
         self.Family.Set(sorted(families))
 
     def GetSettings(self) -> dict:
@@ -328,8 +328,10 @@ class FlashPanel(BasePanel):
     def family(self, value: Family | None):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
-            self.Family.SetValue(value.description)
-            self.Family.SetValue(value.parent_description)
+            if value.description:
+                self.Family.SetValue(value.description)
+            if value.parent_description:
+                self.Family.SetValue(value.parent_description)
         self.DoUpdate(self.Family)
 
     @property
