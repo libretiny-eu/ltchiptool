@@ -121,6 +121,10 @@ class BasePanel(wx.Panel):
         window: wx.StaticText = self.FindWindowByName(name)
         return window
 
+    def FindStaticBitmap(self, name: str):
+        window: wx.StaticBitmap = self.FindWindowByName(name)
+        return window
+
     def EnableAll(self):
         if self.is_closing:
             return

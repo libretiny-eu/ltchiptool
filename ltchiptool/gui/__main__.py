@@ -25,7 +25,7 @@ def gui_entrypoint():
         app.MainLoop()
     except Exception as e:
         wx.MessageBox(
-            message=f"Exception during app initialization:\n{type(e).__name__}: {e}",
+            message=f"Exception during app initialization\n\n{type(e).__name__}: {e}",
             caption="Error",
             style=wx.ICON_ERROR,
         )

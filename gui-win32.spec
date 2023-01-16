@@ -3,9 +3,11 @@
 a = Analysis(
     ["gui.py"],
     datas=[
-        ("ltchiptool/gui/ltchiptool.xrc", "."),
+        ("ltchiptool.txt", "."),
         ("ltchiptool/boards/", "./boards/"),
         ("ltchiptool/families.json", "."),
+        ("ltchiptool/gui/ltchiptool-192x192.png", "."),
+        ("ltchiptool/gui/ltchiptool.xrc", "."),
         ("pyproject.toml", "."),
     ],
 )

@@ -397,3 +397,4 @@ pip-selfcheck.json
 # PyInstaller-related
 !*.spec
 gui-win32.txt
+ltchiptool.txt

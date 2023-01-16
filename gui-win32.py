@@ -2,6 +2,8 @@
 
 if __name__ == "__main__":
     import re
+    import socket
+    from datetime import datetime
     from os import rename
 
     import PyInstaller.__main__
@@ -20,6 +22,9 @@ if __name__ == "__main__":
         code = code.replace("--description--", description)
     with open(__file__.replace(".py", ".txt"), "w") as f:
         f.write(code.strip())
+    with open("ltchiptool.txt", "w") as f:
+        date = datetime.now().strftime("%Y-%m-%d")
+        f.write(f"{date} @ {socket.gethostname()}")
 
     PyInstaller.__main__.run([__file__.replace(".py", ".spec")])
 

@@ -3,18 +3,19 @@
 import json
 import sys
 import threading
-from logging import debug, error, info
+from logging import debug, info
 from os import makedirs
-from os.path import abspath, dirname, isfile, join
+from os.path import dirname, isfile, join
 
 import wx
 import wx.adv
 import wx.xrc
 from click import get_app_dir
 
-from ltchiptool.util.env import lt_find_json, lt_find_path
+from ltchiptool.util.env import lt_find_json
 from ltchiptool.util.logging import LoggingHandler
 
+from .panels.about import AboutPanel
 from .panels.base import BasePanel
 from .panels.flash import FlashPanel
 from .panels.log import LogPanel
@@ -40,6 +41,24 @@ class MainFrame(wx.Frame):
         except SystemError:
             raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
 
+        try:
+            # try to find LT directory or local data snapshot
+            lt_find_json("families.json")
+        except FileNotFoundError:
+            message = (
+                f"Couldn't find required data files\n\n"
+                f"Neither LibreTuya package nor local data snapshot could be found.\n\n"
+                f"- if you've opened the .EXE file or installed ltchiptool from PyPI, "
+                f"report the error on GitHub issues\n"
+                f"- if you're running a git-cloned copy of ltchiptool, install "
+                f"LibreTuya platform using PlatformIO IDE or CLI\n"
+                f"- running the GUI in a git-cloned LT directory will use "
+                f"that version, if no other is available"
+            )
+            wx.MessageBox(message=message, caption="Error", style=wx.ICON_ERROR)
+            wx.Exit()
+            return
+
         self.config_file = join(get_app_dir("ltchiptool"), "config.json")
         self.loaded = False
         self.panels = {}
@@ -60,6 +79,11 @@ class MainFrame(wx.Frame):
             self.Flash = FlashPanel(res, self.Notebook)
             self.panels["flash"] = self.Flash
             self.Notebook.AddPage(self.Flash, "Flashing")
+
+            self.About = AboutPanel(res, self.Notebook)
+            self.panels["about"] = self.About
+            self.Notebook.AddPage(self.About, "About")
+
             self.loaded = True
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
@@ -152,22 +176,6 @@ class MainFrame(wx.Frame):
         match (title, label):
             case ("File", "Quit"):
                 self.Close(True)
-
-            case ("File", "Find LibreTuya"):
-                try:
-                    path = lt_find_path()
-                    path = abspath(path)
-                    info(f"LibreTuya package path: {path}")
-                    return
-                except FileNotFoundError:
-                    pass
-                try:
-                    families = lt_find_json("families.json")
-                    path = dirname(families)
-                    path = abspath(path)
-                    info(f"Local data snapshot path: {path}")
-                except FileNotFoundError:
-                    error("LT file 'families.json' not found")
 
             case ("Debug", "Print settings"):
                 debug(f"Main settings: {self.GetSettings()}")

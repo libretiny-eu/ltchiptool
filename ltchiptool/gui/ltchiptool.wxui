@@ -11,11 +11,6 @@
         label="File">
         <node
           class="wxMenuItem"
-          label="Find LibreTuya" />
-        <node
-          class="separator" />
-        <node
-          class="wxMenuItem"
           id="wxID_EXIT"
           label="Quit"
           var_name="menu_item_2" />
@@ -387,6 +382,171 @@
             column="1"
             flags="wxEXPAND"
             row="7" />
+        </node>
+      </node>
+    </node>
+    <node
+      class="PanelForm"
+      class_name="AboutPanel">
+      <node
+        class="wxGridBagSizer"
+        var_name="sizer_main"
+        minimum_size="-1,-1d"
+        growablecols="0,1,2"
+        flags="wxEXPAND">
+        <node
+          class="wxStaticBitmap"
+          scale_mode="AspectFit"
+          var_name="bmp_logo"
+          size="-1,50d"
+          colspan="3"
+          flags="wxEXPAND" />
+        <node
+          class="wxStaticText"
+          label="Tools for working with LT-supported IoT chips"
+          style="wxALIGN_CENTER_HORIZONTAL"
+          font="default family,11"
+          colspan="3"
+          flags="wxEXPAND"
+          row="1" />
+        <node
+          class="wxStaticLine"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="2" />
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_0"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="LibreTuya version"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="v0.12.3"
+            var_name="text_lt_version"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_1"
+          column="1"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="ltchiptool version"
+            var_name="m_staticText_2"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="v2.0.2"
+            var_name="text_tool_version"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_2"
+          column="2"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="GUI build version"
+            var_name="text_build_date_title"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="2023-01-16 @ localhost"
+            var_name="text_build_date"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_1"
+          colspan="3"
+          flags="wxEXPAND"
+          row="4">
+          <node
+            class="wxStaticText"
+            label="LibreTuya package location"
+            var_name="text_path_title"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="/home/user/.platformio/platforms/libretuya/"
+            var_name="text_path"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxStaticLine"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="5" />
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_3"
+          colspan="3"
+          flags="wxEXPAND"
+          row="6">
+          <node
+            class="wxStaticText"
+            label="Project page"
+            var_name="m_staticText_4"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://github.com/libretuya/ltchiptool"
+            var_name="m_hyperlink_3"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_4"
+          colspan="3"
+          flags="wxEXPAND"
+          row="7">
+          <node
+            class="wxStaticText"
+            label="Documentation / usage guide"
+            var_name="m_staticText_5"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://docs.libretuya.ml/"
+            var_name="m_hyperlink_4"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_5"
+          colspan="3"
+          flags="wxEXPAND"
+          row="8">
+          <node
+            class="wxStaticText"
+            label="Discord server of LT community"
+            var_name="m_staticText_3"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://discord.gg/SyGCB9Xwtf"
+            border_size="0"
+            flags="wxEXPAND" />
         </node>
       </node>
     </node>
