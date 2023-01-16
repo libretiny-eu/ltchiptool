@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ltchiptool"
-version = "2.0.2"
+version = "3.0.0a0"
 description = "Tools for working with LT-supported IoT chips"
 authors = ["Kuba Szczodrzyński <kuba@szczodrzynski.pl>"]
 license = "MIT"
