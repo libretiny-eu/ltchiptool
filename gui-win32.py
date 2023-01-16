@@ -15,7 +15,8 @@ if __name__ == "__main__":
     with open("pyproject.toml", "r", encoding="utf-8") as f:
         text = f.read()
         version = re.search(r"version\s?=\s?\"(.+?)\"", text).group(1)
-        version_tuple = ", ".join(re.sub(r"[^\d.]", "", version).split("."))
+        version_raw = re.search(r"(\d+\.\d+\.\d+)", version).group(1)
+        version_tuple = ", ".join(version_raw.split("."))
         description = re.search(r"description\s?=\s?\"(.+?)\"", text).group(1)
 
     if not isfile("ltchiptool/families.json"):
