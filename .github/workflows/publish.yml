@@ -61,15 +61,6 @@ jobs:
     - name: Publish to PyPI
       run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
 
-    # - name: Add GitHub release assets
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     files: |
-    #       dist/*.whl
-    #       dist/*.tar.gz
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Upload workflow artifact
       uses: actions/upload-artifact@v3
       with:
@@ -77,3 +68,65 @@ jobs:
         path: |
           dist/*.whl
           dist/*.tar.gz
+
+  gui-win32:
+    name: Build Win32 GUI release
+    runs-on: windows-latest
+    needs:
+      - lint
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Checkout LT repository
+        uses: actions/checkout@v3
+        with:
+          repository: kuba2k2/libretuya
+          path: libretuya
+
+      - name: Set up Python Custom
+        # Configure embedded Python 3.10 modified to work on Windows 7
+        shell: cmd
+        run: |
+          mkdir python
+          pushd python
+          certutil -urlcache -split -f https://github.com/kuba2k2/cpython/releases/download/v3.10.0-win7/python-3.10.0-embed-amd64-win7.zip python.zip || exit /b
+          tar -xf python.zip || exit /b
+          certutil -urlcache -split -f https://bootstrap.pypa.io/get-pip.py get-pip.py || exit /b
+          python get-pip.py || exit /b
+
+          pushd Lib
+          tar -xf ..\python310.zip || exit /b
+          popd
+
+          echo .>python310._pth
+          echo Lib>>python310._pth
+          echo import site>>python310._pth
+          set PATH=%cd%\Scripts;%cd%;%PATH%
+          popd
+
+          pip install poetry || exit /b
+          pip install .[gui] || exit /b
+          move python\python310._pth python\python310._pth_
+          pip install pyinstaller || exit /b
+          move python\python310._pth_ python\python310._pth
+
+      - name: Copy LT data snapshot
+        run: |
+          mkdir -p ltchiptool/boards/_base
+          cp libretuya/families.json ltchiptool/
+          cp libretuya/boards/*.json ltchiptool/boards/
+          cp -r libretuya/boards/_base/ ltchiptool/boards/
+
+      - name: Build GUI with PyInstaller
+        shell: cmd
+        run: |
+          set PATH=%cd%\python;%PATH%
+          python gui-win32.py || exit /b
+
+      - name: Add GitHub release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

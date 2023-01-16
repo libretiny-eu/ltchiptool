@@ -13,9 +13,11 @@ if __name__ == "__main__":
     from ltchiptool.util.env import lt_find_json
     from ltchiptool.version import get_description, get_version
 
-    version = get_version()
-    version_tuple = ", ".join(re.sub(r"[^\d.]", "", version).split("."))
-    description = get_description()
+    with open("pyproject.toml", "r", encoding="utf-8") as f:
+        text = f.read()
+        version = re.search(r"version\s?=\s?\"(.+?)\"", text).group(1)
+        version_tuple = ", ".join(re.sub(r"[^\d.]", "", version).split("."))
+        description = re.search(r"description\s?=\s?\"(.+?)\"", text).group(1)
 
     if not isfile("ltchiptool/families.json"):
         families = lt_find_json("families.json")
