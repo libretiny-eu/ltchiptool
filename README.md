@@ -2,7 +2,7 @@
 
 Universal, easy-to-use GUI flashing/dumping tool for BK7231, RTL8710B and RTL8720C. Also contains some CLI utilities for binary firmware manipulation.
 
-<div style="text-align: center">
+<div align="center">
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyPI](https://img.shields.io/pypi/v/ltchiptool)](https://pypi.org/project/ltchiptool/)
