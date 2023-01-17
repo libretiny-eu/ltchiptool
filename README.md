@@ -1,6 +1,16 @@
 # ltchiptool
 
-Tools for working with LT-supported IoT chips.
+Universal, easy-to-use GUI flashing/dumping tool for BK7231, RTL8710B and RTL8720C. Also contains some CLI utilities for binary firmware manipulation.
+
+<div style="text-align: center">
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PyPI](https://img.shields.io/pypi/v/ltchiptool)](https://pypi.org/project/ltchiptool/)
+
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/libretuya/ltchiptool?include_prereleases&label=GUI%20release)](https://github.com/libretuya/ltchiptool/releases/latest)
+
+![Screenshot](.github/screenshot.png)
+</div>
 
 ## What is this?
 
@@ -8,76 +18,37 @@ This repository is a collection of tools, used in the [LibreTuya project](https:
 
 Since v2.0.0, it contains a common, chip-independent CLI and API for interacting with supported chips in download mode (reading/writing flash).
 
-## Installation
+Since v3.0.0, it contains a beginner-friendly GUI for flashing firmware or dumping flash contents.
 
-From PyPI:
+# Usage/documentation
+<div style="text-align: center">
 
-```shell
-pip install ltchiptool
+## [Available here](https://docs.libretuya.ml/docs/flashing/ltchiptool/)
+</div>
+
+## License
+
 ```
+MIT License
 
-This will install `ltchiptool` and `uf2tool` packages.
+Copyright (c) 2022 Kuba Szczodrzyński
 
-## Usage
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-```shell
-$ ltchiptool --help
-Usage: ltchiptool [OPTIONS] COMMAND [ARGS]...
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-  Tools for working with LT-supported IoT chips
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-Options:
-  -v, --verbose         Output debugging messages (repeat to output more)
-  -T, --traceback       Print complete exception traceback
-  -t, --timed           Prepend log lines with timing info
-  -r, --raw-log         Output logging messages with no additional styling
-  -i, --indent INTEGER  Indent log messages using graph lines
-  -V, --version         Show the version and exit.
-  -h, --help            Show this message and exit.
-
-Commands:
-  dump      Capture or process device dumps
-  elf2bin   Generate firmware binaries from ELF file
-  flash     Flashing tool - reading/writing
-  link2bin  Link code to binary format
-  list      List boards, families, etc.
-  soc       Run SoC-specific tools
-  uf2       Work with UF2 files
-```
-
-## Flashing/dumping
-
-There are three main commands used for flashing:
-- `ltchiptool flash file <FILE>` - detect file type based on its contents (i.e. chip from which a dump was acquired), similar to Linux `file` command
-- `ltchiptool flash read <FAMILY> <FILE>` - make a full flash dump of the connected device; specifying the family is required
-- `ltchiptool flash write <FILE>` - upload a file to the device; detects file type automatically (just like the `file` command above)
-
-Supported device families can be checked using `ltchiptool list families` command. In the commands above, you can use any of the family names (name/code/short name/etc).
-
-The upload UART port and baud rate is detected automatically. To override it, use `-d COMx` or `-d /dev/ttyUSBx`. To change the target baud rate, use `-b 460800`.
-Note that the baud rate is changed after linking. Linking is performed using chip-default baud rate.
-
-It's not required to specify chip family for writing files - `ltchiptool` tries to recognize contents of the file, and chooses the best settings automatically.
-If you want to flash unrecognized/raw binaries (or fine-tune the flashing parameters), specify `-f <FAMILY>` and `-s <START OFFSET>`.
-
-## UF2 Example
-
-```shell
-$ ltchiptool uf2 info ./arduinotest_22.08.01_wb2l_BK7231T_lt0.8.0.uf2
-Family: BK7231T / Beken 7231T
-Tags:
- - BOARD: wb2l
- - DEVICE_ID: d80e20c2
- - LT_VERSION: 0.8.0
- - FIRMWARE: arduinotest
- - VERSION: 22.08.01
- - OTA_VERSION: 01
- - DEVICE: LibreTuya
- - BUILD_DATE: 6d08e862
- - LT_HAS_OTA1: 01
- - LT_HAS_OTA2: 00
- - LT_PART_1: app
- - LT_PART_2:
-Data chunks: 1871
-Total binary size: 478788
 ```
