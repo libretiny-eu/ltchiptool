@@ -23,7 +23,7 @@ Since v3.0.0, it contains a beginner-friendly GUI for flashing firmware or dumpi
 # Usage/documentation
 <div style="text-align: center">
 
-## [Available here](https://docs.libretuya.ml/docs/flashing/ltchiptool/)
+## [Available here](https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/)
 </div>
 
 ## License
