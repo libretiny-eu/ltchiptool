@@ -9,15 +9,8 @@ from ltchiptool.util.logging import verbose
 from .base import BaseThread
 
 
-# based on https://abdus.dev/posts/python-monitor-usb/
+# Win32 part based on https://abdus.dev/posts/python-monitor-usb/
 class PortWatcher(BaseThread):
-    """
-    Listens to Win32 `WM_DEVICECHANGE` messages
-    and trigger a callback when a device has been plugged in or out
-
-    See: https://docs.microsoft.com/en-us/windows/win32/devio/wm-devicechange
-    """
-
     def __init__(self, on_event: Callable[[list[tuple[str, bool, str]]], None]):
         super().__init__()
         self.on_event = on_event
@@ -57,7 +50,13 @@ class PortWatcher(BaseThread):
         self.on_event(list_serial_ports())
         return 0
 
-    def run_impl(self):
+    def run_impl_win32(self):
+        """
+        Listens to Win32 `WM_DEVICECHANGE` messages
+        and trigger a callback when a device has been plugged in or out
+
+        See: https://docs.microsoft.com/en-us/windows/win32/devio/wm-devicechange
+        """
         import win32gui
 
         hwnd = self._create_window()
@@ -68,3 +67,13 @@ class PortWatcher(BaseThread):
             win32gui.PumpWaitingMessages()
             sleep(0.5)
         verbose("Listener stopped")
+
+    def run_impl(self):
+        import platform
+
+        match platform.system():
+            case "Windows":
+                self.run_impl_win32()
+            case _:
+                verbose("Running dummy PortWatcher impl")
+                self.on_event(list_serial_ports())

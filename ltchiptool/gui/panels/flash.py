@@ -257,6 +257,8 @@ class FlashPanel(BasePanel):
 
     @property
     def port(self):
+        if not self.ports:
+            return None
         if self.Port.GetSelection() == wx.NOT_FOUND:
             return None
         return self.ports[self.Port.GetSelection()][0]
@@ -410,6 +412,12 @@ class FlashPanel(BasePanel):
         return self.auto_file
 
     def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
+        self.Port.Enable(not not ports)
+        if not ports:
+            self.ports = []
+            self.Port.Set(["No serial ports found"])
+            self.Port.SetSelection(0)
+            return
         user_port = self.port or self.delayed_port
         for port, is_usb, description in set(ports) - set(self.ports):
             info(f"Found new device: {description}")

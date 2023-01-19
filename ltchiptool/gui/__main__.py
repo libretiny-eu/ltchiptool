@@ -13,6 +13,7 @@ def gui_entrypoint():
         import wx
     except ImportError:
         error("Cannot find wxPython or one of its dependencies")
+        error("Refer to https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/")
         exit(1)
 
     from .main import MainFrame
