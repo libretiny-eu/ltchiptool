@@ -2,12 +2,12 @@
 
 import gzip
 from binascii import crc32
-from io import FileIO
-from typing import Union
+from typing import IO, Union
 
 from Cryptodome.Cipher import AES
 
-from ltchiptool.util import CRC16, BitInt
+from ltchiptool.util.bitint import BitInt
+from ltchiptool.util.crc16 import CRC16
 from ltchiptool.util.intbin import (
     ByteGenerator,
     ByteSource,
@@ -79,7 +79,7 @@ class BekenBinary:
 
     def package(
         self,
-        f: FileIO,
+        f: IO[bytes],
         addr: int,
         size: int,
         rbl: RBL,
@@ -144,7 +144,7 @@ class BekenBinary:
 
     def ota_package(
         self,
-        f: FileIO,
+        f: IO[bytes],
         rbl: RBL,
         key: Union[bytes, str] = None,
         iv: Union[bytes, str] = None,
@@ -182,7 +182,7 @@ class BekenBinary:
 
     def ota_unpackage(
         self,
-        f: FileIO,
+        f: IO[bytes],
         rbl: RBL,
         key: Union[bytes, str] = None,
         iv: Union[bytes, str] = None,

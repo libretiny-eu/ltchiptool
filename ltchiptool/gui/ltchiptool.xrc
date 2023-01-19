@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resource xmlns="http://www.wxwidgets.org/wxxrc" version="2.5.3.0">
+	<object class="wxMenuBar" name="MainMenuBar">
+		<object class="wxMenu" name="m_menu">
+			<label>File</label>
+			<object class="wxMenuItem" name="wxID_EXIT">
+				<label>Quit</label>
+			</object>
+		</object>
+		<object class="wxMenu" name="m_menu_2">
+			<label>Logging</label>
+			<object class="wxMenuItem" name="menu_item_12">
+				<label>Clear log window</label>
+			</object>
+			<object class="separator" name="separator_2" />
+			<object class="wxMenuItem" name="menu_item_11">
+				<label>Options</label>
+				<enabled>0</enabled>
+			</object>
+			<object class="wxMenuItem" name="menu_item_4">
+				<label>Timed</label>
+				<checkable>1</checkable>
+			</object>
+			<object class="wxMenuItem" name="menu_item_13">
+				<label>Colors</label>
+				<checked>1</checked>
+				<checkable>1</checkable>
+			</object>
+			<object class="separator" name="separator_3" />
+			<object class="wxMenuItem" name="menu_item_10">
+				<label>Log level</label>
+				<enabled>0</enabled>
+			</object>
+			<object class="wxMenuItem" name="menu_item_5">
+				<label>Verbose</label>
+				<radio>1</radio>
+			</object>
+			<object class="wxMenuItem" name="menu_item_6">
+				<label>Debug</label>
+				<radio>1</radio>
+			</object>
+			<object class="wxMenuItem" name="menu_item_7">
+				<label>Info</label>
+				<radio>1</radio>
+			</object>
+			<object class="wxMenuItem" name="menu_item_8">
+				<label>Warning</label>
+				<radio>1</radio>
+			</object>
+			<object class="wxMenuItem" name="menu_item_9">
+				<label>Error</label>
+				<radio>1</radio>
+			</object>
+		</object>
+		<object class="wxMenu" name="m_menu_3">
+			<label>Debug</label>
+			<object class="wxMenuItem" name="menu_item_14">
+				<label>Print settings</label>
+			</object>
+		</object>
+	</object>
+	<object class="wxPanel" name="LogPanel">
+		<style>wxTAB_TRAVERSAL</style>
+		<object class="wxBoxSizer" name="sizer_main">
+			<orient>wxVERTICAL</orient>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxFlexGridSizer" name="sizer_progress">
+					<rows>0</rows>
+					<cols>3</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<growablerows>0</growablerows>
+					<growablecols>1</growablecols>
+					<flexibledirection>wxBOTH</flexibledirection>
+					<nonflexiblegrowmode>wxFLEX_GROWMODE_SPECIFIED</nonflexiblegrowmode>
+					<object class="sizeritem">
+						<flag>wxTOP|wxALIGN_CENTER</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_elapsed">
+							<label>Elapsed:</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxTOP|wxBOTTOM|wxALIGN_CENTER</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_progress">
+							<label>53% (1.1 MiB / 2.0 MiB) - 350 kiB/s</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxTOP|wxALIGN_CENTER</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_left">
+							<label>Left:</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxLEFT|wxRIGHT|wxALIGN_CENTER</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_time_elapsed">
+							<label>00:00:00</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+						<border>5</border>
+						<option>1</option>
+						<object class="wxGauge" name="progress_bar">
+							<range>100</range>
+							<value>53</value>
+							<style>wxGA_HORIZONTAL</style>
+							<size>-1,10d</size>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxLEFT|wxRIGHT|wxALIGN_CENTER</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_time_left">
+							<label>00:03:17</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>0</border>
+				<option>1</option>
+				<object class="wxTextCtrl" name="text_log">
+					<style>wxTE_MULTILINE|wxTE_READONLY|wxTE_RICH|wxTE_DONTWRAP</style>
+					<font>
+						<size>10</size>
+						<face>Cascadia Code</face>
+					</font>
+					<bg>#0C0C0C</bg>
+					<fg>#FFFFFF</fg>
+				</object>
+			</object>
+		</object>
+	</object>
+	<object class="wxPanel" name="FlashPanel">
+		<style>wxTAB_TRAVERSAL</style>
+		<object class="wxGridBagSizer" name="sizer_main">
+			<vgap>0</vgap>
+			<hgap>0</hgap>
+			<growablecols>1</growablecols>
+			<flexibledirection>wxBOTH</flexibledirection>
+			<nonflexiblegrowmode>wxFLEX_GROWMODE_SPECIFIED</nonflexiblegrowmode>
+			<object class="sizeritem">
+				<cellpos>0,0</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="text_port">
+					<label>Device port</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>0,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxComboBox" name="combo_port">
+					<style>wxCB_READONLY</style>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>0,2</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxButton" name="button_rescan">
+					<label>Rescan</label>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>1,0</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="text_baudrate">
+					<label>Baud rate</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>1,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="sizer_baudrate">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_baudrate_auto">
+							<label>Auto</label>
+							<value>1</value>
+							<style>wxRB_GROUP</style>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_baudrate_115200">
+							<label>115200</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_baudrate_230400">
+							<label>230400</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_baudrate_460800">
+							<label>460800</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_baudrate_921600">
+							<label>921600</label>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>2,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="sizer_operation">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_write">
+							<label>Write flash / identify file</label>
+							<value>1</value>
+							<style>wxRB_GROUP</style>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_read">
+							<label>Read flash</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_read_rom">
+							<label>Read ROM</label>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,0</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="text_file">
+					<label>Input file</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxTextCtrl" name="input_file" />
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,2</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxButton" name="button_browse">
+					<label>Browse</label>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>4,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxCheckBox" name="checkbox_auto_detect">
+					<label>Auto-detect advanced parameters</label>
+					<checked>1</checked>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>5,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxTOP|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxGridSizer" name="sizer_params1">
+					<rows>0</rows>
+					<cols>2</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_family">
+							<label>Chip family</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_file_type">
+							<label>File type</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxComboBox" name="combo_family">
+							<style>wxCB_READONLY</style>
+							<enabled>0</enabled>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxTextCtrl" name="input_file_type">
+							<style>wxTE_READONLY</style>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>6,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxTOP|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxGridSizer" name="sizer_params2">
+					<rows>0</rows>
+					<cols>3</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_offset">
+							<label>Start address</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_skip">
+							<label>Skip offset (input file)</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_length">
+							<label>Reading length</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxTextCtrl" name="input_offset">
+							<enabled>0</enabled>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxTextCtrl" name="input_skip">
+							<enabled>0</enabled>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxTextCtrl" name="input_length">
+							<enabled>0</enabled>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>7,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>0</border>
+				<object class="wxGridSizer" name="sizer_buttons">
+					<rows>0</rows>
+					<cols>2</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxCommandLinkButton" name="button_start">
+							<label>Start</label>
+							<note>-</note>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxCommandLinkButton" name="button_cancel">
+							<label>Cancel</label>
+							<note>-</note>
+							<enabled>0</enabled>
+						</object>
+					</object>
+				</object>
+			</object>
+		</object>
+	</object>
+	<object class="wxPanel" name="AboutPanel">
+		<style>wxTAB_TRAVERSAL</style>
+		<object class="wxGridBagSizer" name="sizer_main">
+			<vgap>0</vgap>
+			<hgap>0</hgap>
+			<growablecols>0,1,2</growablecols>
+			<flexibledirection>wxBOTH</flexibledirection>
+			<nonflexiblegrowmode>wxFLEX_GROWMODE_SPECIFIED</nonflexiblegrowmode>
+			<object class="sizeritem">
+				<cellpos>0,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticBitmap" name="bmp_logo">
+					<size>-1,50d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>1,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="m_staticText">
+					<label>Tools for working with LT-supported IoT chips</label>
+					<wrap>-1</wrap>
+					<style>wxALIGN_CENTER_HORIZONTAL</style>
+					<font>
+						<size>11</size>
+					</font>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>2,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,0</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_0_0">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="m_staticText">
+							<label>LibreTuya version</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="text_lt_version">
+							<label>v0.12.3</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_0_1">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="m_staticText_2">
+							<label>ltchiptool version</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="text_tool_version">
+							<label>v2.0.2</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>3,2</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_0_2">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="text_build_date_title">
+							<label>GUI build version</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="text_build_date">
+							<label>2023-01-16 @ localhost</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>4,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_1">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="text_path_title">
+							<label>LibreTuya package location</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>0</border>
+						<object class="wxHyperlinkCtrl" name="text_path">
+							<label>/home/user/.platformio/platforms/libretuya/</label>
+							<style>wxHL_ALIGN_LEFT</style>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>5,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>6,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_3">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="m_staticText_4">
+							<label>Project page</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>0</border>
+						<object class="wxHyperlinkCtrl" name="m_hyperlink_3">
+							<label>https://github.com/libretuya/ltchiptool</label>
+							<style>wxHL_ALIGN_LEFT</style>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>7,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_4">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="m_staticText_5">
+							<label>Documentation / usage guide</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>0</border>
+						<object class="wxHyperlinkCtrl" name="m_hyperlink_4">
+							<label>https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/</label>
+							<style>wxHL_ALIGN_LEFT</style>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>8,0</cellpos>
+				<cellspan>1,3</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_5">
+					<orient>wxVERTICAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>0</border>
+						<object class="wxStaticText" name="m_staticText_3">
+							<label>Discord server of LT community</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>0</border>
+						<object class="wxHyperlinkCtrl" name="m_hyperlink">
+							<label>https://discord.gg/SyGCB9Xwtf</label>
+							<style>wxHL_ALIGN_LEFT</style>
+						</object>
+					</object>
+				</object>
+			</object>
+		</object>
+	</object>
+</resource>

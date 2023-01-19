@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wxUiEditorData
+  data_version="15">
+  <node
+    class="Project">
+    <node
+      class="MenuBar"
+      class_name="MainMenuBar">
+      <node
+        class="wxMenu"
+        label="File">
+        <node
+          class="wxMenuItem"
+          id="wxID_EXIT"
+          label="Quit"
+          var_name="menu_item_2" />
+      </node>
+      <node
+        class="wxMenu"
+        label="Logging"
+        var_name="m_menu_2">
+        <node
+          class="wxMenuItem"
+          label="Clear log window"
+          var_name="menu_item_12" />
+        <node
+          class="separator"
+          var_name="separator_2" />
+        <node
+          class="wxMenuItem"
+          disabled="1"
+          label="Options"
+          var_name="menu_item_11" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_CHECK"
+          label="Timed"
+          var_name="menu_item_4" />
+        <node
+          class="wxMenuItem"
+          checked="1"
+          kind="wxITEM_CHECK"
+          label="Colors"
+          var_name="menu_item_13" />
+        <node
+          class="separator"
+          var_name="separator_3" />
+        <node
+          class="wxMenuItem"
+          disabled="1"
+          label="Log level"
+          var_name="menu_item_10" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_RADIO"
+          label="Verbose"
+          var_name="menu_item_5" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_RADIO"
+          label="Debug"
+          var_name="menu_item_6" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_RADIO"
+          label="Info"
+          var_name="menu_item_7" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_RADIO"
+          label="Warning"
+          var_name="menu_item_8" />
+        <node
+          class="wxMenuItem"
+          kind="wxITEM_RADIO"
+          label="Error"
+          var_name="menu_item_9" />
+      </node>
+      <node
+        class="wxMenu"
+        label="Debug"
+        var_name="m_menu_3">
+        <node
+          class="wxMenuItem"
+          label="Print settings"
+          var_name="menu_item_14" />
+      </node>
+    </node>
+    <node
+      class="PanelForm"
+      class_name="LogPanel"
+      mockup_size="400,200">
+      <node
+        class="wxBoxSizer"
+        orientation="wxVERTICAL"
+        var_name="sizer_main"
+        flags="wxEXPAND">
+        <node
+          class="wxFlexGridSizer"
+          cols="3"
+          var_name="sizer_progress"
+          growablecols="1"
+          growablerows="0"
+          flags="wxEXPAND">
+          <node
+            class="wxStaticText"
+            label="Elapsed:"
+            var_name="text_elapsed"
+            alignment="wxALIGN_CENTER"
+            borders="wxTOP" />
+          <node
+            class="wxStaticText"
+            label="53% (1.1 MiB / 2.0 MiB) - 350 kiB/s"
+            var_name="text_progress"
+            alignment="wxALIGN_CENTER"
+            borders="wxTOP|wxBOTTOM"
+            column="1"
+            row="8" />
+          <node
+            class="wxStaticText"
+            label="Left:"
+            var_name="text_left"
+            alignment="wxALIGN_CENTER"
+            borders="wxTOP" />
+          <node
+            class="wxStaticText"
+            label="00:00:00"
+            var_name="text_time_elapsed"
+            alignment="wxALIGN_CENTER"
+            borders="wxLEFT|wxRIGHT"
+            row="9" />
+          <node
+            class="wxGauge"
+            position="53"
+            var_name="progress_bar"
+            size="-1,10d"
+            borders="wxLEFT|wxRIGHT"
+            column="1"
+            flags="wxEXPAND"
+            proportion="1"
+            row="9" />
+          <node
+            class="wxStaticText"
+            label="00:03:17"
+            var_name="text_time_left"
+            alignment="wxALIGN_CENTER"
+            borders="wxLEFT|wxRIGHT"
+            column="2"
+            row="9" />
+        </node>
+        <node
+          class="wxTextCtrl"
+          style="wxTE_MULTILINE|wxTE_READONLY|wxTE_RICH|wxTE_DONTWRAP"
+          var_name="text_log"
+          background_colour="12,12,12"
+          font="Cascadia Code,10"
+          foreground_colour="255,255,255"
+          border_size="0"
+          flags="wxEXPAND"
+          proportion="1" />
+      </node>
+    </node>
+    <node
+      class="PanelForm"
+      class_name="FlashPanel">
+      <node
+        class="wxGridBagSizer"
+        var_name="sizer_main"
+        growablecols="1"
+        flags="wxEXPAND">
+        <node
+          class="wxStaticText"
+          label="Device port"
+          var_name="text_port" />
+        <node
+          class="wxComboBox"
+          style="wxCB_READONLY"
+          var_name="combo_port"
+          column="1"
+          flags="wxEXPAND" />
+        <node
+          class="wxButton"
+          label="Rescan"
+          var_name="button_rescan"
+          column="2"
+          flags="wxEXPAND" />
+        <node
+          class="wxStaticText"
+          label="Baud rate"
+          var_name="text_baudrate"
+          row="1" />
+        <node
+          class="wxBoxSizer"
+          var_name="sizer_baudrate"
+          column="1"
+          flags="wxEXPAND"
+          row="1">
+          <node
+            class="wxRadioButton"
+            checked="1"
+            label="Auto"
+            style="wxRB_GROUP"
+            var_name="radio_baudrate_auto" />
+          <node
+            class="wxRadioButton"
+            label="115200"
+            var_name="radio_baudrate_115200" />
+          <node
+            class="wxRadioButton"
+            label="230400"
+            var_name="radio_baudrate_230400" />
+          <node
+            class="wxRadioButton"
+            label="460800"
+            var_name="radio_baudrate_460800" />
+          <node
+            class="wxRadioButton"
+            label="921600"
+            var_name="radio_baudrate_921600" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          var_name="sizer_operation"
+          column="1"
+          flags="wxEXPAND"
+          row="2">
+          <node
+            class="wxRadioButton"
+            checked="1"
+            label="Write flash / identify file"
+            style="wxRB_GROUP"
+            var_name="radio_write" />
+          <node
+            class="wxRadioButton"
+            label="Read flash"
+            var_name="radio_read" />
+          <node
+            class="wxRadioButton"
+            label="Read ROM"
+            var_name="radio_read_rom" />
+        </node>
+        <node
+          class="wxStaticText"
+          label="Input file"
+          var_name="text_file"
+          row="3" />
+        <node
+          class="wxTextCtrl"
+          var_name="input_file"
+          column="1"
+          flags="wxEXPAND"
+          row="3" />
+        <node
+          class="wxButton"
+          label="Browse"
+          var_name="button_browse"
+          column="2"
+          flags="wxEXPAND"
+          row="3" />
+        <node
+          class="wxCheckBox"
+          checked="1"
+          label="Auto-detect advanced parameters"
+          var_name="checkbox_auto_detect"
+          column="1"
+          flags="wxEXPAND"
+          row="4" />
+        <node
+          class="wxGridSizer"
+          var_name="sizer_params1"
+          borders="wxTOP"
+          column="1"
+          flags="wxEXPAND"
+          row="5">
+          <node
+            class="wxStaticText"
+            label="Chip family"
+            var_name="text_family"
+            colspan="3"
+            flags="wxEXPAND" />
+          <node
+            class="wxStaticText"
+            label="File type"
+            var_name="text_file_type"
+            colspan="3"
+            column="3" />
+          <node
+            class="wxComboBox"
+            style="wxCB_READONLY"
+            var_name="combo_family"
+            disabled="1"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="3"
+            flags="wxEXPAND"
+            row="1" />
+          <node
+            class="wxTextCtrl"
+            style="wxTE_READONLY"
+            var_name="input_file_type"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="3"
+            column="3"
+            flags="wxEXPAND"
+            row="1" />
+        </node>
+        <node
+          class="wxGridSizer"
+          cols="3"
+          var_name="sizer_params2"
+          borders="wxTOP"
+          column="1"
+          flags="wxEXPAND"
+          row="6">
+          <node
+            class="wxStaticText"
+            label="Start address"
+            var_name="text_offset"
+            colspan="2"
+            row="2" />
+          <node
+            class="wxStaticText"
+            label="Skip offset (input file)"
+            var_name="text_skip"
+            colspan="2"
+            column="2"
+            row="2" />
+          <node
+            class="wxStaticText"
+            label="Reading length"
+            var_name="text_length"
+            colspan="2"
+            column="4"
+            row="2" />
+          <node
+            class="wxTextCtrl"
+            var_name="input_offset"
+            disabled="1"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="2"
+            flags="wxEXPAND"
+            row="3" />
+          <node
+            class="wxTextCtrl"
+            var_name="input_skip"
+            disabled="1"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="2"
+            column="2"
+            flags="wxEXPAND"
+            row="3" />
+          <node
+            class="wxTextCtrl"
+            var_name="input_length"
+            disabled="1"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="2"
+            column="4"
+            flags="wxEXPAND"
+            row="3" />
+        </node>
+        <node
+          class="wxGridSizer"
+          var_name="sizer_buttons"
+          border_size="0"
+          column="1"
+          flags="wxEXPAND"
+          row="7">
+          <node
+            class="wxCommandLinkButton"
+            main_label="Start"
+            note="-"
+            var_name="button_start"
+            column="1"
+            flags="wxEXPAND"
+            row="7" />
+          <node
+            class="wxCommandLinkButton"
+            main_label="Cancel"
+            note="-"
+            var_name="button_cancel"
+            disabled="1"
+            column="1"
+            flags="wxEXPAND"
+            row="7" />
+        </node>
+      </node>
+    </node>
+    <node
+      class="PanelForm"
+      class_name="AboutPanel">
+      <node
+        class="wxGridBagSizer"
+        var_name="sizer_main"
+        minimum_size="-1,-1d"
+        growablecols="0,1,2"
+        flags="wxEXPAND">
+        <node
+          class="wxStaticBitmap"
+          scale_mode="AspectFit"
+          var_name="bmp_logo"
+          size="-1,50d"
+          colspan="3"
+          flags="wxEXPAND" />
+        <node
+          class="wxStaticText"
+          label="Tools for working with LT-supported IoT chips"
+          style="wxALIGN_CENTER_HORIZONTAL"
+          font="default family,11"
+          colspan="3"
+          flags="wxEXPAND"
+          row="1" />
+        <node
+          class="wxStaticLine"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="2" />
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_0"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="LibreTuya version"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="v0.12.3"
+            var_name="text_lt_version"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_1"
+          column="1"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="ltchiptool version"
+            var_name="m_staticText_2"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="v2.0.2"
+            var_name="text_tool_version"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_0_2"
+          column="2"
+          flags="wxEXPAND"
+          row="3">
+          <node
+            class="wxStaticText"
+            label="GUI build version"
+            var_name="text_build_date_title"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="2023-01-16 @ localhost"
+            var_name="text_build_date"
+            border_size="0" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_1"
+          colspan="3"
+          flags="wxEXPAND"
+          row="4">
+          <node
+            class="wxStaticText"
+            label="LibreTuya package location"
+            var_name="text_path_title"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="/home/user/.platformio/platforms/libretuya/"
+            style="wxHL_ALIGN_LEFT"
+            var_name="text_path"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxStaticLine"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="5" />
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_3"
+          colspan="3"
+          flags="wxEXPAND"
+          row="6">
+          <node
+            class="wxStaticText"
+            label="Project page"
+            var_name="m_staticText_4"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://github.com/libretuya/ltchiptool"
+            style="wxHL_ALIGN_LEFT"
+            var_name="m_hyperlink_3"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_4"
+          colspan="3"
+          flags="wxEXPAND"
+          row="7">
+          <node
+            class="wxStaticText"
+            label="Documentation / usage guide"
+            var_name="m_staticText_5"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/"
+            style="wxHL_ALIGN_LEFT"
+            var_name="m_hyperlink_4"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_5"
+          colspan="3"
+          flags="wxEXPAND"
+          row="8">
+          <node
+            class="wxStaticText"
+            label="Discord server of LT community"
+            var_name="m_staticText_3"
+            border_size="0" />
+          <node
+            class="wxHyperlinkCtrl"
+            label="https://discord.gg/SyGCB9Xwtf"
+            style="wxHL_ALIGN_LEFT"
+            border_size="0"
+            flags="wxEXPAND" />
+        </node>
+      </node>
+    </node>
+  </node>
+</wxUiEditorData>

@@ -6,7 +6,7 @@ import click
 
 from ltchiptool import Board, SocInterface
 from ltchiptool.models import BoardParamType
-from ltchiptool.util import parse_argfile
+from ltchiptool.util.cli import parse_argfile
 
 
 @click.command(

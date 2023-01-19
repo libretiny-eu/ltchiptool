@@ -5,7 +5,7 @@ from typing import List, Union
 
 import click
 
-from ltchiptool.util import lt_find_path, lt_read_json
+from ltchiptool.util.env import lt_find_path, lt_read_json
 
 LT_FAMILIES: List["Family"] = []
 
@@ -14,6 +14,7 @@ class Family:
     id: int
     short_name: str
     description: str
+    parent_description: str = None
     name: str = None
     parent: str = None
     code: str = None
@@ -46,6 +47,7 @@ class Family:
         short_name: str = None,
         name: str = None,
         code: str = None,
+        description: str = None,
         by_parent: bool = False,
     ) -> "Family":
         if any:
@@ -53,6 +55,7 @@ class Family:
             short_name = any
             name = any
             code = any
+            description = any
         if id and isinstance(id, str) and id.startswith("0x"):
             id = int(id, 16)
         for family in cls.get_all():
@@ -64,15 +67,20 @@ class Family:
                 return family
             if code and family.code == code.lower():
                 return family
+            if description and family.description == description:
+                return family
             if not by_parent:
                 continue
             if name and family.parent == name.lower():
                 return family
             if code and family.parent_code == code.lower():
                 return family
+            if description and family.parent_description == description:
+                return family
         if any:
             raise ValueError(f"Family not found - {any}")
-        text = ", ".join(filter(None, [hex(id), short_name, name, code]))
+        items = [hex(id) if id else None, short_name, name, code, description]
+        text = ", ".join(filter(None, items))
         raise ValueError(f"Family not found - {text}")
 
     @property

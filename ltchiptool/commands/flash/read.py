@@ -1,14 +1,17 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-23.
 
-from io import FileIO
 from time import time
+from typing import IO
 
 import click
 from click import File
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
-from ltchiptool.util import AutoIntParamType, DevicePortParamType, graph, sizeof
+from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
+from ltchiptool.util.flash import ClickProgressCallback, FlashConnection
+from ltchiptool.util.logging import graph
+from ltchiptool.util.misc import sizeof
 
 from ._utils import flash_link_interactive
 
@@ -45,7 +48,7 @@ from ._utils import flash_link_interactive
 @click.option(
     "-t",
     "--timeout",
-    help="Timeout for operations in seconds (default: 20.0)",
+    help="Chip connection timeout in seconds (default: 20.0)",
     type=float,
     default=None,
 )
@@ -63,7 +66,7 @@ from ._utils import flash_link_interactive
 )
 def cli(
     family: Family,
-    file: FileIO,
+    file: IO[bytes],
     device: str,
     baudrate: int,
     offset: int,
@@ -87,7 +90,8 @@ def cli(
     """
     time_start = time()
     soc = SocInterface.get(family)
-    flash_link_interactive(soc, device, baudrate, timeout)
+    soc.flash_set_connection(FlashConnection(device, baudrate))
+    flash_link_interactive(soc, timeout)
 
     if rom:
         max_length = soc.flash_get_rom_size()
@@ -108,10 +112,15 @@ def cli(
     else:
         graph(0, f"Reading {sizeof(length)} @ 0x{offset:X} to '{file.name}'")
 
-    with click.progressbar(length=length, width=64) as bar:
-        for chunk in soc.flash_read_raw(offset, length, verify=check, use_rom=rom):
+    with ClickProgressCallback(length) as callback:
+        for chunk in soc.flash_read_raw(
+            offset=offset,
+            length=length,
+            verify=check,
+            use_rom=rom,
+            callback=callback,
+        ):
             file.write(chunk)
-            bar.update(len(chunk))
 
     duration = time() - time_start
     graph(1, f"Finished in {duration:.3f} s")

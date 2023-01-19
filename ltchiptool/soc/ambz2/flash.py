@@ -1,17 +1,19 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-28.
+
 from __future__ import annotations
 
 import io
 from abc import ABC
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import BinaryIO, Generator, Optional, Protocol, Union
+from typing import IO, Generator, Optional, Protocol
 
 from Cryptodome.Hash import HMAC, SHA256
 
 from ltchiptool import SocInterface
-from ltchiptool.util.intbin import gen2bytes
 from ltchiptool.soc.ambz2.binary import MARKER_UNSIGNED
+from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.intbin import gen2bytes
 from uf2tool import UploadContext
 
 from .util.ambz2tool import AmbZ2Tool
@@ -138,33 +140,46 @@ def select_partition(amb: AmbZ2Tool) -> tuple[int, bytes, Hasher, int]:
 
 class AmebaZ2Flash(SocInterface, ABC):
     amb: Optional[AmbZ2Tool] = None
-    is_linked: bool = False
+
+    def flash_set_connection(self, connection: FlashConnection) -> None:
+        if self.conn:
+            self.flash_disconnect()
+        self.conn = connection
+        self.conn.fill_baudrate(115200)
 
     def flash_build_protocol(self, force: bool = False) -> None:
         if not force and self.amb:
             return
         self.flash_disconnect()
         self.amb = AmbZ2Tool(
-            port=self.port,
-            baudrate=115200,
-            link_timeout=self.link_timeout,
-            read_timeout=self.read_timeout,
+            port=self.conn.port,
+            baudrate=self.conn.link_baudrate,
         )
+        self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
+
+    def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
+        self.flash_build_protocol()
+        if timeout:
+            self.amb.read_timeout = timeout
+            self.conn.timeout = timeout
+        if link_timeout:
+            self.amb.link_timeout = link_timeout
+            self.conn.link_timeout = link_timeout
 
     def flash_connect(self) -> None:
-        if self.amb and self.is_linked:
+        if self.amb and self.conn.linked:
             return
         self.flash_build_protocol()
         assert self.amb
         self.amb.link()
-        self.amb.change_baudrate(self.baud)
-        self.is_linked = True
+        self.amb.change_baudrate(self.conn.baudrate)
+        self.conn.linked = True
 
     def flash_disconnect(self) -> None:
         if self.amb:
             self.amb.close()
         self.amb = None
-        self.is_linked = False
+        self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
@@ -194,41 +209,37 @@ class AmebaZ2Flash(SocInterface, ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
         assert self.amb
-        yield from self.amb.memory_read(
+        gen = self.amb.memory_read(
             offset=offset,
             length=length,
             use_flash=not use_rom,
             hash_check=verify,
             yield_size=1024,
         )
+        yield from callback.update_with(gen)
 
     def flash_write_raw(
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int | str, None, None]:
-        """
-        Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
-
-        :return: a generator, yielding then lengths of the chunks being written, or
-        progress messages, as string
-        """
-
-        yield "connecting..."
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
+        callback.on_message("connecting...")
         self.flash_connect()
         assert self.amb
 
-        yield "reading partition table..."
+        callback.on_message("reading partition table...")
         ota_idx, next_serial, hasher, flash_offset = select_partition(self.amb)
 
-        yield f"OTA {ota_idx}"
+        callback.on_message(f"OTA {ota_idx}")
         with io.BytesIO(data.read(length)) as stream:
-            yield "updating serial number and OTA signature..."
+            callback.on_message("updating serial number and OTA signature...")
 
             with stream.getbuffer() as buf:
                 if buf[0:32] == MARKER_UNSIGNED:
@@ -239,36 +250,32 @@ class AmebaZ2Flash(SocInterface, ABC):
                     hasher.update(buf[PTABLE_OFF_HDR : PTABLE_OFF_HDR + 0x60])
                     buf[0:32] = hasher.digest()
 
-            yield f"OTA {ota_idx} ({flash_offset + offset:#X})"
+            callback.on_message(f"OTA {ota_idx} ({flash_offset + offset:#X})")
             # write to flash
-            yield from self.amb.memory_write(
+            callback.attach(data)
+            self.amb.memory_write(
                 flash_offset + offset,
                 stream,
                 use_flash=True,
                 hash_check=verify,
-                progress=self.progress_callback,
             )
+            callback.detach(data)
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
-        """
-        Upload an UF2 package to the chip.
-
-        :return: a generator, yielding either the total writing length,
-        then lengths of the chunks being written, or progress messages, as string
-        """
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
         # collect continuous blocks of data
         parts = ctx.collect()
-        # yield the total writing length (plus boot-from-flash command)
-        yield sum(len(part.getvalue()) for part in parts.values())
+        callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
 
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            yield from self.flash_write_raw(offset, length, data, verify)
+            self.flash_write_raw(offset, length, data, verify, callback)
 
-        yield "Booting firmware"
+        callback.on_message("Booting firmware")
         self.amb.disconnect()
+        callback.on_update(4)

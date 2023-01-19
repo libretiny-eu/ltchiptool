@@ -2,41 +2,74 @@
 
 import logging
 import sys
-from logging import LogRecord, StreamHandler
+from logging import DEBUG, ERROR, INFO, Logger, LogRecord, StreamHandler, error, log
 from time import time
+from typing import Callable
 
 import click
 
-VERBOSE = logging.DEBUG // 2
-LOG_COLORS = {
-    "V": "bright_cyan",
-    "D": "bright_blue",
-    "I": "bright_green",
-    "W": "bright_yellow",
-    "E": "bright_red",
-    "C": "bright_magenta",
-}
-VERBOSITY_LEVEL = {
-    0: logging.INFO,
-    1: logging.DEBUG,
-    2: VERBOSE,
-}
+VERBOSE = DEBUG // 2
 
 
 class LoggingHandler(StreamHandler):
     INSTANCE: "LoggingHandler" = None
+    LOG_COLORS = {
+        "V": "bright_cyan",
+        "D": "bright_blue",
+        "I": "bright_green",
+        "W": "bright_yellow",
+        "E": "bright_red",
+        "C": "bright_magenta",
+    }
 
-    time_start: float
-    time_prev: float
-    timed: bool = False
-    raw: bool = False
-    indent: int = 0
+    @staticmethod
+    def get() -> "LoggingHandler":
+        if LoggingHandler.INSTANCE:
+            return LoggingHandler.INSTANCE
+        return LoggingHandler()
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        timed: bool = False,
+        raw: bool = False,
+        indent: int = 0,
+        full_traceback: bool = True,
+    ) -> None:
         super().__init__()
         LoggingHandler.INSTANCE = self
         self.time_start = time()
         self.time_prev = self.time_start
+        self.timed = timed
+        self.raw = raw
+        self.indent = indent
+        self.full_traceback = full_traceback
+        self.emitters = []
+        self.attach()
+
+    @property
+    def level(self):
+        return logging.root.level
+
+    @level.setter
+    def level(self, value: int):
+        logging.root.setLevel(value)
+
+    def attach(self, logger: Logger = None):
+        logging.addLevelName(VERBOSE, "VERBOSE")
+        if logger:
+            root = logging.root
+            logger.setLevel(root.level)
+        else:
+            logger = logging.root
+        for h in logger.handlers:
+            logger.removeHandler(h)
+        logger.addHandler(self)
+
+    def add_emitter(self, emitter: Callable[[str, str, str], None]):
+        self.emitters.append(emitter)
+
+    def clear_emitters(self):
+        self.emitters.clear()
 
     def emit(self, record: LogRecord) -> None:
         message = record.getMessage()
@@ -49,7 +82,7 @@ class LoggingHandler(StreamHandler):
         elapsed_total = now - self.time_start
         elapsed_current = now - self.time_prev
 
-        log_color = color or LOG_COLORS[log_prefix]
+        log_color = color or self.LOG_COLORS[log_prefix]
 
         if self.indent:
             empty = (
@@ -66,31 +99,39 @@ class LoggingHandler(StreamHandler):
         elif not self.raw:
             message = f"{log_prefix}: {message}"
 
-        file = sys.stderr if log_prefix in "WEC" else sys.stdout
-
-        if self.raw:
-            click.echo(message, file=file)
-        else:
-            click.secho(message, file=file, fg=log_color)
+        self.emit_raw(log_prefix, message, log_color)
         self.time_prev += elapsed_current
 
+    def emit_raw(self, log_prefix: str, message: str, color: str):
+        file = sys.stderr if log_prefix in "WEC" else sys.stdout
+        if file:
+            if self.raw:
+                click.echo(message, file=file)
+            else:
+                click.secho(message, file=file, fg=color)
+        for emitter in self.emitters:
+            emitter(log_prefix, message, color)
 
-def log_setup(verbosity: int, timed: bool, raw: bool, indent: int):
-    verbosity = min(verbosity, 2)
-    handler = LoggingHandler()
-    handler.timed = timed
-    handler.raw = raw
-    handler.indent = indent
+    @staticmethod
+    def tb_echo(tb):
+        filename = tb.tb_frame.f_code.co_filename
+        name = tb.tb_frame.f_code.co_name
+        line = tb.tb_lineno
+        graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
 
-    logging.addLevelName(VERBOSE, "VERBOSE")
-    logger = logging.root
-    logger.setLevel(VERBOSITY_LEVEL[verbosity])
-    for h in logger.handlers:
-        logger.removeHandler(h)
-    logger.addHandler(handler)
+    def emit_exception(self, e: Exception):
+        error(f"{type(e).__name__}: {e}")
+        tb = e.__traceback__
+        while tb.tb_next:
+            if self.full_traceback:
+                self.tb_echo(tb)
+            tb = tb.tb_next
+        self.tb_echo(tb)
 
+
+def log_setup_click_bars():
     # make Click progress bars visible on non-TTY stdout
-    if sys.stdout.isatty():
+    if sys.stdout and sys.stdout.isatty():
         return
     # noinspection PyProtectedMember
     from click._termui_impl import ProgressBar
@@ -108,15 +149,11 @@ def log_setup(verbosity: int, timed: bool, raw: bool, indent: int):
     ProgressBar.render_finish = render_finish
 
 
-def log_copy_setup(logger: str):
-    handler = LoggingHandler.INSTANCE
-    root = logging.root
-    logger = logging.getLogger(logger)
-    logger.setLevel(root.level)
-    for h in logger.handlers:
-        logger.removeHandler(h)
-    logger.addHandler(handler)
-
-
 def verbose(msg, *args, **kwargs):
     logging.log(VERBOSE, msg, *args, **kwargs)
+
+
+def graph(level: int, *message, loglevel: int = INFO):
+    prefix = (level - 1) * "|   " + "|-- " if level else ""
+    message = " ".join(str(m) for m in message)
+    log(loglevel, f"{prefix}{message}")

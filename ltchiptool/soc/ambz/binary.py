@@ -1,14 +1,15 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import FileIO
 from os.path import basename
 from struct import unpack
 from typing import IO, Dict, Optional, Tuple
 
 from ltchiptool import SocInterface
-from ltchiptool.util import chname, graph, isnewer, peek, readbin
+from ltchiptool.util.detection import Detection
+from ltchiptool.util.fileio import chname, isnewer, peek, readbin
 from ltchiptool.util.intbin import inttole32
+from ltchiptool.util.logging import graph
 
 
 def write_header(f: IO[bytes], start: int, end: int):
@@ -98,15 +99,15 @@ class AmebaZBinary(SocInterface, ABC):
 
     def detect_file_type(
         self,
-        file: FileIO,
+        file: IO[bytes],
         length: int,
-    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+    ) -> Optional[Detection]:
         data = peek(file, size=64)
         if not data:
             return None
 
         if data[0x08:0x0E] == b"RTKWin" or data[0x28:0x2E] == b"RTKWin":
-            return "Realtek AmebaZ RAM Image", None, 0, 0
+            return Detection.make_unsupported("Realtek AmebaZ RAM Image")
 
         # stage 0 - check XIP file
         tpl = check_xip_binary(data)
@@ -116,18 +117,35 @@ class AmebaZBinary(SocInterface, ABC):
             type = "SDK" if data.startswith(b"Customer") else "LT"
             if start:
                 if start & 0x8000020 != 0x8000020:
-                    return "Realtek AmebaZ Unknown Image", None, 0, 0
-                ota_idx = 1 if start == 0xB000 else 2
-                return f"Realtek AmebaZ {type}-XIP{ota_idx}", start, 0, xip_length
-            return f"Realtek AmebaZ {type}-XIP Unknown", None, 0, 0
+                    return Detection.make_unsupported("Realtek AmebaZ Unknown Image")
+                ota_idx = 1 if start == 0x800B020 else 2
+                return Detection.make(
+                    type_name=f"Realtek AmebaZ {type}-XIP{ota_idx}",
+                    offset=start & ~0x8000020,
+                    skip=0,
+                    length=xip_length,
+                )
+            return Detection.make(f"Realtek AmebaZ {type}-XIP Unknown", offset=None)
 
-        # stage 1 - check full dump file
+        # stage 1 - check Realtek OTA 1+2 file
+        if data[0x08:0x0C] == b"OTA1" and data[0x20:0x24] == b"OTA2":
+            if data[0x38:0x40] != b"81958711":
+                return Detection.make_unsupported("Realtek OTA Package Invalid")
+            xip_length, skip, start = unpack("<III", data[0x14:0x20])
+            return Detection.make(
+                type_name=f"Realtek OTA Package",
+                offset=start & ~0x8000020,
+                skip=skip,
+                length=xip_length,
+            )
+
+        # stage 2 - check full dump file
         tpl = check_bootloader_binary(data)
         if not tpl:
             # no bootloader at 0x0, nothing to do
             return None
         start, xip_length, _ = tpl
-        if start != 0x8000020:
+        if start & 0x8000020 != 0x8000020:
             # make sure the bootloader offset is correct
             return None
         # read app header
@@ -137,12 +155,17 @@ class AmebaZBinary(SocInterface, ABC):
             if xip_length >= 0x4000:
                 # too long, probably not AmebaZ
                 return None
-            return "Realtek AmebaZ Bootloader", 0, 0, xip_length
+            return Detection.make(
+                type_name="Realtek AmebaZ Bootloader",
+                offset=start & ~0x8000020,
+                skip=0,
+                length=xip_length,
+            )
         # check XIP at 0xB000
         tpl = check_xip_binary(data)
         if not tpl:
             return None
 
         if length != 2048 * 1024:
-            return "Realtek AmebaZ Incomplete Dump", None, 0, 0
-        return "Realtek AmebaZ Full Dump", 0, 0, 0
+            return Detection.make("Realtek AmebaZ Incomplete Dump", offset=None)
+        return Detection.make("Realtek AmebaZ Full Dump", 0, 0, 0)

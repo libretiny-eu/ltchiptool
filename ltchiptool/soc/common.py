@@ -7,7 +7,8 @@ from os.path import basename, isfile
 from shutil import copyfile
 from typing import Dict, List, Optional, Tuple
 
-from ltchiptool.util import chext, graph
+from ltchiptool.util.fileio import chext
+from ltchiptool.util.logging import graph
 
 from .interface import SocInterface
 

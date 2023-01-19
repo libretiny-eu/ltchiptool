@@ -2,7 +2,7 @@
 
 import click
 
-from ltchiptool.util import get_multi_command_class
+from ltchiptool.util.cli import get_multi_command_class
 
 COMMANDS = {
     "file": "ltchiptool/commands/flash/file.py",

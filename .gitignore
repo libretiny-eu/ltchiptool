@@ -393,3 +393,10 @@ pip-selfcheck.json
 *.crc
 *.bat
 *.ota
+
+# PyInstaller-related
+!*.spec
+gui-win32.txt
+ltchiptool.txt
+ltchiptool/families.json
+ltchiptool/boards/

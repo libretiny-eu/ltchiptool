@@ -1,11 +1,12 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
-from logging import ERROR, error
+from logging import DEBUG, INFO
 
 import click
 from click import Context
 
-from ltchiptool.util import get_multi_command_class, graph, log_setup
+from ltchiptool.util.cli import get_multi_command_class
+from ltchiptool.util.logging import VERBOSE, LoggingHandler, log_setup_click_bars
 
 from .version import get_version
 
@@ -13,13 +14,18 @@ COMMANDS = {
     "dump": "ltchiptool/commands/dumptool.py",
     "elf2bin": "ltchiptool/commands/elf2bin.py",
     "flash": "ltchiptool/commands/flash/__main__.py",
+    "gui": "ltchiptool/gui/__main__.py",
     "link2bin": "ltchiptool/commands/link2bin.py",
     "list": "ltchiptool/commands/list.py",
     "soc": "ltchiptool/commands/soc.py",
     "uf2": "uf2tool/cli.py",
 }
 
-FULL_TRACEBACK: bool = False
+VERBOSITY_LEVEL = {
+    0: INFO,
+    1: DEBUG,
+    2: VERBOSE,
+}
 
 
 @click.command(
@@ -73,30 +79,21 @@ def cli_entrypoint(
     raw_log: bool,
     indent: int,
 ):
-    global FULL_TRACEBACK
-    FULL_TRACEBACK = traceback
     ctx.ensure_object(dict)
-    log_setup(verbosity=verbose, timed=timed, raw=raw_log, indent=indent)
-
-
-def tb_echo(tb):
-    filename = tb.tb_frame.f_code.co_filename
-    name = tb.tb_frame.f_code.co_name
-    line = tb.tb_lineno
-    graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
+    logger = LoggingHandler.get()
+    logger.level = VERBOSITY_LEVEL[min(verbose, 2)]
+    logger.timed = timed
+    logger.raw = raw_log
+    logger.indent = indent
+    logger.full_traceback = traceback
+    log_setup_click_bars()
 
 
 def cli():
     try:
         cli_entrypoint()
     except Exception as e:
-        error(f"{type(e).__name__}: {e}")
-        tb = e.__traceback__
-        while tb.tb_next:
-            if FULL_TRACEBACK:
-                tb_echo(tb)
-            tb = tb.tb_next
-        tb_echo(tb)
+        LoggingHandler.get().emit_exception(e)
         exit(1)
 
 

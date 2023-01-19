@@ -2,6 +2,7 @@
 # licensed under MIT License
 
 from enum import IntEnum
+
 import typer
 from construct import *
 from Cryptodome.Hash import HMAC, SHA256

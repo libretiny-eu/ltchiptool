@@ -5,16 +5,17 @@ from abc import ABC
 from dataclasses import dataclass
 from enum import IntEnum
 from io import FileIO
-from logging import info, warning, error
+from logging import error, info, warning
 from struct import pack
+from typing import Dict, Optional
 
-from elftools.elf.elffile import ELFFile
 from Cryptodome.Hash import HMAC, SHA256
+from elftools.elf.elffile import ELFFile
 
 from ltchiptool import SocInterface
-from ltchiptool.util import chname, peek
+from ltchiptool.util.detection import Detection
+from ltchiptool.util.fileio import chname, peek
 from ltchiptool.util.intbin import pad_data, pad_up
-
 
 LEN_HDR_IMG = 0x60
 LEN_HDR_SEC = 0x60
@@ -300,7 +301,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         ota1: str,
         ota2: str,
         args: list[str],
-    ) -> dict[str, int | None]:
+    ) -> Dict[str, Optional[int]]:
         assert not ota1 and not ota2
         elfs = self.link2elf("", "", args)
         assert elfs.keys() == {1}
@@ -312,7 +313,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         self,
         input: str,
         ota_idx: int,
-    ) -> dict[str, int | None]:
+    ) -> Dict[str, Optional[int]]:
 
         with ELFFile.load_from_path(input) as elf:
             firmware_raw = from_elf(elf, serial=0xFFFF_FFFF)
@@ -328,14 +329,9 @@ class AmebaZ2Binary(SocInterface, ABC):
         self,
         file: FileIO,
         length: int,
-    ) -> tuple[str, int | None, int, int] | None:
-        """
-        Check if the file is flashable to this SoC.
-
-        :return: a tuple: (file type, offset, skip, length), or None if type unknown
-        """
+    ) -> Optional[Detection]:
         data = peek(file, size=32)
         if data == MARKER_UNSIGNED:
-            return "Realtek AmebaZ2 unsigned OTA image", None, 0, length
+            return Detection.make_unsupported("Realtek AmebaZ2 unsigned OTA image")
 
         return None

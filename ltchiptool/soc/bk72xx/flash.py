@@ -4,11 +4,12 @@ import logging
 from abc import ABC
 from binascii import crc32
 from logging import DEBUG, debug
-from typing import BinaryIO, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Union
 
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
+from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
 from uf2tool import UploadContext
@@ -34,40 +35,54 @@ BK72XX_GUIDE = [
 
 class BK72XXFlash(SocInterface, ABC):
     bk: Optional[BK7231Serial] = None
-    is_linked: bool = False
+
+    def flash_set_connection(self, connection: FlashConnection) -> None:
+        if self.conn:
+            self.flash_disconnect()
+        self.conn = connection
+        self.conn.fill_baudrate(115200)
 
     def flash_build_protocol(self, force: bool = False) -> None:
         if not force and self.bk:
             return
         self.flash_disconnect()
         self.bk = BK7231Serial(
-            port=self.port,
-            baudrate=self.baud,
-            link_timeout=self.link_timeout,
-            cmnd_timeout=self.read_timeout,
+            port=self.conn.port,
+            baudrate=self.conn.baudrate,
+            link_baudrate=self.conn.link_baudrate,
         )
         loglevel = logging.getLogger().getEffectiveLevel()
         if loglevel <= DEBUG:
             self.bk.info = lambda *args: debug(" ".join(args))
         if loglevel <= VERBOSE:
             self.bk.debug = lambda *args: verbose(" ".join(args))
+        self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
+
+    def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
+        self.flash_build_protocol()
+        if timeout:
+            self.bk.cmnd_timeout = timeout
+            self.conn.timeout = timeout
+        if link_timeout:
+            self.bk.link_timeout = link_timeout
+            self.conn.link_timeout = link_timeout
 
     def flash_hw_reset(self) -> None:
         self.flash_build_protocol()
         self.bk.hw_reset()
 
     def flash_connect(self) -> None:
-        if self.bk and self.is_linked:
+        if self.bk and self.conn.linked:
             return
         self.flash_build_protocol()
         self.bk.connect()
-        self.is_linked = True
+        self.conn.linked = True
 
     def flash_disconnect(self) -> None:
         if self.bk:
             self.bk.close()
         self.bk = None
-        self.is_linked = False
+        self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
@@ -96,6 +111,7 @@ class BK72XXFlash(SocInterface, ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
 
@@ -105,6 +121,7 @@ class BK72XXFlash(SocInterface, ABC):
             for address in range(offset, offset + length, 4):
                 reg = self.bk.register_read(address)
                 yield inttole32(reg)
+                callback.on_update(4)
             return
 
         crc_offset = offset
@@ -121,6 +138,7 @@ class BK72XXFlash(SocInterface, ABC):
             # check CRC every each 32 KiB, or by the end of file
             if crc_length < 32 * 1024 and crc_offset + crc_length != offset + length:
                 yield chunk
+                callback.on_update(len(chunk))
                 continue
 
             crc_expected = self.bk.read_flash_range_crc(
@@ -136,32 +154,34 @@ class BK72XXFlash(SocInterface, ABC):
             crc_length = 0
             crc_value = 0
             yield chunk
+            callback.on_update(len(chunk))
 
     def flash_write_raw(
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int, None, None]:
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
         self.flash_connect()
-        yield from self.bk.program_flash(
+        gen = self.bk.program_flash(
             io=data,
             io_size=length,
             start=offset,
             crc_check=verify,
         )
+        callback.update_from(gen)
 
     def flash_write_uf2(
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
         # collect continuous blocks of data (before linking, as this takes time)
         parts = ctx.collect(ota_idx=1)
-
-        # yield the total writing length
-        yield sum(len(part.getvalue()) for part in parts.values())
+        callback.on_total(sum(len(part.getvalue()) for part in parts.values()))
 
         # connect to chip
         self.flash_connect()
@@ -170,8 +190,8 @@ class BK72XXFlash(SocInterface, ABC):
         for offset, data in parts.items():
             length = len(data.getvalue())
             data.seek(0)
-            yield f"Writing (0x{offset:06X})"
-            yield from self.bk.program_flash(
+            callback.on_message(f"Writing (0x{offset:06X})")
+            gen = self.bk.program_flash(
                 io=data,
                 io_size=length,
                 start=offset,
@@ -179,6 +199,8 @@ class BK72XXFlash(SocInterface, ABC):
                 dry_run=False,
                 really_erase=True,
             )
-        yield "Booting firmware"
+            callback.update_from(gen)
+
+        callback.on_message("Booting firmware")
         # reboot the chip
         self.bk.reboot_chip()

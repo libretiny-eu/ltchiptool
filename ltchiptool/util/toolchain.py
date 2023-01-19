@@ -4,7 +4,8 @@ from os.path import basename
 from subprocess import PIPE, Popen
 from typing import IO, Dict, List
 
-from ltchiptool.util import graph, isnewer
+from .fileio import isnewer
+from .logging import graph
 
 
 class Toolchain:

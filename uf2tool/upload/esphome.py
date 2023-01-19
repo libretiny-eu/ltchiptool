@@ -1,7 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-08-06.
 
 from enum import IntEnum
-from io import FileIO
 from logging import debug
 from os import stat
 from socket import (
@@ -14,10 +13,10 @@ from socket import (
     gethostbyname,
     socket,
 )
-from typing import Tuple, Union
+from typing import IO, Tuple, Union
 
-from ltchiptool.util import graph, verbose
 from ltchiptool.util.intbin import inttobe32
+from ltchiptool.util.logging import graph, verbose
 
 OTA_MAGIC = b"\x6C\x26\xF7\x5C\x45"
 
@@ -58,7 +57,7 @@ class OTACode(IntEnum):
 
 
 class ESPHomeUploader:
-    file: FileIO
+    file: IO[bytes]
     file_size: int
     file_md5: bytes
 
@@ -70,7 +69,7 @@ class ESPHomeUploader:
 
     def __init__(
         self,
-        file: FileIO,
+        file: IO[bytes],
         md5: bytes,
         host: str,
         port: int,

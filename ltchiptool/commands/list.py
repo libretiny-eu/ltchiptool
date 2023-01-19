@@ -4,7 +4,7 @@ import click
 from prettytable import PrettyTable
 
 from ltchiptool import Board, Family
-from ltchiptool.util import sizeof
+from ltchiptool.util.misc import sizeof
 
 
 @click.group(help="List boards, families, etc.")
@@ -48,16 +48,18 @@ def boards():
 def families():
     table = PrettyTable()
     table.field_names = [
-        "Title",
+        "Title (parent)",
         "Name (parent)",
         "Code (parent)",
         "Short name / ID",
     ]
-    table.align["Title"] = "l"
+    table.align["Title (parent)"] = "l"
     for family in Family.get_all():
         table.add_row(
             [
-                family.description,
+                f"{family.description} ({family.parent_description})"
+                if family.parent_description
+                else family.description,
                 f"{family.name} ({family.parent})"
                 if family.parent
                 else family.name

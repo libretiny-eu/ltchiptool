@@ -1,22 +1,17 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from io import FileIO
-from typing import BinaryIO, Dict, Generator, List, Optional, Tuple, Union
+from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
-from ltchiptool.util import graph
+from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from uf2tool import UploadContext
 
 
 class SocInterface(ABC):
     family: Family = None
     board: Board = None
-    port: str = None
-    baud: int = None
-    link_timeout: float = 20.0
-    read_timeout: float = 1.0
-    progress_callback: Optional[Callable[[int], None]] = None
+    conn: FlashConnection = None
 
     @classmethod
     def get(cls, family: Family) -> "SocInterface":
@@ -33,29 +28,21 @@ class SocInterface(ABC):
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
+    @classmethod
+    def get_family_codes(cls) -> List[str]:
+        """Return family codes (or parent codes) implemented in SocInterface."""
+        return [
+            "bk72xx",
+            "ambz",
+            "ambz2",
+        ]
+
     #########################
     # Common helper methods #
     #########################
 
     def set_board(self, board: Board):
         self.board = board
-        if board:
-            self.baud = self.baud or board["upload.speed"] or 115200
-
-    def set_uart_params(
-        self,
-        port: str,
-        baud: int = None,
-        link_timeout: float = None,
-        read_timeout: float = None,
-    ):
-        self.port = port or self.port
-        self.baud = baud or self.baud or 115200
-        self.link_timeout = link_timeout or self.link_timeout
-        self.read_timeout = read_timeout or self.read_timeout
-
-    def print_protocol(self):
-        graph(1, f"Connecting on {self.port} @ {self.baud}")
 
     #####################################################
     # Abstract methods - implemented by the SoC modules #
@@ -97,13 +84,13 @@ class SocInterface(ABC):
 
     def detect_file_type(
         self,
-        file: FileIO,
+        file: IO[bytes],
         length: int,
-    ) -> Optional[Tuple[str, Optional[int], int, int]]:
+    ) -> Optional["Detection"]:
         """
         Check if the file is flashable to this SoC.
 
-        :return: a tuple: (file type, offset, skip, length), or None if type unknown
+        :return: a Detection object with results, or None if type unknown
         """
         raise NotImplementedError()
 
@@ -111,8 +98,16 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_set_connection(self, connection: FlashConnection) -> None:
+        """Configure device connection parameters."""
+        raise NotImplementedError()
+
     def flash_build_protocol(self, force: bool = False) -> None:
         """Create an instance of flashing protocol class. Only used internally."""
+        raise NotImplementedError()
+
+    def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
+        """Change device connection timeout values."""
         raise NotImplementedError()
 
     def flash_hw_reset(self) -> None:
@@ -151,10 +146,16 @@ class SocInterface(ABC):
         length: int,
         verify: bool = True,
         use_rom: bool = False,
+        callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         """
         Read 'length' bytes from the flash, starting at 'offset'.
 
+        :param offset: start memory offset
+        :param length: length of data to read
+        :param verify: whether to verify checksums
+        :param use_rom: whether to read from ROM instead of Flash
+        :param callback: reading progress callback
         :return: a generator yielding the chunks being read
         """
         raise NotImplementedError()
@@ -163,13 +164,18 @@ class SocInterface(ABC):
         self,
         offset: int,
         length: int,
-        data: BinaryIO,
+        data: IO[bytes],
         verify: bool = True,
-    ) -> Generator[int | str, None, None]:
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
         """
         Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
 
-        :return: a generator yielding lengths of the chunks being written
+        :param offset: start memory offset
+        :param length: length of data to write
+        :param data: IO stream of data to write
+        :param verify: whether to verify checksums
+        :param callback: writing progress callback
         """
         raise NotImplementedError()
 
@@ -177,11 +183,13 @@ class SocInterface(ABC):
         self,
         ctx: UploadContext,
         verify: bool = True,
-    ) -> Generator[Union[int, str], None, None]:
+        callback: ProgressCallback = ProgressCallback(),
+    ) -> None:
         """
         Upload an UF2 package to the chip.
 
-        :return: a generator, yielding either the total writing length,
-        then lengths of the chunks being written, or progress messages, as string
+        :param ctx: UF2 uploading context
+        :param verify: whether to verify checksums
+        :param callback: writing progress callback
         """
         raise NotImplementedError()

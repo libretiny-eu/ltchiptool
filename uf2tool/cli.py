@@ -1,11 +1,10 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import logging
-from io import FileIO
 from os import makedirs
 from os.path import join
 from time import time
-from typing import Tuple
+from typing import IO, Tuple
 
 import click
 
@@ -39,7 +38,7 @@ def cli():
 )
 @click.argument("INPUTS", nargs=-1, type=InputParamType())
 def write(
-    output: FileIO,
+    output: IO[bytes],
     family: Family,
     board: str,
     version: str,
@@ -60,7 +59,7 @@ def write(
 
 @cli.command(help="Print info about UF2 file")
 @click.argument("file", type=click.File("rb"))
-def info(file: FileIO):
+def info(file: IO[bytes]):
     uf2 = UF2(file)
     uf2.read()
     uf2.dump()
@@ -69,7 +68,7 @@ def info(file: FileIO):
 @cli.command(help="Dump UF2 contents")
 @click.argument("file", type=click.File("rb"))
 @click.option("-o", "--output", type=click.Path(file_okay=False), default=".")
-def dump(file: FileIO, output: str):
+def dump(file: IO[bytes], output: str):
     uf2 = UF2(file)
     uf2.read()
     ctx = UploadContext(uf2)

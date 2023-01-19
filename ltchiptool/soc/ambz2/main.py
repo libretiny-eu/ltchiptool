@@ -6,8 +6,8 @@ from logging import info
 from ltchiptool import Family
 from ltchiptool.soc import SocInterfaceCommon
 
-from .flash import AmebaZ2Flash
 from .binary import AmebaZ2Binary
+from .flash import AmebaZ2Flash
 
 
 class AmebaZ2Main(
