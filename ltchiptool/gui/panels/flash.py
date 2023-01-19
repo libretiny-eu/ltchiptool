@@ -448,6 +448,9 @@ class FlashPanel(BasePanel):
             if dialog.ShowModal() == wx.ID_CANCEL:
                 return
             self.file = dialog.GetPath()
+            if self.operation != FlashOp.WRITE:
+                # clear previous writing filename
+                self.prev_file = None
 
     @on_event
     def on_start_click(self):
