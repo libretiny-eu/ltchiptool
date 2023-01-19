@@ -141,7 +141,7 @@ class AmebaZFlash(SocInterface, ABC):
                 f"Length invalid while reading from 0x9000 - {len(system)}"
             )
         # read OTA switch value
-        ota_switch = bin(letoint(system[4:8]))[2:]
+        ota_switch = f"{letoint(system[4:8]):032b}"
         # count 0-bits
         ota_idx = 1 + (ota_switch.count("0") % 2)
         # validate OTA2 address in system data
