@@ -20,7 +20,7 @@ bk7231tools = "^1.2.1"
 pycryptodomex = "^3.15.0"
 xmodem = "^0.4.6"
 wxPython = {version = "^4.2.0", optional = true}
-pywin32 = {version = "^305", optional = true}
+pywin32 = {version = "^305", optional = true, markers = "sys_platform == 'win32'"}
 
 [tool.poetry.extras]
 gui = ["wxPython", "pywin32"]

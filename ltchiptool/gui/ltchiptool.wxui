@@ -482,7 +482,7 @@
           <node
             class="wxHyperlinkCtrl"
             label="/home/user/.platformio/platforms/libretuya/"
-            style="wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE"
+            style="wxHL_ALIGN_LEFT"
             var_name="text_path"
             border_size="0"
             flags="wxEXPAND" />
@@ -508,7 +508,7 @@
           <node
             class="wxHyperlinkCtrl"
             label="https://github.com/libretuya/ltchiptool"
-            style="wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE"
+            style="wxHL_ALIGN_LEFT"
             var_name="m_hyperlink_3"
             border_size="0"
             flags="wxEXPAND" />
@@ -528,7 +528,7 @@
           <node
             class="wxHyperlinkCtrl"
             label="https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/"
-            style="wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE"
+            style="wxHL_ALIGN_LEFT"
             var_name="m_hyperlink_4"
             border_size="0"
             flags="wxEXPAND" />
@@ -548,7 +548,7 @@
           <node
             class="wxHyperlinkCtrl"
             label="https://discord.gg/SyGCB9Xwtf"
-            style="wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE"
+            style="wxHL_ALIGN_LEFT"
             border_size="0"
             flags="wxEXPAND" />
         </node>

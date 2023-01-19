@@ -174,7 +174,7 @@ class MainFrame(wx.Frame):
             return
         title = target.GetTitle()
         label = item.GetItemLabel()
-        checked = item.IsChecked()
+        checked = item.IsChecked() if item.IsCheckable() else False
 
         match (title, label):
             case ("File", "Quit"):

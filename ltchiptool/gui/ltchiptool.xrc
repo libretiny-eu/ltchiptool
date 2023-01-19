@@ -571,7 +571,7 @@
 						<border>0</border>
 						<object class="wxHyperlinkCtrl" name="text_path">
 							<label>/home/user/.platformio/platforms/libretuya/</label>
-							<style>wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE</style>
+							<style>wxHL_ALIGN_LEFT</style>
 						</object>
 					</object>
 				</object>
@@ -606,7 +606,7 @@
 						<border>0</border>
 						<object class="wxHyperlinkCtrl" name="m_hyperlink_3">
 							<label>https://github.com/libretuya/ltchiptool</label>
-							<style>wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE</style>
+							<style>wxHL_ALIGN_LEFT</style>
 						</object>
 					</object>
 				</object>
@@ -631,7 +631,7 @@
 						<border>0</border>
 						<object class="wxHyperlinkCtrl" name="m_hyperlink_4">
 							<label>https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/</label>
-							<style>wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE</style>
+							<style>wxHL_ALIGN_LEFT</style>
 						</object>
 					</object>
 				</object>
@@ -656,7 +656,7 @@
 						<border>0</border>
 						<object class="wxHyperlinkCtrl" name="m_hyperlink">
 							<label>https://discord.gg/SyGCB9Xwtf</label>
-							<style>wxHL_ALIGN_LEFT|wxHL_DEFAULT_STYLE</style>
+							<style>wxHL_ALIGN_LEFT</style>
 						</object>
 					</object>
 				</object>
