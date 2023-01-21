@@ -135,6 +135,7 @@ class AmebaZFlash(SocInterface, ABC):
         callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         # read system data to get active OTA index
+        callback.on_message("Checking OTA index...")
         system = gen2bytes(self.flash_read_raw(0x9000, 256))
         if len(system) != 256:
             raise ValueError(

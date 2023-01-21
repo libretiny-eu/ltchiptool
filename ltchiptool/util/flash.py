@@ -53,10 +53,16 @@ class ProgressCallback:
             except StopIteration as e:
                 return e.value
 
-    def attach(self, io: IO[bytes]) -> IO[bytes]:
+    def attach(self, io: IO[bytes], limit: int = 0) -> IO[bytes]:
         setattr(io, "_read", io.read)
+        end = io.tell() + limit
 
         def read(n: int = -1) -> bytes:
+            # read at most 'limit' bytes
+            pos = io.tell()
+            n = min(n, end - pos) if limit and n > 0 else n
+            if not n:
+                return b""
             data: bytes = getattr(io, "_read")(n)
             self.on_update(len(data))
             return data

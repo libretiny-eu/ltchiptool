@@ -1,337 +1,199 @@
-# Copyright 2022 Kjell Braden
-# licensed under MIT License
+#  Copyright (c) Kuba Szczodrzyński 2023-1-21.
 
 from abc import ABC
-from dataclasses import dataclass
-from enum import IntEnum
-from io import FileIO
-from logging import error, info, warning
-from struct import pack
+from os.path import basename, isfile
 from typing import Dict, Optional
 
-from Cryptodome.Hash import HMAC, SHA256
-from elftools.elf.elffile import ELFFile
-
 from ltchiptool import SocInterface
-from ltchiptool.util.detection import Detection
-from ltchiptool.util.fileio import chname, peek
-from ltchiptool.util.intbin import pad_data, pad_up
+from ltchiptool.util.fileio import chname, isnewer, readbin
+from ltchiptool.util.intbin import pad_data
+from ltchiptool.util.logging import graph
 
-LEN_HDR_IMG = 0x60
-LEN_HDR_SEC = 0x60
-LEN_FST = 0x60
-LEN_MAPPING = 0x20
-
-MARKER_UNSIGNED = (
-    b"LibreTuyaAmebaZ2"
-    b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+from .util.models.config import ImageConfig
+from .util.models.enums import ImageType, SectionType
+from .util.models.headers import (
+    EntryHeader,
+    ImageHeader,
+    Keyblock,
+    KeyblockOTA,
+    SectionHeader,
 )
-assert len(MARKER_UNSIGNED) == 32
-
-
-def mac(key: bytes, buf: bytes) -> bytes:
-    h = HMAC.new(key, digestmod=SHA256)
-    h.update(buf)
-    return h.digest()
-
-
-class ImageType(IntEnum):
-    PARTAB = 0
-    BOOT = 1
-    FWHS_S = 2
-    FWHS_NS = 3
-    FWLS = 4
-    ISP = 5
-    VOE = 6
-    WLN = 7
-    XIP = 8
-    WOWLN = 10
-    CINIT = 11
-    CPFW = 9
-    UNKNOWN = 63
-
-
-class SectionType(IntEnum):
-    UNSET = 0x00
-    DTCM = 0x80
-    ITCM = 0x81
-    SRAM = 0x82
-    PSRAM = 0x83
-    LPDDR = 0x84
-    XIP = 0x85
-    UNKNOWN = 0xFF
-
-
-@dataclass
-class Section:
-    type: SectionType
-    data: bytes
-    section_base: int
-    entry_point: int = 0xFFFFFFFF
-
-    @property
-    def mapping_hdr(self) -> bytes:
-        return pad_data(
-            pack("<III", len(self.data), self.section_base, self.entry_point), 32, 0xFF
-        )
-
-
-@dataclass
-class SubImage:
-    type: ImageType
-    sections: list[Section]
-    serial: int
-
-
-@dataclass
-class Image:
-    subs: list[SubImage]
-    pubkeys: list[bytes]
-
-    def __post_init__(self):
-        while len(self.pubkeys) < 6:
-            self.pubkeys.append(b"\xff" * 32)
-
-        if len(self.pubkeys) > 6:
-            raise ValueError("too many pubkeys")
-
-        if not all(len(pk) == 32 for pk in self.pubkeys):
-            raise ValueError("pubkeys have invalid length")
-
-
-def build_section(
-    s: Section, img_index: int, sect_index: int, base_addr: int
-) -> bytearray:
-    base_addr += LEN_HDR_SEC
-    base_addr += LEN_MAPPING
-
-    mapping_base_actual = base_addr & 0x3FFF
-    mapping_base_expected = s.section_base & 0x3FFF
-
-    if s.type == SectionType.XIP and mapping_base_actual != mapping_base_expected:
-        if s.section_base & ~0xFF800000 == 0:
-            assert mapping_base_actual > mapping_base_expected
-            cutoff = mapping_base_actual - mapping_base_expected
-
-            s.data = s.data[cutoff:]
-            s.section_base += cutoff
-
-            info(
-                "cutting of %#x reserved data from section start, new base: %#x",
-                cutoff,
-                s.section_base,
-            )
-
-        else:
-            error(
-                "base mismatch: placed at %#x, linked for %#x",
-                base_addr,
-                s.section_base,
-            )
-
-    sect_hdr = pack(
-        "<IIBBBB4x8sB7x16s16s32x",
-        len(s.data) + 0x20,
-        0xFFFFFFFF,
-        s.type,
-        0,  # SCE disabled
-        0,  # xip page size
-        0,  # xip block size
-        bytes(range(8)),  # valid pattern
-        0,  # flags (no xip key)
-        b"\xff" * 16,  # xip_key
-        b"\xff" * 16,  # xip_iv
-    )
-    assert len(sect_hdr) == LEN_HDR_SEC
-
-    return bytearray(sect_hdr + s.mapping_hdr + pad_data(s.data, 32, 0x00))
-
-
-def build_subimage(img: SubImage, img_index: int, base_addr: int) -> bytearray:
-    fst = pack(
-        "<HHI8s4xBB10x32s16s16x",
-        1,  # enc_algo
-        1,  # hash_algo
-        0,  # part_size??
-        bytes(range(8)),  # valid pattern
-        0,  # flags (not hashed, not encrypted)
-        0,  # key_valid (no cipher key)
-        b"\xff" * 32,  # cipher_key
-        b"\xff" * 16,  # cipher_iv
-    )
-
-    assert len(fst) == LEN_FST
-    base_addr += LEN_HDR_IMG + LEN_FST
-
-    sects_raw = bytearray()
-
-    for i, s in enumerate(img.sections):
-        sect_raw = build_section(s, img_index, i, base_addr)
-        if i < len(img.sections) - 1:
-            sect_raw[4:8] = len(sect_raw).to_bytes(4, "little")
-
-        base_addr += len(sect_raw)
-        sects_raw += sect_raw
-
-    assert len(sects_raw) % 32 == 0, len(sects_raw)
-
-    hdr = pack(
-        "<IIBBBB8xI8x32s32s",
-        len(fst) + len(sects_raw),
-        0xFFFFFFFF,
-        img.type,
-        0x00,  # encrypted?
-        0x00,  # 00 for fw images, ff for parttbl and boot
-        0x00,  # user keys valid (bits 0 and 1)
-        img.serial,
-        b"\xff" * 32,  # user_key1
-        b"\xff" * 32,  # user_key2
-    )
-
-    assert len(hdr) == LEN_HDR_IMG
-
-    return bytearray(hdr + fst + sects_raw)
-
-
-def build(hash_key: bytes | None, image: Image) -> bytes:
-    buf = bytearray(32 + 32 * 6)
-
-    # pubkeys
-    buf[32 : 32 + 32 * 6] = b"".join(image.pubkeys)
-
-    for i, sub_img in enumerate(image.subs):
-        sub_raw = build_subimage(sub_img, i, len(buf))
-        # append hash placeholder
-        sub_raw += b"\xAA" * 32
-
-        # only set next pointers and padding for all but last image
-        if i < len(image.subs) - 1:
-            padlen = pad_up(len(buf) + len(sub_raw), 0x4000)
-            imglen_with_padding = len(sub_raw) + padlen
-            sub_raw[4:8] = imglen_with_padding.to_bytes(4, "little")
-            sub_raw += b"\x87" * padlen
-
-        buf += sub_raw
-
-    if hash_key:
-        # ota_signature
-        buf[0:32] = mac(hash_key, buf[7 * 32 : 7 * 32 + LEN_HDR_IMG])
-    else:
-        # marker for detect_file_type()
-        buf[0:32] = MARKER_UNSIGNED
-
-    return bytes(buf)
-
-
-def from_elf(
-    elf: ELFFile,
-    serial: int,
-    hash_key: bytes | None = None,
-    pubkeys: list[bytes] | None = None,
-) -> bytes:
-    ram_img = SubImage(
-        type=ImageType.FWHS_S,
-        serial=serial,
-        sections=[],
-    )
-    xip_imgs = []
-
-    for seg in elf.iter_segments("PT_LOAD"):
-        seg_addr = seg["p_vaddr"]
-        data = seg.data()
-
-        if not data:
-            continue
-
-        if seg_addr & 0xFFF0_0000 == 0x1000_0000:
-            if seg_addr == 0x1000_0000 and len(data) == 0x80:
-                info("dropping .ram.vector section")
-                continue
-            # RAM
-            ram_img.sections.append(
-                Section(
-                    type=SectionType.SRAM,
-                    section_base=seg_addr,
-                    data=seg.data(),
-                )
-            )
-        elif seg_addr & 0xFF00_0000 == 0x9B00_0000:
-            # XIP
-            # needs separate images for each block
-            # as flash placement in image headers needs to fit to memory mapping
-            xip_imgs.append(
-                SubImage(
-                    type=ImageType.XIP,
-                    serial=0,
-                    sections=[
-                        Section(
-                            type=SectionType.XIP,
-                            section_base=seg_addr,
-                            data=seg.data(),
-                        )
-                    ],
-                )
-            )
-        else:
-            warning("ignoring segment in unknown address space: 0x%08x", seg_addr)
-
-    # in bootloader from Dec 5, 2019, it doesn't matter which section or subimage has
-    # the entry point, as long as it is in a FWHS_S image.
-    # last entry_point != 0xffff_ffff wins
-    ram_img.sections[0].entry_point = elf["e_entry"]
-
-    img = Image([ram_img] + xip_imgs, pubkeys=pubkeys or [])
-
-    for sub in img.subs:
-        info("sub image %s", sub.type)
-        for sect in sub.sections:
-            info(
-                "  section 0x%08x (entry = 0x%08x): %s",
-                sect.section_base,
-                sect.entry_point,
-                sect.type,
-            )
-
-    return build(hash_key, img)
+from .util.models.images import Flash, Image
+from .util.models.partitions import (
+    Bootloader,
+    Firmware,
+    PartitionRecord,
+    PartitionTable,
+    Section,
+)
+from .util.models.utils import FF_32
 
 
 class AmebaZ2Binary(SocInterface, ABC):
-    def link2bin(
-        self,
-        ota1: str,
-        ota2: str,
-        args: list[str],
-    ) -> Dict[str, Optional[int]]:
-        assert not ota1 and not ota2
-        elfs = self.link2elf("", "", args)
-        assert elfs.keys() == {1}
-        elf = elfs[1]
+    @staticmethod
+    def _get_public_key(private: bytes) -> bytes:
+        from ltchiptool.util.curve25519 import X25519PrivateKey
 
-        return self.elf2bin(elf, 0)
+        key = X25519PrivateKey.from_private_bytes(private)
+        return key.public_key()
+
+    def _build_keyblock(self, config: ImageConfig, region: str):
+        if region in config.keys.keyblock:
+            return Keyblock(
+                decryption=self._get_public_key(config.keys.decryption),
+                hash=self._get_public_key(config.keys.keyblock[region]),
+            )
+        return KeyblockOTA(
+            decryption=self._get_public_key(config.keys.decryption),
+        )
+
+    def _build_section(
+        self,
+        section: ImageConfig.Section,
+        input: str,
+        nmap: Dict[str, int],
+    ):
+        toolchain = self.board.toolchain
+
+        # build output name
+        output = chname(input, f"image.{section.name}.bin")
+        # find entrypoint address
+        entrypoint = nmap[section.entry]
+        # objcopy sections to a binary file
+        output = toolchain.objcopy(input, output, section.elf)
+        # read the binary image
+        data = readbin(output)
+        # build EntryHeader
+        entry = EntryHeader(
+            address=entrypoint,
+            entry_table=[entrypoint] if section.type == SectionType.SRAM else [],
+        )
+        # build Bootloader/Section struct
+        if section.is_boot:
+            data = pad_data(data, 0x20, 0x00)
+            return Bootloader(
+                entry=entry,
+                data=data,
+            )
+        return Section(
+            header=SectionHeader(type=section.type),
+            entry=entry,
+            data=data,
+        )
 
     def elf2bin(
         self,
         input: str,
         ota_idx: int,
     ) -> Dict[str, Optional[int]]:
+        result: Dict[str, Optional[int]] = {}
+        # read AmbZ2 image config
+        config = ImageConfig(**self.board["image"])
+        # find partition offsets
+        boot_offset, _, boot_end = self.board.region("boot")
+        ota1_offset, _, ota1_end = self.board.region("ota1")
 
-        with ELFFile.load_from_path(input) as elf:
-            firmware_raw = from_elf(elf, serial=0xFFFF_FFFF)
+        # find bootloader image
+        input_boot = chname(input, "bootloader.axf")
+        if not isfile(input_boot):
+            raise FileNotFoundError("Bootloader image not found")
+        # build output name
+        output = chname(input, f"flash_is.bin")
+        out_ota1 = chname(input, f"firmware_is.bin")
+        out_boot = chname(input, f"bootloader.bin")
+        # print graph element
+        graph(1, basename(output))
+        # add to outputs
+        result[output] = 0
+        result[out_boot] = boot_offset
+        result[out_ota1] = ota1_offset
 
-        output = chname(input, "firmware_is.bin")
+        # return if images are up-to-date
+        if (
+            not isnewer(input, output)
+            and not isnewer(input, out_ota1)
+            and not isnewer(input_boot, out_boot)
+        ):
+            return result
+
+        # read addresses from input ELF
+        nmap_boot = self.board.toolchain.nm(input_boot)
+        nmap_ota1 = self.board.toolchain.nm(input)
+
+        # build the partition table
+        ptable = PartitionTable(user_data=b"\xFF" * 256)
+        for region, type in config.ptable.items():
+            offset, length, _ = self.board.region(region)
+            hash_key = config.keys.hash_keys[region]
+            ptable.partitions.append(
+                PartitionRecord(offset, length, type, hash_key=hash_key),
+            )
+        ptable = Image(
+            keyblock=self._build_keyblock(config, "part_table"),
+            header=ImageHeader(
+                type=ImageType.PARTAB,
+            ),
+            data=ptable,
+        )
+
+        # build boot image
+        region = "boot"
+        boot = Image(
+            keyblock=self._build_keyblock(config, region),
+            header=ImageHeader(
+                type=ImageType.BOOT,
+                user_keys=[config.keys.user_keys[region], FF_32],
+            ),
+            data=self._build_section(config.boot, input_boot, nmap_boot),
+        )
+
+        # build firmware (sub)images
+        firmware = []
+        region = "ota1"
+        for idx, image in enumerate(config.fw):
+            obj = Image(
+                keyblock=self._build_keyblock(config, region),
+                header=ImageHeader(
+                    type=image.type,
+                    # use FF to allow recalculating by OTA code
+                    serial=0xFFFFFFFF if idx == 0 else 0,
+                    user_keys=[FF_32, config.keys.user_keys[region]]
+                    if idx == 0
+                    else [FF_32, FF_32],
+                ),
+                data=Firmware(
+                    sections=[
+                        self._build_section(section, input, nmap_ota1)
+                        for section in image.sections
+                    ],
+                ),
+            )
+            # remove empty sections
+            obj.data.sections = [s for s in obj.data.sections if s.data]
+            firmware.append(obj)
+            if image.type != ImageType.XIP:
+                continue
+            # update SCE keys for XIP images
+            for section in obj.data.sections:
+                section.header.sce_key = config.keys.xip_sce_key
+                section.header.sce_iv = config.keys.xip_sce_iv
+
+        # build main flash image
+        flash = Flash(
+            ptable=ptable,
+            boot=boot,
+            firmware=firmware,
+        )
+
+        # write all parts to files
+        data = flash.pack(hash_key=config.keys.hash_keys["part_table"])
         with open(output, "wb") as f:
-            f.write(firmware_raw)
-
-        # TODO None ok here?
-        return {output: None}
-
-    def detect_file_type(
-        self,
-        file: FileIO,
-        length: int,
-    ) -> Optional[Detection]:
-        data = peek(file, size=32)
-        if data == MARKER_UNSIGNED:
-            return Detection.make_unsupported("Realtek AmebaZ2 unsigned OTA image")
-
-        return None
+            f.write(data)
+        with open(out_boot, "wb") as f:
+            boot = data[boot_offset:boot_end].rstrip(b"\xFF")
+            boot = pad_data(boot, 0x20, 0xFF)
+            f.write(boot)
+        with open(out_ota1, "wb") as f:
+            ota1 = data[ota1_offset:ota1_end]
+            f.write(ota1)
+        return result
