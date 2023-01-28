@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from io import BytesIO
+from logging import error
 from typing import Dict, Optional, Tuple
 
 from ltchiptool import Board
@@ -64,7 +65,9 @@ class UploadContext:
 
     def get_offset(self, part: str, offs: int) -> Optional[int]:
         (start, length, end) = self.board.region(part)
+        print(part, start, length, end, offs)
         if offs >= length:
+            error(f"Partition '{part}' rel. offset 0x{offs:X} larger than 0x{length:X}")
             return None
         return start + offs
 
