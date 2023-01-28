@@ -209,10 +209,10 @@ def main(*argv):
         rbl = f.read(96)
         rbl = RBL.deserialize(rbl)
         info(
-            f" - found '{rbl.name}' ({rbl.version}),",
-            f"size {rbl.raw_size},",
-            f"compression {rbl.compression.name},",
-            f"encryption {rbl.encryption.name}",
+            f" - found '{rbl.name}' ({rbl.version}), "
+            f"size {rbl.raw_size}, "
+            f"compression {rbl.compression.name}, "
+            f"encryption {rbl.encryption.name}"
         )
         gen = bk.ota_unpackage(f, rbl, key=args.key, iv=args.iv)
 

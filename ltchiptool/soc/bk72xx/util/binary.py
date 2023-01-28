@@ -4,8 +4,6 @@ import gzip
 from binascii import crc32
 from typing import IO, Union
 
-from Cryptodome.Cipher import AES
-
 from ltchiptool.util.bitint import BitInt
 from ltchiptool.util.crc16 import CRC16
 from ltchiptool.util.intbin import (
@@ -142,6 +140,18 @@ class BekenBinary:
         # yield RBL with CRC16
         yield from self.crc(rbl.serialize(), type_rbl)
 
+    @staticmethod
+    def _make_aes(key: bytes, iv: bytes):
+        try:
+            from Cryptodome.Cipher import AES
+        except (ImportError, ModuleNotFoundError):
+            raise ImportError(
+                "PyCryptodomex is required for OTA encryption/decryption. "
+                "Install ltchiptool with 'crypto' extras: "
+                "pip install ltchiptool[crypto]",
+            )
+        return AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+
     def ota_package(
         self,
         f: IO[bytes],
@@ -169,7 +179,7 @@ class BekenBinary:
         if rbl.encryption == OTAEncryption.AES256:
             padding = pad_up(len(data), 16)
             data += bytes([padding] * padding)
-            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            aes = self._make_aes(key=key, iv=iv)
             data = aes.encrypt(data)
         elif rbl.encryption != OTAEncryption.NONE:
             raise ValueError("Unsupported encryption algorithm")
@@ -196,7 +206,7 @@ class BekenBinary:
         data = f.read()
 
         if rbl.encryption == OTAEncryption.AES256:
-            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            aes = self._make_aes(key=key, iv=iv)
             data = aes.decrypt(data)
             # trim AES padding
             padding_bytes = data[-1:]
