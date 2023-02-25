@@ -73,12 +73,10 @@ class FlashPanel(BasePanel):
         self.Cancel.SetNote("")
 
         families = set()
-        family_codes = SocInterface.get_family_codes()
+        family_names = SocInterface.get_family_names()
         for family in Family.get_all():
-            if family.code in family_codes and family.description:
+            if family.name in family_names:
                 families.add(family.description)
-            if family.parent_code in family_codes:
-                families.add(family.parent_description or family.description)
         self.Family.Set(sorted(families))
 
     def GetSettings(self) -> dict:
@@ -87,7 +85,7 @@ class FlashPanel(BasePanel):
             baudrate=self.baudrate,
             operation=self.operation.value,
             auto_detect=self.auto_detect,
-            family=self.family and self.family.short_name,
+            family=self.family and self.family.name,
             file=self.file,
             offset=self.offset,
             skip=self.skip,
@@ -116,7 +114,7 @@ class FlashPanel(BasePanel):
         self.operation = FlashOp(operation)
         self.auto_detect = auto_detect
         try:
-            self.family = Family.get(short_name=family)
+            self.family = Family.get(name=family)
         except ValueError:
             self.family = None
         self.file = file
@@ -323,7 +321,7 @@ class FlashPanel(BasePanel):
     @property
     def family(self):
         try:
-            return Family.get(description=self.Family.GetValue(), by_parent=True)
+            return Family.get(description=self.Family.GetValue())
         except ValueError:
             return None
 
@@ -331,10 +329,7 @@ class FlashPanel(BasePanel):
     def family(self, value: Family | None):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
-            if value.description:
-                self.Family.SetValue(value.description)
-            if value.parent_description:
-                self.Family.SetValue(value.parent_description)
+            self.Family.SetValue(value.description)
         self.DoUpdate(self.Family)
 
     @property

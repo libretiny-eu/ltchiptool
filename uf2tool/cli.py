@@ -28,7 +28,11 @@ def cli():
     default="out.uf2",
 )
 @click.option(
-    "-f", "--family", help="Family name", required=True, type=FamilyParamType()
+    "-f",
+    "--family",
+    help="Family name",
+    required=True,
+    type=FamilyParamType(require_chip=True),
 )
 @click.option("-b", "--board", help="Board name/code")
 @click.option("-v", "--version", help="LibreTuya core version")

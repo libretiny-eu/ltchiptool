@@ -16,25 +16,25 @@ class SocInterface(ABC):
     @classmethod
     def get(cls, family: Family) -> "SocInterface":
         # fmt: off
-        if family.parent_code == "bk72xx":
+        if family.is_child_of("beken-72xx"):
             from .bk72xx import BK72XXMain
             return BK72XXMain(family)
-        if family.code == "ambz":
+        if family.is_child_of("realtek-ambz"):
             from .ambz import AmebaZMain
             return AmebaZMain(family)
-        if family.code == "ambz2":
+        if family.is_child_of("realtek-ambz2"):
             from .ambz2 import AmebaZ2Main
             return AmebaZ2Main(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
     @classmethod
-    def get_family_codes(cls) -> List[str]:
-        """Return family codes (or parent codes) implemented in SocInterface."""
+    def get_family_names(cls) -> List[str]:
+        """Return family names (or parent names) implemented in SocInterface."""
         return [
-            "bk72xx",
-            "ambz",
-            "ambz2",
+            "beken-72xx",
+            "realtek-ambz",
+            "realtek-ambz2",
         ]
 
     #########################
