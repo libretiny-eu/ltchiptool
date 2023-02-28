@@ -79,7 +79,7 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		}
 
 		if (str_dest) {
-			*str_dest = (char *)zalloc(tag_len + 1);
+			*str_dest = calloc(tag_len + 1, 1);
 			memcpy(*str_dest, tag, tag_len);
 		}
 		// align position to 4 bytes

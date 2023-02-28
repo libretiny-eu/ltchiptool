@@ -2,8 +2,11 @@
 
 #pragma once
 
-// include family stdlib APIs
-#include <Arduino.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "uf2binpatch.h"
 #include "uf2types.h"

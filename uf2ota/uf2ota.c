@@ -3,14 +3,14 @@
 #include "uf2priv.h"
 
 uf2_ota_t *uf2_ctx_init(uint8_t ota_idx, uint32_t family_id) {
-	uf2_ota_t *ctx = (uf2_ota_t *)zalloc(sizeof(uf2_ota_t));
+	uf2_ota_t *ctx = calloc(1, sizeof(uf2_ota_t));
 	ctx->ota_idx   = ota_idx;
 	ctx->family_id = family_id;
 	return ctx;
 }
 
 uf2_info_t *uf2_info_init() {
-	uf2_info_t *info = (uf2_info_t *)zalloc(sizeof(uf2_info_t));
+	uf2_info_t *info = calloc(1, sizeof(uf2_info_t));
 	return info;
 }
 
