@@ -19,6 +19,7 @@ class Family:
     description: str
     id: Optional[int] = None
     short_name: Optional[str] = None
+    package: Optional[str] = None
     mcus: List[str] = field(default_factory=lambda: [])
     children: List["Family"] = field(default_factory=lambda: [])
 
@@ -107,6 +108,12 @@ class Family:
     def is_chip(self) -> bool:
         return self.id is not None and self.short_name is not None
 
+    @property
+    def is_supported(self) -> bool:
+        from ltchiptool import SocInterface
+
+        return any(self.is_child_of(name) for name in SocInterface.get_family_names())
+
     def is_child_of(self, name: str) -> bool:
         if self.name == name:
             return True
@@ -128,6 +135,14 @@ class Family:
     @property
     def parent_description(self) -> Optional[str]:
         return self.parent and self.parent.description
+
+    @property
+    def target_package(self) -> Optional[str]:
+        return self.package or self.parent and self.parent.target_package
+
+    @property
+    def inheritance(self) -> List["Family"]:
+        return (self.parent.inheritance if self.parent else []) + [self]
 
     def dict(self) -> dict:
         return dict(

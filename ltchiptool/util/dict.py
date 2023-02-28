@@ -22,7 +22,7 @@ class RecursiveDict(dict):
     def __setitem__(self, key, value):
         if "." not in key:
             return super().__setitem__(key, value)
-        set_(self, key, value)
+        set_(self, key, value, newtype=RecursiveDict)
 
     def __delitem__(self, key):
         if "." not in key:

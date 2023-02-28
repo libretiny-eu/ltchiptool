@@ -48,7 +48,6 @@ def boards():
 
 @cli.command(help="List families")
 def families():
-    supported_names = SocInterface.get_family_names()
     table = PrettyTable()
     table.field_names = [
         "Title",
@@ -56,13 +55,14 @@ def families():
         "Code",
         "Short name / ID",
         "Supported?",
+        "Arduino?",
+        "SDK package",
     ]
     table.align = "l"
 
     def add_families(families: List[Family], level: int):
         indent = (" " + "|   " * (level - 1) + "+-- ") if level else ""
         for family in families:
-            is_supported = any(family.is_child_of(name) for name in supported_names)
             table.add_row(
                 [
                     indent + family.description,
@@ -71,7 +71,13 @@ def families():
                     f"{family.short_name.upper()} / 0x{family.id:08X}"
                     if family.short_name and family.id
                     else "-",
-                    "-" if not family.id else "Yes" if is_supported else "No",
+                    "-" if not family.id else "Yes" if family.is_supported else "No",
+                    "-"
+                    if not family.id
+                    else "Yes"
+                    if family.is_supported and family.has_arduino_core
+                    else "No",
+                    family.target_package or "-",
                 ]
             )
             add_families(family.children, level + 1)
