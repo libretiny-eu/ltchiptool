@@ -110,9 +110,13 @@ class SocInterface(ABC):
         """Change device connection timeout values."""
         raise NotImplementedError()
 
+    def flash_sw_reset(self) -> None:
+        """Perform a software reset by transmitting a magic word."""
+        pass  # Optional; do not fail here
+
     def flash_hw_reset(self) -> None:
         """Perform a hardware reset using UART GPIO lines."""
-        raise NotImplementedError()
+        pass  # Optional; do not fail here
 
     def flash_connect(self) -> None:
         """Link with the chip for read/write operations. Do nothing if

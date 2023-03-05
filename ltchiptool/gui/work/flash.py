@@ -93,10 +93,14 @@ class FlashThread(BaseThread):
                     # guide the user how to reset the chip
                     for line in format_flash_guide(self.soc):
                         LoggingHandler.get().emit_string("I", line, color="bright_blue")
-                case _ if elapsed and elapsed % 4 == 0:
-                    # HW-reset every 2.0 seconds
+                case _ if elapsed and elapsed % 8 == 0:
+                    # HW-reset every 4.0 seconds
                     self.callback.on_message("Hardware reset...")
                     self.soc.flash_hw_reset()
+                case _ if elapsed and elapsed % 8 == 4:
+                    # SW-reset every 4.0 seconds
+                    self.callback.on_message("Software reset...")
+                    self.soc.flash_sw_reset()
                 case _:
                     self.callback.on_message("Connecting to the chip")
 
