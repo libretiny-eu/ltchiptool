@@ -62,11 +62,11 @@ class BK72XXBinary(SocInterface, ABC):
         rbl_offs = app_offs + to_offset(app_size) - 102
 
         # build output names
-        out_rbl = chname(input, f"{mcu}_app_0x{app_offs:06X}.rbl")
-        out_crc = chname(input, f"{mcu}_app_0x{app_offs:06X}.crc")
-        out_rblh = chname(input, f"{mcu}_app_0x{rbl_offs:06X}.rblh")
-        out_ota = chname(input, f"{mcu}_app.ota.rbl")
-        out_ug = chname(input, f"{mcu}_app.ota.ug.bin")
+        out_rbl = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.rbl")
+        out_crc = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.crc")
+        out_rblh = chname(input, f"image_{mcu}_app.0x{rbl_offs:06X}.rblh")
+        out_ota = chname(input, f"image_{mcu}_app.ota.rbl")
+        out_ug = chname(input, f"image_{mcu}_app.ota.ug.bin")
         fw_bin = chext(input, "bin")
         outputs = [out_rbl, out_crc, out_rblh, out_ota, out_ug]
         # print graph element

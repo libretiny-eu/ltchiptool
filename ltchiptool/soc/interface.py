@@ -4,6 +4,7 @@ from abc import ABC
 from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
+from ltchiptool.models import OTAType
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from uf2tool import UploadContext
 
@@ -52,8 +53,13 @@ class SocInterface(ABC):
         raise NotImplementedError()
 
     @property
-    def elf_has_dual_ota(self) -> bool:
+    def ota_type(self) -> Optional[OTAType]:
         raise NotImplementedError()
+
+    @property
+    def ota_supports_format_1(self) -> bool:
+        """Returns True if the chip family should support legacy OTA."""
+        return False
 
     ##################################
     # Linking - ELF and BIN building #

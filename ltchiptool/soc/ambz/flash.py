@@ -8,7 +8,7 @@ from typing import IO, Generator, List, Optional, Union
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
-from uf2tool import UploadContext
+from uf2tool import OTAScheme, UploadContext
 
 from .util.rtltool import CAN, RTL_ROM_BAUD, RTLXMD
 
@@ -172,7 +172,9 @@ class AmebaZFlash(SocInterface, ABC):
                 )
 
         # collect continuous blocks of data
-        parts = ctx.collect(ota_idx=ota_idx)
+        parts = ctx.collect_data(
+            OTAScheme.FLASHER_DUAL_1 if ota_idx == 1 else OTAScheme.FLASHER_DUAL_2
+        )
         callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
 
         callback.on_message(f"OTA {ota_idx}")

@@ -7,6 +7,7 @@ from os.path import basename, isfile
 from shutil import copyfile
 from typing import Dict, List, Optional, Tuple
 
+from ltchiptool.models import OTAType
 from ltchiptool.util.fileio import chext
 from ltchiptool.util.logging import graph
 
@@ -52,7 +53,7 @@ class SocInterfaceCommon(SocInterface, ABC):
     ) -> Dict[int, str]:
         toolchain = self.board.toolchain
 
-        if self.elf_has_dual_ota:
+        if self.ota_type == OTAType.DUAL:
             # process linker arguments for dual-OTA chips
             elfs = ldargs_parse(args, ota1, ota2)
         else:
@@ -68,7 +69,7 @@ class SocInterfaceCommon(SocInterface, ABC):
             checkfile(elf)
             ota_idx += 1
 
-        if self.elf_has_dual_ota:
+        if self.ota_type == OTAType.DUAL:
             # copy OTA1 file as firmware.elf to make PIO understand it
             elf, _ = ldargs_parse(args, None, None)[0]
             copyfile(elfs[0][0], elf)

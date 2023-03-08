@@ -34,10 +34,11 @@ class Family:
         global LT_FAMILIES
         if LT_FAMILIES:
             return LT_FAMILIES
+        families = lt_read_json("families.json")
+        if not isinstance(families, dict):
+            raise ValueError("LT version is incompatible (too old)")
         LT_FAMILIES = [
-            cls(name=k, **v)
-            for k, v in lt_read_json("families.json").items()
-            if isinstance(v, dict)
+            cls(name=k, **v) for k, v in families.items() if isinstance(v, dict)
         ]
         # attach parents and children to all families
         for family in LT_FAMILIES:

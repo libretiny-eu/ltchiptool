@@ -1,7 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-05-27.
 
 from hashlib import md5
-from io import BytesIO
 from logging import info
 from typing import IO, Dict, List
 
@@ -144,14 +143,8 @@ class UF2:
             self.write_header()
             self.seq += 1
 
-        bio = BytesIO()
         for bl in self.data:
             bl.block_count = self.block_count
             bl.block_seq = self.seq
-            bio.write(bl.encode())
-            if self.seq % 128 == 0:
-                # write the buffer every 64 KiB
-                self.f.write(bio.getvalue())
-                bio = BytesIO()
+            self.f.write(bl.encode())
             self.seq += 1
-        self.f.write(bio.getvalue())

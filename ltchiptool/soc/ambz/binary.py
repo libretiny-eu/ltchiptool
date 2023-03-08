@@ -58,10 +58,10 @@ class AmebaZBinary(SocInterface, ABC):
         ram_end = nmap["__ram_image2_text_end__"]
         xip_start = nmap["__flash_text_start__"] - 0x8000020
         # build output name
-        output = chname(input, f"image_0x{xip_start:06X}.ota{ota_idx}.bin")
-        out_ram = chname(input, f"ota{ota_idx}.ram_2.r.bin")
-        out_xip = chname(input, f"ota{ota_idx}.xip_image2.bin")
-        out_rdp = chname(input, f"ota{ota_idx}.rdp.bin")
+        output = chname(input, f"image_ota{ota_idx}.0x{xip_start:06X}.bin")
+        out_ram = chname(input, f"image_ota{ota_idx}.ram_2.r.bin")
+        out_xip = chname(input, f"image_ota{ota_idx}.xip_image2.bin")
+        out_rdp = chname(input, f"image_ota{ota_idx}.rdp.bin")
         # print graph element
         graph(1, basename(output))
         # objcopy required images
