@@ -50,6 +50,7 @@ class FlashThread(BaseThread):
         self.length = length
         self.verify = verify
         self.uf2 = uf2
+        self.ctx = None
         self.on_chip_info = on_chip_info
 
     def run_impl(self):
@@ -61,6 +62,9 @@ class FlashThread(BaseThread):
         self.callback = ClickProgressCallback()
         with self.callback:
             try:
+                # create UploadContext before linking, to validate the package first
+                self.ctx = UploadContext(self.uf2) if self.uf2 else None
+
                 self._link()
                 if self.operation == FlashOp.WRITE:
                     self._do_write()
@@ -79,7 +83,7 @@ class FlashThread(BaseThread):
 
     def stop(self):
         super().stop()
-        if self.uf2:
+        if self.ctx:
             # try to break UF2 flashing
             self.soc.flash_disconnect()
 
@@ -122,10 +126,9 @@ class FlashThread(BaseThread):
             return
         self.callback.on_message(None)
 
-        if self.uf2:
-            ctx = UploadContext(self.uf2)
+        if self.ctx:
             self.soc.flash_write_uf2(
-                ctx=ctx,
+                ctx=self.ctx,
                 verify=self.verify,
                 callback=self.callback,
             )

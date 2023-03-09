@@ -50,6 +50,7 @@ class UF2Writer:
         self.uf2.put_int8(Tag.OTA_FORMAT_2, 2)
         self.uf2.put_str(Tag.DEVICE, "LibreTuya")
 
+        schemes = set()
         for image in images:
             # local tags (for this image only)
             tags = {}
@@ -103,6 +104,11 @@ class UF2Writer:
                     f"Images must have same lengths ({len(data1)} vs {len(data2)})"
                 )
 
+            for scheme, part in image.schemes.items():
+                # collect all used scheme in the package
+                if part:
+                    schemes.add(scheme)
+
             for i in range(0, len(data1), 256):
                 block1 = data1[i : i + 256]
                 block2 = data2[i : i + 256]
@@ -125,4 +131,12 @@ class UF2Writer:
                 )
                 # store tags for the first block only
                 tags = {}
+
+        # add a tag indicating schemes present in the package
+        part_list = ""
+        for scheme in OTAScheme:
+            part_list += "1" if scheme in schemes else "0"
+        assert len(part_list) == 6
+        self.uf2.tags[Tag.OTA_PART_LIST] = bytes.fromhex(part_list)
+
         self.uf2.write()

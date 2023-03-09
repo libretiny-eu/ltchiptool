@@ -159,6 +159,7 @@ def cli(
     family = detection.family
     soc = detection.soc
     uf2 = detection.uf2
+    ctx = UploadContext(uf2) if uf2 else None
 
     # 1. file type found using SocInterface
     # 2. flashing in Raw mode (-f + -s)
@@ -173,8 +174,7 @@ def cli(
 
     graph(0, f"Writing '{file.name}'")
     callback = ClickProgressCallback()
-    if uf2:
-        ctx = UploadContext(uf2)
+    if ctx:
         graph(1, ctx.fw_name, ctx.fw_version, "@", ctx.build_date, "->", ctx.board_name)
         soc.flash_write_uf2(ctx, verify=check, callback=callback)
     else:

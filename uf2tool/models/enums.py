@@ -15,7 +15,8 @@ class Tag(IntEnum):
     OTA_FORMAT_1 = 0x5D57D0
     OTA_FORMAT_2 = 0x6C8492
     # LibreTuya custom tags
-    OTA_PART_INFO = 0xC0EE0C  # partition names for each target type
+    OTA_PART_LIST = 0x6EC68A  # list of OTA schemes this package is usable in
+    OTA_PART_INFO = 0xC0EE0C  # partition names for each OTA schemes
     BOARD = 0xCA25C8  # board name (lowercase code)
     FIRMWARE = 0x00DE43  # firmware description / name
     BUILD_DATE = 0x822F30  # build date/time as Unix timestamp

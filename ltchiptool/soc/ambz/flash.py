@@ -99,7 +99,8 @@ class AmebaZFlash(SocInterface, ABC):
             self.rtl._port.close()
             self.rtl._port = None
         self.rtl = None
-        self.conn.linked = False
+        if self.conn:
+            self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         return "Realtek RTL87xxB"

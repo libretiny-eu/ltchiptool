@@ -82,7 +82,8 @@ class BK72XXFlash(SocInterface, ABC):
         if self.bk:
             self.bk.close()
         self.bk = None
-        self.conn.linked = False
+        if self.conn:
+            self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
