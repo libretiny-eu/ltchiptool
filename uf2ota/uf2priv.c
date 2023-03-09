@@ -23,9 +23,6 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 	if (block->has_md5)
 		tags_len -= 24;
 
-	char *part1 = NULL;
-	char *part2 = NULL;
-
 	uf2_tag_type_t type;
 	while (tags_pos < tags_len) {
 		uint8_t len = uf2_read_tag(tags_start + tags_pos, &type);
@@ -36,12 +33,9 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		uint8_t tag_len = len - 4;
 
 		char **str_dest = NULL; // char* to copy the tag into
+		uf2_err_t err	= UF2_ERR_OK;
 
 		switch (type) {
-			case UF2_TAG_OTA_VERSION:
-				if (tag[0] != 1)
-					return UF2_ERR_OTA_VER;
-				break;
 			case UF2_TAG_FIRMWARE:
 				if (info)
 					str_dest = &(info->fw_name);
@@ -58,17 +52,15 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 				if (info)
 					str_dest = &(info->board);
 				break;
-			case UF2_TAG_HAS_OTA1:
-				ctx->has_ota1 = tag[0];
+
+			case UF2_TAG_OTA_FORMAT_2:
+				ctx->is_format_ok = true;
 				break;
-			case UF2_TAG_HAS_OTA2:
-				ctx->has_ota2 = tag[0];
+			case UF2_TAG_OTA_PART_LIST:
+				err = uf2_parse_part_list(ctx, tag, tag_len);
 				break;
-			case UF2_TAG_PART_1:
-				str_dest = &(part1);
-				break;
-			case UF2_TAG_PART_2:
-				str_dest = &(part2);
+			case UF2_TAG_OTA_PART_INFO:
+				err = uf2_parse_part_info(ctx, tag, tag_len);
 				break;
 			case UF2_TAG_BINPATCH:
 				ctx->binpatch	  = tag;
@@ -78,6 +70,9 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 				break;
 		}
 
+		if (err != UF2_ERR_OK)
+			return err;
+
 		if (str_dest) {
 			*str_dest = calloc(tag_len + 1, 1);
 			memcpy(*str_dest, tag, tag_len);
@@ -85,19 +80,6 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		// align position to 4 bytes
 		tags_pos += (((len - 1) / 4) + 1) * 4;
 	}
-
-	if (part1 && part2) {
-		// update current target partition
-		uf2_err_t err = uf2_update_parts(ctx, part1, part2);
-		if (err)
-			return err;
-	} else if (part1 || part2) {
-		// only none or both partitions can be specified
-		return UF2_ERR_PART_ONE;
-	}
-
-	free(part1);
-	free(part2);
 
 	return UF2_ERR_OK;
 }
@@ -113,34 +95,54 @@ uint8_t uf2_read_tag(const uint8_t *data, uf2_tag_type_t *type) {
 	return len;
 }
 
-uf2_err_t uf2_update_parts(uf2_ota_t *ctx, char *part1, char *part2) {
-	// reset both target partitions
-	ctx->part1 = NULL;
-	ctx->part2 = NULL;
-	// reset offsets as they probably don't apply to this partition
-	ctx->erased_offset = 0;
-	ctx->erased_length = 0;
-
-	if (part1[0]) {
-		ctx->part1 = (fal_partition_t)fal_partition_find(part1);
-		if (!ctx->part1)
-			return UF2_ERR_PART_404;
-	}
-	if (part2[0]) {
-		ctx->part2 = (fal_partition_t)fal_partition_find(part2);
-		if (!ctx->part2)
-			return UF2_ERR_PART_404;
-	}
-
+uf2_err_t uf2_parse_part_list(uf2_ota_t *ctx, const uint8_t *tag, uint8_t tag_len) {
+	if (tag_len < 3)
+		return UF2_ERR_OTA_WRONG;
+	uint8_t has_data = tag[ctx->scheme_byte] >> ctx->scheme_shift;
+	if (has_data == 0)
+		return UF2_ERR_OTA_WRONG;
 	return UF2_ERR_OK;
 }
 
-fal_partition_t uf2_get_target_part(uf2_ota_t *ctx) {
-	if (ctx->ota_idx == 1)
-		return ctx->part1;
-	if (ctx->ota_idx == 2)
-		return ctx->part2;
-	return NULL;
+uf2_err_t uf2_parse_part_info(uf2_ota_t *ctx, const uint8_t *tag, uint8_t tag_len) {
+	// reset the target partition
+	ctx->part = NULL;
+	// reset offsets as they probably don't apply to this partition
+	ctx->erased_offset = 0;
+	ctx->erased_length = 0;
+	// indicate that OTA_PART_INFO has been parsed
+	ctx->is_part_set = true;
+
+	if (tag_len < 3)
+		return UF2_ERR_PART_INVALID;
+
+	uint8_t index = tag[ctx->scheme_byte] >> ctx->scheme_shift;
+	if (index == 0)
+		return UF2_ERR_OK;
+	if (index > 6)
+		return UF2_ERR_PART_INVALID;
+
+	char *part_name = (char *)tag + 3;
+	char *tag_end	= (char *)tag + tag_len;
+
+	uint8_t current_index = 0;
+	while (tag_end > part_name) {
+		char *part_end = memchr(part_name, '\0', tag_end - part_name);
+		if (!part_end || part_name == part_end)
+			return UF2_ERR_PART_INVALID;
+		current_index++;
+		if (current_index == index && part_end < tag_end)
+			break;
+		part_name = part_end + 1;
+	}
+	if (current_index != index)
+		return UF2_ERR_PART_INVALID;
+
+	ctx->part = fal_partition_find(part_name);
+	if (!ctx->part)
+		return UF2_ERR_PART_404;
+
+	return UF2_ERR_OK;
 }
 
 bool uf2_is_erased(uf2_ota_t *ctx, uint32_t offset, uint32_t length) {

@@ -2,10 +2,14 @@
 
 #include "uf2priv.h"
 
-uf2_ota_t *uf2_ctx_init(uint8_t ota_idx, uint32_t family_id) {
+uf2_ota_t *uf2_ctx_init(uf2_ota_scheme_t scheme, uint32_t family_id) {
 	uf2_ota_t *ctx = calloc(1, sizeof(uf2_ota_t));
-	ctx->ota_idx   = ota_idx;
 	ctx->family_id = family_id;
+
+	ctx->scheme_byte	 = scheme >> 1;
+	ctx->scheme_shift	 = (scheme & 1 ^ 1) * 4;
+	ctx->scheme_binpatch = scheme == UF2_SCHEME_DEVICE_DUAL_2 || scheme == UF2_SCHEME_FLASHER_DUAL_2;
+
 	return ctx;
 }
 
@@ -48,9 +52,8 @@ uf2_err_t uf2_parse_header(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info)
 	uf2_err_t err = uf2_parse_block(ctx, block, info);
 	if (err)
 		return err;
-
-	if ((ctx->ota_idx == 1 && !ctx->has_ota1) || !ctx->has_ota2)
-		return UF2_ERR_OTA_WRONG;
+	if (!ctx->is_format_ok)
+		return UF2_ERR_OTA_VER;
 	return UF2_ERR_OK;
 }
 
@@ -65,16 +68,15 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 	if (err)
 		return err;
 
-	if (!ctx->part1 && !ctx->part2)
-		// no partitions set at all
+	if (!ctx->is_part_set)
+		// missing OTA_PART_INFO tag
 		return UF2_ERR_PART_UNSET;
-
-	fal_partition_t part = uf2_get_target_part(ctx);
+	const struct fal_partition *part = ctx->part;
 	if (!part)
-		// image is not for current OTA scheme
+		// this block is not for current OTA scheme
 		return UF2_ERR_IGNORE;
 
-	if (ctx->ota_idx == 2 && ctx->binpatch_len) {
+	if (ctx->scheme_binpatch && ctx->binpatch_len) {
 		// apply binpatch
 		err = uf2_binpatch(block->data, ctx->binpatch, ctx->binpatch_len);
 		if (err)
@@ -96,5 +98,6 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 		return UF2_ERR_WRITE_FAILED;
 	if (ret != block->len)
 		return UF2_ERR_WRITE_LENGTH;
+	ctx->written += ret;
 	return UF2_ERR_OK;
 }

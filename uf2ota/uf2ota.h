@@ -11,11 +11,11 @@ extern "C" {
 /**
  * @brief Create an UF2 OTA context.
  *
- * @param ota_idx target OTA index
+ * @param scheme the device's target OTA scheme
  * @param family_id expected family ID
  * @return uf2_ota_t* heap-allocated structure
  */
-uf2_ota_t *uf2_ctx_init(uint8_t ota_idx, uint32_t family_id);
+uf2_ota_t *uf2_ctx_init(uf2_ota_scheme_t scheme, uint32_t family_id);
 
 /**
  * @brief Create an UF2 Info structure.
