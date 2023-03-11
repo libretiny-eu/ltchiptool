@@ -2,6 +2,7 @@
 
 import gzip
 from binascii import crc32
+from logging import debug
 from typing import IO, Union
 
 from ltchiptool.util.bitint import BitInt
@@ -144,13 +145,27 @@ class BekenBinary:
     def _make_aes(key: bytes, iv: bytes):
         try:
             from Cryptodome.Cipher import AES
+
+            debug("Using PyCryptodomex for OTA encryption")
+            return AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
         except (ImportError, ModuleNotFoundError):
-            raise ImportError(
-                "PyCryptodomex is required for OTA encryption/decryption. "
-                "Install ltchiptool with 'crypto' extras: "
-                "pip install ltchiptool[crypto]",
-            )
-        return AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            from pyaes import AESModeOfOperationCBC, Decrypter, Encrypter
+
+            debug("Using PyAES for OTA encryption")
+            aes = AESModeOfOperationCBC(key=key, iv=iv)
+            encrypter = Encrypter(aes)
+            decrypter = Decrypter(aes)
+
+            class Wrap:
+                @staticmethod
+                def encrypt(data):
+                    return encrypter.feed(data) + encrypter.feed()
+
+                @staticmethod
+                def decrypt(data):
+                    return decrypter.feed(data) + decrypter.feed()
+
+            return Wrap()
 
     def ota_package(
         self,
