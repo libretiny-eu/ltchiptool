@@ -30,6 +30,7 @@ class MainFrame(wx.Frame):
         super().__init__(*args, **kw)
         sys.excepthook = self.OnException
         threading.excepthook = self.OnException
+        LoggingHandler.get().exception_hook = self.ShowExceptionMessage
 
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             xrc = join(sys._MEIPASS, "ltchiptool.xrc")
@@ -138,6 +139,14 @@ class MainFrame(wx.Frame):
             LoggingHandler.get().emit_exception(args[1])
         else:
             LoggingHandler.get().emit_exception(args[0].exc_value)
+
+    @staticmethod
+    def ShowExceptionMessage(e):
+        wx.MessageBox(
+            message=str(e),
+            caption="Error",
+            style=wx.ICON_ERROR,
+        )
 
     def OnShow(self, *_):
         settings = self._settings

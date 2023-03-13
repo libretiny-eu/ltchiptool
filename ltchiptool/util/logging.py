@@ -21,6 +21,7 @@ class LoggingHandler(StreamHandler):
         "E": "bright_red",
         "C": "bright_magenta",
     }
+    exception_hook: Callable[[Exception], None] = None
 
     @staticmethod
     def get() -> "LoggingHandler":
@@ -127,6 +128,8 @@ class LoggingHandler(StreamHandler):
                 self.tb_echo(tb)
             tb = tb.tb_next
         self.tb_echo(tb)
+        if self.exception_hook:
+            self.exception_hook(e)
 
 
 def log_setup_click_bars():

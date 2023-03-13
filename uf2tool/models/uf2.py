@@ -64,7 +64,7 @@ class UF2:
     def put_int8(self, tag: Tag, value: int):
         self.tags[tag] = intto8(value)
 
-    def read(self, block_tags: bool = True):
+    def read(self, block_tags: bool = True, count: int = 0):
         while True:
             data = self.f.read(512)
             if len(data) not in [0, 512]:
@@ -89,6 +89,9 @@ class UF2:
                 self.tags.update(block.tags)
             if block.length and not block.flags.not_main_flash:
                 self.data.append(block)
+
+            if count and self.seq >= count:
+                break
 
     def dump(self):
         info(f"Family: {self.family.short_name} / {self.family.description}")

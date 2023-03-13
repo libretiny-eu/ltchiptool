@@ -36,7 +36,7 @@ class FlashThread(BaseThread):
         skip: int,
         length: int | None,
         verify: bool,
-        uf2: UF2 | None,
+        ctx: UploadContext | None,
         on_chip_info: Callable[[str], None],
     ):
         super().__init__()
@@ -49,8 +49,7 @@ class FlashThread(BaseThread):
         self.skip = skip
         self.length = length
         self.verify = verify
-        self.uf2 = uf2
-        self.ctx = None
+        self.ctx = ctx
         self.on_chip_info = on_chip_info
 
     def run_impl(self):
@@ -62,9 +61,6 @@ class FlashThread(BaseThread):
         self.callback = ClickProgressCallback()
         with self.callback:
             try:
-                # create UploadContext before linking, to validate the package first
-                self.ctx = UploadContext(self.uf2) if self.uf2 else None
-
                 self._link()
                 if self.operation == FlashOp.WRITE:
                     self._do_write()
@@ -74,11 +70,7 @@ class FlashThread(BaseThread):
                 print(e)
                 if self.should_run():
                     # show exceptions only if not cancelled
-                    wx.MessageBox(
-                        message=str(e),
-                        caption="Error",
-                        style=wx.ICON_ERROR,
-                    )
+                    LoggingHandler.get().emit_exception(e)
         self.soc.flash_disconnect()
 
     def stop(self):

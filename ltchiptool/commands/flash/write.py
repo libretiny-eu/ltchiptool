@@ -158,8 +158,7 @@ def cli(
         graph(0, f"Detected file type: {detection.title}")
     family = detection.family
     soc = detection.soc
-    uf2 = detection.uf2
-    ctx = UploadContext(uf2) if uf2 else None
+    ctx = detection.get_uf2_ctx()
 
     # 1. file type found using SocInterface
     # 2. flashing in Raw mode (-f + -s)
