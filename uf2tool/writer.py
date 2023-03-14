@@ -48,7 +48,8 @@ class UF2Writer:
         soc = SocInterface.get(self.family)
 
         self.uf2.put_int8(Tag.OTA_FORMAT_2, 2)
-        self.uf2.put_str(Tag.DEVICE, "LibreTuya")
+        if Tag.LT_VERSION in self.uf2.tags:
+            self.uf2.put_str(Tag.DEVICE, "LibreTuya")
 
         schemes = set()
         for image in images:

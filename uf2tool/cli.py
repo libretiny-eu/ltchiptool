@@ -4,7 +4,7 @@ import logging
 from logging import debug, warning
 from os import makedirs
 from os.path import join
-from shutil import copyfile
+from shutil import SameFileError, copyfile
 from time import time
 from typing import IO, Optional, Tuple
 
@@ -26,14 +26,7 @@ def cli():
 @click.option(
     "-o",
     "--output",
-    help="Output .uf2 binary",
-    type=click.File("wb"),
-    default="out.uf2",
-)
-@click.option(
-    "-O",
-    "--output-copy",
-    help="Output .uf2 binary copy",
+    help="Output .uf2 binary (can be specified multiple times)",
     type=str,
     multiple=True,
 )
@@ -52,8 +45,7 @@ def cli():
 )
 @click.argument("IMAGES", nargs=-1, type=ImageParamType())
 def write(
-    output: IO[bytes],
-    output_copy: Tuple[str],
+    output: Tuple[str],
     family: Family,
     board: str,
     lt_version: str,
@@ -61,7 +53,11 @@ def write(
     date: int,
     images: Tuple[Image],
 ):
-    writer = UF2Writer(output, family)
+    if not output:
+        output = ("out.uf2",)
+
+    out_file = open(output[0], "wb")
+    writer = UF2Writer(out_file, family)
     if board:
         writer.set_board(board)
     if lt_version:
@@ -70,10 +66,14 @@ def write(
         writer.set_firmware(fw)
     writer.set_date(date)
     writer.write(images)
-    output.close()
-    for copy in output_copy:
+    out_file.close()
+
+    for copy in output[1:]:
         debug(f"Copying UF2 as {copy}")
-        copyfile(output.name, copy)
+        try:
+            copyfile(output[0], copy)
+        except SameFileError:
+            pass
 
 
 @cli.command(help="Print info about UF2 file")
