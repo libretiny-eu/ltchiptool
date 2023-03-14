@@ -23,11 +23,11 @@ pywin32 = { version = "^305", optional = true, platform = "win32" }
 
 [tool.poetry.dependencies.pycryptodomex]
 version = "^3.15.0"
-markers = "'arm' not in platform_machine or platform_machine == 'arm64'"
+markers = "platform_machine not in 'armv6l,armv7l,armv8l,armv8b,aarch64'"
 
 [tool.poetry.dependencies.pyaes]
 version = "^1.6.1"
-markers = "'arm' in platform_machine and platform_machine != 'arm64'"
+markers = "platform_machine in 'armv6l,armv7l,armv8l,armv8b,aarch64'"
 
 [tool.poetry.extras]
 gui = ["wxPython", "pywin32"]
