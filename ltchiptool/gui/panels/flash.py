@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 from logging import debug, info
-from os.path import dirname, isfile
+from os.path import dirname, isfile, realpath
 
 import wx
 import wx.adv
@@ -78,6 +78,11 @@ class FlashPanel(BasePanel):
             if family.name in family_names:
                 families.add(family.description)
         self.Family.Set(sorted(families))
+
+    def SetInitParams(self, file: str = None, **kwargs):
+        if file and isfile(file):
+            self.operation = FlashOp.WRITE
+            self.file = realpath(file)
 
     def GetSettings(self) -> dict:
         return dict(

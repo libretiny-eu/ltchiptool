@@ -25,6 +25,7 @@ from .utils import with_target
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
     panels: dict[str, BasePanel]
+    init_params: dict
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -65,6 +66,7 @@ class MainFrame(wx.Frame):
         self.config_file = join(get_app_dir("ltchiptool"), "config.json")
         self.loaded = False
         self.panels = {}
+        self.init_params = {}
 
         # initialize logging
         self.Log = LogPanel(res, self)
@@ -153,6 +155,7 @@ class MainFrame(wx.Frame):
         self.SetSettings(**settings.get("main", {}))
         for name, panel in self.panels.items():
             panel.SetSettings(**settings.get(name, {}))
+            panel.SetInitParams(**self.init_params)
         if settings:
             info(f"Loaded settings from {self.config_file}")
         for name, panel in self.panels.items():

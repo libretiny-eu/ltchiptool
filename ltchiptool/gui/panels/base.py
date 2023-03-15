@@ -41,6 +41,9 @@ class BasePanel(wx.Panel):
     def on_work_stopped(self, t: BaseThread):
         self._threads.remove(t)
 
+    def SetInitParams(self, **kwargs):
+        pass
+
     def GetSettings(self) -> dict:
         pass
 
