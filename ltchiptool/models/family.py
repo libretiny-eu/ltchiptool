@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
 
 from dataclasses import dataclass, field
+from logging import warning
 from os.path import isdir, join
 from typing import List, Optional, Union
 
@@ -36,7 +37,16 @@ class Family:
             return LT_FAMILIES
         families = lt_read_json("families.json")
         if not isinstance(families, dict):
-            raise ValueError("LT version is incompatible (too old)")
+            try:
+                families = lt_read_json("families.json", force_local=True)
+                warning("LibreTuya version outdated. Update to v1.0.0 or newer")
+            except FileNotFoundError:
+                pass
+        if not isinstance(families, dict):
+            raise ValueError(
+                "LT version is incompatible (too old) and "
+                "no local data snapshot has been found"
+            )
         LT_FAMILIES = [
             cls(name=k, **v) for k, v in families.items() if isinstance(v, dict)
         ]

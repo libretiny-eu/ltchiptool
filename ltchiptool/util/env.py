@@ -2,6 +2,7 @@
 
 import json
 import sys
+from logging import debug
 from os.path import dirname, expanduser, isdir, isfile, join
 from typing import Dict, Union
 
@@ -26,6 +27,7 @@ def lt_find_path() -> str:
         manager = PlatformPackageManager()
         pkg = manager.get_package("libretuya")
         LT_PATH = pkg.path
+        debug(f"LT path found by PlatformIO: {pkg.path}")
         return pkg.path
     except (ImportError, AttributeError):
         pass
@@ -35,8 +37,13 @@ def lt_find_path() -> str:
         expanduser("~/.platformio/platforms/libretuya"),
     ]
     for path in paths:
-        if isfile(join(path, "families.json")) and isdir(join(path, "boards")):
+        if (
+            isfile(join(path, "platform.json"))
+            and isfile(join(path, "families.json"))
+            and isdir(join(path, "boards"))
+        ):
             LT_PATH = path
+            debug(f"LT path found by files: {path}")
             return path
     raise FileNotFoundError(
         "Couldn't find LibreTuya directory. "
@@ -45,8 +52,10 @@ def lt_find_path() -> str:
     )
 
 
-def lt_find_json(name: str) -> str:
+def lt_find_json(name: str, force_local: bool = False) -> str:
     try:
+        if force_local:
+            raise FileNotFoundError("Local JSON usage forced")
         path = join(lt_find_path(), name)
         if isfile(path):
             return path
@@ -65,10 +74,10 @@ def lt_find_json(name: str) -> str:
     raise FileNotFoundError(path)
 
 
-def lt_read_json(name: str) -> Union[dict, list]:
+def lt_read_json(name: str, force_local: bool = False) -> Union[dict, list]:
     global LT_JSON_CACHE
-    if name not in LT_JSON_CACHE:
-        path = lt_find_json(name)
+    if name not in LT_JSON_CACHE or force_local:
+        path = lt_find_json(name, force_local)
         with open(path, "rb") as f:
             LT_JSON_CACHE[name] = json.load(f)
     return LT_JSON_CACHE[name]
