@@ -156,7 +156,7 @@ def cli(
 
     if detection.type != Detection.Type.RAW:
         graph(0, f"Detected file type: {detection.title}")
-    family = detection.family
+    family = detection.family or family
     soc = detection.soc
     uf2 = detection.uf2
 
