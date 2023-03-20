@@ -1,14 +1,13 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-16.
 
-import json
 import sys
-from os.path import abspath, dirname, join
+from os.path import dirname, join
 
 import wx.adv
 import wx.xrc
 
 from ltchiptool import get_version
-from ltchiptool.util.env import lt_find_json, lt_find_path
+from ltchiptool.util.lvm import LVM, LVMPlatform
 
 from .base import BasePanel
 
@@ -18,32 +17,14 @@ class AboutPanel(BasePanel):
         super().__init__(*args, **kw)
         self.LoadXRC(res, "AboutPanel")
 
-        lt_version = None
-        lt_path_title = ""
-        lt_path = ""
-
-        try:
-            lt_find_path()
-            platform = lt_find_json("platform.json")
-            platform = abspath(platform)
-        except FileNotFoundError:
-            platform = None
-        try:
-            families = lt_find_json("families.json")
-            families = abspath(families)
-        except FileNotFoundError:
-            families = None
-
-        if platform:
-            lt_path_title = "LibreTuya package path"
-            lt_path = dirname(platform)
-            with open(platform, "r") as f:
-                platform = json.load(f)
-                version = platform.get("version", None)
-                lt_version = version and f"v{version}"
-        elif families:
+        platform = LVM.default()
+        lt_path = platform.path
+        lt_version = f"v{platform.version}"
+        if platform.type == LVMPlatform.Type.SNAPSHOT:
             lt_path_title = "Local data snapshot path"
-            lt_path = dirname(families)
+            lt_version = None
+        else:
+            lt_path_title = "LibreTuya package path"
 
         tool_version = "v" + get_version()
         if "site-packages" not in __file__ and not hasattr(sys, "_MEIPASS"):

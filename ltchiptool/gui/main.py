@@ -12,8 +12,8 @@ import wx.adv
 import wx.xrc
 from click import get_app_dir
 
-from ltchiptool.util.env import lt_find_json
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.lvm import LVM
 
 from .panels.about import AboutPanel
 from .panels.base import BasePanel
@@ -47,19 +47,9 @@ class MainFrame(wx.Frame):
 
         try:
             # try to find LT directory or local data snapshot
-            lt_find_json("families.json")
-        except FileNotFoundError:
-            message = (
-                f"Couldn't find required data files\n\n"
-                f"Neither LibreTuya package nor local data snapshot could be found.\n\n"
-                f"- if you've opened the .EXE file or installed ltchiptool from PyPI, "
-                f"report the error on GitHub issues\n"
-                f"- if you're running a git-cloned copy of ltchiptool, install "
-                f"LibreTuya platform using PlatformIO IDE or CLI\n"
-                f"- running the GUI in a git-cloned LT directory will use "
-                f"that version, if no other is available"
-            )
-            wx.MessageBox(message=message, caption="Error", style=wx.ICON_ERROR)
+            LVM.get().require_version()
+        except Exception as e:
+            wx.MessageBox(message=str(e), caption="Error", style=wx.ICON_ERROR)
             wx.Exit()
             return
 

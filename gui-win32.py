@@ -6,11 +6,12 @@ if __name__ == "__main__":
     from datetime import datetime
     from os import rename, unlink
     from os.path import isfile
-    from shutil import copy
+    from shutil import SameFileError, copy
 
     import PyInstaller.__main__
+    from semantic_version import SimpleSpec
 
-    from ltchiptool.util.env import lt_find_json
+    from ltchiptool.util.lvm import LVM
 
     with open("pyproject.toml", "r", encoding="utf-8") as f:
         text = f.read()
@@ -19,9 +20,15 @@ if __name__ == "__main__":
         version_tuple = ", ".join(version_raw.split("."))
         description = re.search(r"description\s?=\s?\"(.+?)\"", text).group(1)
 
-    if not isfile("ltchiptool/families.json"):
-        families = lt_find_json("families.json")
+    lvm = LVM.get()
+    lvm.require_version(SimpleSpec("^1.0.0"))
+    platform = lvm.find_json("platform.json", version=True)
+    families = lvm.find_json("families.json", version=True)
+    try:
+        copy(platform, "ltchiptool/platform.json")
         copy(families, "ltchiptool/families.json")
+    except SameFileError:
+        pass
 
     with open(__file__, "r") as f:
         code = f.read()

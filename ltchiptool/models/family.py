@@ -1,13 +1,12 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
 
 from dataclasses import dataclass, field
-from logging import warning
 from os.path import isdir, join
 from typing import List, Optional, Union
 
 import click
 
-from ltchiptool.util.env import lt_find_path, lt_read_json
+from ltchiptool.util.lvm import LVM
 
 LT_FAMILIES: List["Family"] = []
 
@@ -35,18 +34,7 @@ class Family:
         global LT_FAMILIES
         if LT_FAMILIES:
             return LT_FAMILIES
-        families = lt_read_json("families.json")
-        if not isinstance(families, dict):
-            try:
-                families = lt_read_json("families.json", force_local=True)
-                warning("LibreTuya version outdated. Update to v1.0.0 or newer")
-            except FileNotFoundError:
-                pass
-        if not isinstance(families, dict):
-            raise ValueError(
-                "LT version is incompatible (too old) and "
-                "no local data snapshot has been found"
-            )
+        families = LVM.get().load_json("families.json", version=True)
         LT_FAMILIES = [
             cls(name=k, **v) for k, v in families.items() if isinstance(v, dict)
         ]
@@ -105,7 +93,7 @@ class Family:
 
     @property
     def has_arduino_core(self) -> bool:
-        if isdir(join(lt_find_path(), "cores", self.name, "arduino")):
+        if isdir(join(LVM.path(), "cores", self.name, "arduino")):
             return True
         if self.parent:
             return self.parent.has_arduino_core
