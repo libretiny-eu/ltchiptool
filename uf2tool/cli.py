@@ -43,6 +43,7 @@ def cli():
 @click.option(
     "-d", "--date", help="Build date (Unix, default now)", type=int, default=time()
 )
+@click.option("--legacy", help="Add legacy UF2 tags", is_flag=True)
 @click.argument("IMAGES", nargs=-1, type=ImageParamType())
 def write(
     output: Tuple[str],
@@ -51,13 +52,14 @@ def write(
     lt_version: str,
     fw: str,
     date: int,
+    legacy: bool,
     images: Tuple[Image],
 ):
     if not output:
         output = ("out.uf2",)
 
     out_file = open(output[0], "wb")
-    writer = UF2Writer(out_file, family)
+    writer = UF2Writer(out_file, family, legacy)
     if board:
         writer.set_board(board)
     if lt_version:

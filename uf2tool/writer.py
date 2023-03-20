@@ -18,10 +18,11 @@ class UF2Writer:
     uf2: UF2
     family: Family
 
-    def __init__(self, output: IO[bytes], family: Family):
+    def __init__(self, output: IO[bytes], family: Family, legacy: bool):
         self.uf2 = UF2(output)
         self.uf2.family = family
         self.family = family
+        self.legacy = legacy
 
     def set_board(self, board: str):
         self.uf2.put_str(Tag.BOARD, board.lower())
@@ -56,41 +57,46 @@ class UF2Writer:
             # local tags (for this image only)
             tags = {}
 
-            if soc.ota_supports_format_1:
-                single = image.schemes[OTAScheme.DEVICE_SINGLE]
-                dual_1 = image.schemes[OTAScheme.DEVICE_DUAL_1]
-                dual_2 = image.schemes[OTAScheme.DEVICE_DUAL_2]
-                if single or dual_1 or dual_2:
-                    if soc.ota_type == OTAType.SINGLE:
-                        if single:
-                            tags[Tag.LT_LEGACY_PART_1] = b""
-                            tags[Tag.LT_LEGACY_PART_2] = single.encode()
-                            self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA1, False)
-                            self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA2, True)
-                            self.uf2.put_int8(Tag.OTA_FORMAT_1, 1)
-                        else:
-                            warning(
-                                "Legacy single-OTA format requested, but no "
-                                "DEVICE_SINGLE target was provided. "
-                                "Skipping legacy image generation. "
-                                "Are you sure the input files match "
-                                f"the '{self.family.description}' family?"
-                            )
-                    if soc.ota_type == OTAType.DUAL:
-                        if dual_1 and dual_2:
-                            tags[Tag.LT_LEGACY_PART_1] = dual_1.encode()
-                            tags[Tag.LT_LEGACY_PART_2] = dual_2.encode()
-                            self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA1, True)
-                            self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA2, True)
-                            self.uf2.put_int8(Tag.OTA_FORMAT_1, 1)
-                        else:
-                            warning(
-                                "Legacy dual-OTA format requested, but either "
-                                "DEVICE_DUAL_1 or DEVICE_DUAL_2 targets are missing. "
-                                "Skipping legacy image generation. "
-                                "Are you sure the input files match "
-                                f"the '{self.family.description}' family?"
-                            )
+            if self.legacy and soc.ota_supports_format_1:
+                device_single = image.schemes[OTAScheme.DEVICE_SINGLE] or ""
+                device_dual_1 = image.schemes[OTAScheme.DEVICE_DUAL_1] or ""
+                device_dual_2 = image.schemes[OTAScheme.DEVICE_DUAL_2] or ""
+                flasher_single = image.schemes[OTAScheme.FLASHER_SINGLE] or ""
+                if soc.ota_type == OTAType.SINGLE:
+                    if device_single or flasher_single:
+                        tags[Tag.LT_LEGACY_PART_1] = flasher_single.encode()
+                        tags[Tag.LT_LEGACY_PART_2] = device_single.encode()
+                        self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA1, False)
+                        self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA2, True)
+                        self.uf2.put_int8(Tag.OTA_FORMAT_1, 1)
+                    else:
+                        warning(
+                            "Legacy single-OTA format requested, but no "
+                            "*_SINGLE target was provided. "
+                            "Skipping legacy image generation. "
+                            "Are you sure the input files match "
+                            f"the '{self.family.description}' family?"
+                        )
+                if soc.ota_type == OTAType.DUAL:
+                    if device_dual_1 and device_dual_2:
+                        tags[Tag.LT_LEGACY_PART_1] = device_dual_1.encode()
+                        tags[Tag.LT_LEGACY_PART_2] = device_dual_2.encode()
+                        self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA1, True)
+                        self.uf2.put_int8(Tag.LT_LEGACY_HAS_OTA2, True)
+                        self.uf2.put_int8(Tag.OTA_FORMAT_1, 1)
+                    else:
+                        warning(
+                            "Legacy dual-OTA format requested, but either "
+                            "DEVICE_DUAL_1 or DEVICE_DUAL_2 targets are missing. "
+                            "Skipping legacy image generation. "
+                            "Are you sure the input files match "
+                            f"the '{self.family.description}' family?"
+                        )
+
+            for scheme, part in image.schemes.items():
+                # collect all used schemes in the package
+                if part:
+                    schemes.add(scheme)
 
             tags[Tag.OTA_PART_INFO] = image.part_info
             data1 = image.read_file_1()
@@ -104,11 +110,6 @@ class UF2Writer:
                 raise ValueError(
                     f"Images must have same lengths ({len(data1)} vs {len(data2)})"
                 )
-
-            for scheme, part in image.schemes.items():
-                # collect all used scheme in the package
-                if part:
-                    schemes.add(scheme)
 
             for i in range(0, len(data1), 256):
                 block1 = data1[i : i + 256]
