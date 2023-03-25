@@ -10,8 +10,8 @@ from typing import IO, Optional, Tuple
 
 import click
 
-from ltchiptool import Family
-from ltchiptool.models import FamilyParamType
+from ltchiptool import Board
+from ltchiptool.models import BoardParamType
 from uf2tool.models import UF2, Image, ImageParamType, UploadContext
 from uf2tool.models.enums import OTAScheme, OTASchemeParamType
 from uf2tool.writer import UF2Writer
@@ -31,24 +31,26 @@ def cli():
     multiple=True,
 )
 @click.option(
-    "-f",
-    "--family",
-    help="Family name",
+    "-b",
+    "--board",
+    help="Board name/code/JSON path",
     required=True,
-    type=FamilyParamType(require_chip=True),
+    type=BoardParamType(),
 )
-@click.option("-b", "--board", help="Board name/code")
 @click.option("-L", "--lt-version", help="LibreTuya core version")
 @click.option("-F", "--fw", help="Firmware name:version")
 @click.option(
-    "-d", "--date", help="Build date (Unix, default now)", type=int, default=time()
+    "-d",
+    "--date",
+    help="Build date (Unix, default now)",
+    type=int,
+    default=time(),
 )
 @click.option("--legacy", help="Add legacy UF2 tags", is_flag=True)
 @click.argument("IMAGES", nargs=-1, type=ImageParamType())
 def write(
     output: Tuple[str],
-    family: Family,
-    board: str,
+    board: Board,
     lt_version: str,
     fw: str,
     date: int,
@@ -58,10 +60,15 @@ def write(
     if not output:
         output = ("out.uf2",)
 
+    family = board.family
+    if not family.is_chip:
+        raise ValueError(
+            f"Family {family} is not a Chip Family - it can't be used here"
+        )
+
     out_file = open(output[0], "wb")
     writer = UF2Writer(out_file, family, legacy)
-    if board:
-        writer.set_board(board)
+    writer.set_board(board.name)
     if lt_version:
         writer.set_version(lt_version)
     if fw:
