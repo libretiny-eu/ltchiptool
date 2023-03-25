@@ -61,6 +61,13 @@ class BK72XXBinary(SocInterface, ABC):
         app_size = int(rbl_size, 16)
         rbl_offs = app_offs + to_offset(app_size) - 102
 
+        app_part_offs = self.board.region("app")[0]
+        if app_offs != app_part_offs:
+            raise ValueError(
+                f"App partition offset (0x{app_part_offs:06X}) doesn't match "
+                f"the generated binary offset (0x{app_offs:06X})"
+            )
+
         # build output names
         out_rbl = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.rbl")
         out_crc = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.crc")
