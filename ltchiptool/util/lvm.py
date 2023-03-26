@@ -25,7 +25,7 @@ class LVM:
         f"- running the GUI in a git-cloned LT directory will use "
         f"that version, if no other is available"
     )
-    compatible_version = SimpleSpec("^1.0.0")
+    compatible_version = SimpleSpec(">0.99.99")
 
     @staticmethod
     def get() -> "LVM":

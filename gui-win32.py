@@ -9,7 +9,6 @@ if __name__ == "__main__":
     from shutil import SameFileError, copy
 
     import PyInstaller.__main__
-    from semantic_version import SimpleSpec
 
     from ltchiptool.util.lvm import LVM
 
@@ -20,15 +19,19 @@ if __name__ == "__main__":
         version_tuple = ", ".join(version_raw.split("."))
         description = re.search(r"description\s?=\s?\"(.+?)\"", text).group(1)
 
-    lvm = LVM.get()
-    lvm.require_version(SimpleSpec("^1.0.0"))
-    platform = lvm.find_json("platform.json", version=True)
-    families = lvm.find_json("families.json", version=True)
     try:
+        lvm = LVM.get()
+        lvm.require_version()
+        platform = lvm.find_json("platform.json", version=True)
+        families = lvm.find_json("families.json", version=True)
         copy(platform, "ltchiptool/platform.json")
         copy(families, "ltchiptool/families.json")
-    except SameFileError:
+    except (FileNotFoundError, SameFileError):
+        # ignore if LT is not installed; fall back to locally available files
         pass
+
+    if not (isfile("ltchiptool/platform.json") and isfile("ltchiptool/families.json")):
+        raise FileNotFoundError("Data files are missing")
 
     with open(__file__, "r") as f:
         code = f.read()

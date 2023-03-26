@@ -43,6 +43,7 @@ jobs:
       with:
         repository: kuba2k2/libretuya
         path: libretuya
+        ref: structure-refactor
 
     - name: Set up Python
       uses: actions/setup-python@v3
@@ -86,6 +87,7 @@ jobs:
         with:
           repository: kuba2k2/libretuya
           path: libretuya
+          ref: structure-refactor
 
       - name: Set up Python Custom
         # Configure embedded Python 3.10 modified to work on Windows 7
