@@ -55,6 +55,7 @@ jobs:
     - name: Copy LT data snapshot
       run: |
         mkdir -p ltchiptool/boards/_base
+        cp libretuya/platform.json ltchiptool/
         cp libretuya/families.json ltchiptool/
         cp libretuya/boards/*.json ltchiptool/boards/
         cp -r libretuya/boards/_base/ ltchiptool/boards/
@@ -117,6 +118,7 @@ jobs:
         shell: cmd
         run: |
           mkdir ltchiptool\boards\_base
+          copy libretuya\platform.json ltchiptool\
           copy libretuya\families.json ltchiptool\
           copy libretuya\boards\*.json ltchiptool\boards\
           xcopy /S libretuya\boards\_base ltchiptool\boards\
