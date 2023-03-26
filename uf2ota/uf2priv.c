@@ -17,19 +17,18 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 		// at least one tag + last tag must fit
 		return UF2_ERR_DATA_TOO_LONG;
 
-	uint8_t *tags_start = block->data + block->len;
-	uint16_t tags_len	= 476 - block->len;
-	uint16_t tags_pos	= 0;
+	uint8_t *tags_pos = block->data + block->len;
+	uint8_t *tags_end = tags_pos + 476 - block->len;
 	if (block->has_md5)
-		tags_len -= 24;
+		tags_end -= 24;
 
-	uf2_tag_type_t type;
-	while (tags_pos < tags_len) {
-		uint8_t len = uf2_read_tag(tags_start + tags_pos, &type);
+	while (tags_pos < tags_end) {
+		uf2_tag_type_t type;
+		uint8_t len = uf2_read_tag(tags_pos, &type);
 		if (!len)
 			break;
 		// skip tag header
-		uint8_t *tag	= tags_start + tags_pos + 4;
+		uint8_t *tag	= tags_pos + 4;
 		uint8_t tag_len = len - 4;
 
 		char **str_dest = NULL; // char* to copy the tag into
@@ -65,6 +64,13 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 			case UF2_TAG_BINPATCH:
 				ctx->binpatch	  = tag;
 				ctx->binpatch_len = tag_len;
+				break;
+			case UF2_TAG_FAL_PTABLE:
+				ctx->pt_default		= (struct fal_partition *)fal_get_partition_table((size_t *)&ctx->pt_default_len);
+				ctx->pt_current		= malloc(tag_len);
+				ctx->pt_current_len = tag_len / sizeof(struct fal_partition);
+				memcpy(ctx->pt_current, tag, tag_len);
+				fal_set_partition_table_temp(ctx->pt_current, ctx->pt_current_len);
 				break;
 			default:
 				break;

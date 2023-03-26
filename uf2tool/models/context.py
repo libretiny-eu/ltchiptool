@@ -10,6 +10,7 @@ from ltchiptool.util.intbin import letoint
 from uf2tool.binpatch import binpatch_apply
 
 from .enums import OTAScheme, Tag
+from .partition import PartitionTable
 from .uf2 import UF2
 
 
@@ -17,14 +18,24 @@ class UploadContext:
     uf2: UF2
     part: Optional[str] = None
     seq: int = 0
+    part_table: PartitionTable = None
     _board: Board = None
 
     def __init__(self, uf2: UF2) -> None:
         self.uf2 = uf2
+        if not uf2.data:
+            raise ValueError("UF2 file is empty (or not loaded yet)")
         if Tag.OTA_FORMAT_2 not in uf2.tags:
             raise ValueError(
                 "This UF2 is of legacy format and can't be read. "
                 "Use ltchiptool v3.0.0 or older to read this package."
+            )
+        if Tag.FAL_PTABLE in uf2.tags:
+            partition_table = uf2.tags[Tag.FAL_PTABLE]
+            self.part_table = PartitionTable.unpack(
+                partition_table,
+                name_len=16,
+                length=len(partition_table),
             )
 
     @property
@@ -61,7 +72,20 @@ class UploadContext:
         return self.board["upload.speed"]
 
     def get_offset(self, part: str, offs: int) -> Optional[int]:
-        (start, length, end) = self.board.region(part)
+        if self.part_table:
+            try:
+                partition = next(
+                    p for p in self.part_table.partitions if p.name == part
+                )
+            except StopIteration:
+                raise ValueError(
+                    f"Partition '{part}' not found in custom partition table"
+                )
+            start = partition.offset
+            length = partition.length
+        else:
+            (start, length, _) = self.board.region(part)
+
         if offs >= length:
             error(f"Partition '{part}' rel. offset 0x{offs:X} larger than 0x{length:X}")
             return None

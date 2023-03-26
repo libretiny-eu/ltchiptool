@@ -4,12 +4,14 @@ from binascii import crc32
 from logging import warning
 from typing import IO, Tuple
 
-from ltchiptool import Family
+from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
+from ltchiptool.util.intbin import inttole32
 
 from .binpatch import diff32_write
 from .models import UF2, Block, Image, Tag
 from .models.enums import OTAScheme
+from .models.partition import Partition, PartitionTable
 
 BLOCK_SIZE = 256
 
@@ -17,6 +19,7 @@ BLOCK_SIZE = 256
 class UF2Writer:
     uf2: UF2
     family: Family
+    board: Board
 
     def __init__(self, output: IO[bytes], family: Family, legacy: bool):
         self.uf2 = UF2(output)
@@ -24,10 +27,11 @@ class UF2Writer:
         self.family = family
         self.legacy = legacy
 
-    def set_board(self, board: str):
-        self.uf2.put_str(Tag.BOARD, board.lower())
-        key = f"LibreTuya {board.lower()}"
+    def set_board(self, board: Board):
+        self.uf2.put_str(Tag.BOARD, board.name.lower())
+        key = f"LibreTuya {board.name.lower()}"
         self.uf2.put_int32le(Tag.DEVICE_ID, crc32(key.encode()))
+        self.board = board
 
     def set_version(self, version: str):
         self.uf2.put_str(Tag.LT_VERSION, version)
@@ -47,6 +51,35 @@ class UF2Writer:
         from ltchiptool import SocInterface
 
         soc = SocInterface.get(self.family)
+
+        # store FAL partition table in the UF2 header
+        if self.board:
+            # find used partitions
+            partitions = set()
+            for image in images:
+                partitions.update(image.schemes.values())
+
+            # construct the partition table
+            partition_table = PartitionTable()
+            for name in self.board["flash"].keys():
+                if name not in partitions:
+                    continue
+                offset, length, _ = self.board.region(name)
+                partition = Partition(
+                    name=name,
+                    flash_name="flash0",
+                    offset=offset,
+                    length=length,
+                )
+                partition_table.partitions.append(partition)
+            partition_table.partitions.sort(key=lambda p: p.offset)
+            partition_table_data = partition_table.pack(name_len=16)
+
+            if len(partition_table_data) > 255:
+                raise ValueError(
+                    f"Partition table too long " f"({len(partition_table_data)} > 255)"
+                )
+            self.uf2.tags[Tag.FAL_PTABLE] = partition_table_data
 
         self.uf2.put_int8(Tag.OTA_FORMAT_2, 2)
         if Tag.LT_VERSION in self.uf2.tags:

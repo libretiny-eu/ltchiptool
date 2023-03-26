@@ -21,6 +21,7 @@ pycryptodomex = {version = "^3.15.0", optional = true}
 xmodem = "^0.4.6"
 wxPython = {version = "^4.2.0", optional = true}
 pywin32 = {version = "^305", optional = true, markers = "sys_platform == 'win32'"}
+py-datastruct = "^0.3.0"
 
 [tool.poetry.extras]
 gui = ["wxPython", "pywin32"]

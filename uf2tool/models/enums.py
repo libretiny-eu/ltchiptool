@@ -21,6 +21,7 @@ class Tag(IntEnum):
     FIRMWARE = 0x00DE43  # firmware description / name
     BUILD_DATE = 0x822F30  # build date/time as Unix timestamp
     BINPATCH = 0xB948DE  # binary patch to convert OTA1->OTA2
+    FAL_PTABLE = 0x8288ED  # FAL partition table
     LT_VERSION = 0x59563D  # LT version (semver)
     # legacy tags
     LT_LEGACY_PART_1 = 0x805946  # OTA1 partition name

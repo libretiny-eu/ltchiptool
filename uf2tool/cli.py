@@ -12,6 +12,7 @@ import click
 
 from ltchiptool import Board
 from ltchiptool.models import BoardParamType
+from ltchiptool.util.misc import sizeof
 from uf2tool.models import UF2, Image, ImageParamType, UploadContext
 from uf2tool.models.enums import OTAScheme, OTASchemeParamType
 from uf2tool.writer import UF2Writer
@@ -68,7 +69,7 @@ def write(
 
     out_file = open(output[0], "wb")
     writer = UF2Writer(out_file, family, legacy)
-    writer.set_board(board.name)
+    writer.set_board(board)
     if lt_version:
         writer.set_version(lt_version)
     if fw:
@@ -91,6 +92,16 @@ def info(file: IO[bytes]):
     uf2 = UF2(file)
     uf2.read()
     uf2.dump()
+    ctx = UploadContext(uf2)
+    if not ctx.part_table:
+        return
+    logging.info("Partition table:")
+    for part in ctx.part_table.partitions:
+        logging.info(
+            f" - {part.name}: "
+            f"0x{part.offset:06X}+0x{part.length:X} "
+            f"({sizeof(part.length)})"
+        )
 
 
 @cli.command(help="Dump UF2 contents")

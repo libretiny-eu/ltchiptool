@@ -18,6 +18,15 @@ uf2_info_t *uf2_info_init() {
 	return info;
 }
 
+void uf2_ctx_free(uf2_ota_t *ctx) {
+	if (!ctx)
+		return;
+	if (ctx->pt_default)
+		fal_set_partition_table_temp(ctx->pt_default, ctx->pt_default_len);
+	free(ctx->pt_current);
+	free(ctx);
+}
+
 void uf2_info_free(uf2_info_t *info) {
 	if (!info)
 		return;
@@ -60,13 +69,12 @@ uf2_err_t uf2_parse_header(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info)
 uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 	if (ctx->seq == 0)
 		return uf2_parse_header(ctx, block, NULL);
-	if (block->not_main_flash || !block->len)
-		// ignore blocks not meant for flashing
-		return UF2_ERR_IGNORE;
-
 	uf2_err_t err = uf2_parse_block(ctx, block, NULL);
 	if (err)
 		return err;
+	if (block->not_main_flash || !block->len)
+		// ignore blocks not meant for flashing
+		return UF2_ERR_IGNORE;
 
 	if (!ctx->is_part_set)
 		// missing OTA_PART_INFO tag

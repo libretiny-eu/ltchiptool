@@ -87,8 +87,7 @@ class UF2:
 
             if block_tags or not block.length:
                 self.tags.update(block.tags)
-            if block.length and not block.flags.not_main_flash:
-                self.data.append(block)
+            self.data.append(block)
 
             if count and self.seq >= count:
                 break
@@ -102,7 +101,7 @@ class UF2:
             else:
                 v = v.hex()
             info(f" - {k.name}: {v}")
-        info(f"Data chunks: {len(self.data)}")
+        info(f"Block count: {len(self.data)}")
         info(f"Total binary size: {sum(bl.length for bl in self.data)}")
 
     @property
