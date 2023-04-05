@@ -482,7 +482,7 @@ class FlashPanel(BasePanel):
             skip=self.skip,
             length=self.length,
             verify=True,
-            ctx=self.detection.get_uf2_ctx(),
+            ctx=self.detection and self.detection.get_uf2_ctx(),
             on_chip_info=self.Start.SetNote,
         )
         self.start_work(work, freeze_ui=True)
