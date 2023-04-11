@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ltchiptool.models import OTAType
 from ltchiptool.util.fileio import chext
+from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.logging import graph
 
 from .interface import SocInterface
@@ -81,12 +82,12 @@ class SocInterfaceCommon(SocInterface, ABC):
         ota1: str,
         ota2: str,
         args: List[str],
-    ) -> Dict[str, Optional[int]]:
+    ) -> List[FirmwareBinary]:
         elfs = self.link2elf(ota1, ota2, args)
-        output = {}
+        output = []
 
         for ota_idx, elf in elfs.items():
             # generate a set of binaries for the SoC
             bins = self.elf2bin(elf, ota_idx)
-            output.update(bins)
+            output += bins
         return output

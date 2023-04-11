@@ -1,15 +1,14 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from os.path import basename
 from struct import unpack
-from typing import IO, Dict, Optional, Tuple
+from typing import IO, List, Optional, Tuple
 
 from ltchiptool import SocInterface
 from ltchiptool.util.detection import Detection
-from ltchiptool.util.fileio import chname, isnewer, peek, readbin
+from ltchiptool.util.fileio import peek, readbin
+from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.intbin import inttole32
-from ltchiptool.util.logging import graph
 
 
 def write_header(f: IO[bytes], start: int, end: int):
@@ -36,13 +35,8 @@ def check_bootloader_binary(data: bytes) -> Optional[Tuple[int, int, bytes]]:
 
 
 class AmebaZBinary(SocInterface, ABC):
-    def elf2bin(
-        self,
-        input: str,
-        ota_idx: int,
-    ) -> Dict[str, Optional[int]]:
+    def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
-        result: Dict[str, Optional[int]] = {}
 
         sections_ram = [
             ".ram_image2.entry",
@@ -58,24 +52,40 @@ class AmebaZBinary(SocInterface, ABC):
         ram_end = nmap["__ram_image2_text_end__"]
         xip_start = nmap["__flash_text_start__"] - 0x8000020
         # build output name
-        output = chname(input, f"image_ota{ota_idx}.0x{xip_start:06X}.bin")
-        out_ram = chname(input, f"image_ota{ota_idx}.ram_2.r.bin")
-        out_xip = chname(input, f"image_ota{ota_idx}.xip_image2.bin")
-        out_rdp = chname(input, f"image_ota{ota_idx}.rdp.bin")
+        output = FirmwareBinary(
+            location=input,
+            name=f"ota{ota_idx}",
+            offset=xip_start,
+            title=f"OTA{ota_idx} XIP image",
+            public=True,
+        )
+        out_ram = FirmwareBinary(
+            location=input,
+            name=f"ota{ota_idx}",
+            subname="ram_2.r",
+            title="Raw RAM image",
+        )
+        out_xip = FirmwareBinary(
+            location=input,
+            name=f"ota{ota_idx}",
+            subname="xip_image2",
+            title="Raw XIP image",
+        )
+        out_rdp = FirmwareBinary(
+            location=input,
+            name=f"ota{ota_idx}",
+            subname="rdp",
+            title="Raw RDP image",
+        )
         # print graph element
-        graph(1, basename(output))
+        output.graph(1)
         # objcopy required images
-        ram = toolchain.objcopy(input, out_ram, sections_ram)
-        xip = toolchain.objcopy(input, out_xip, sections_xip)
-        toolchain.objcopy(input, out_rdp, sections_rdp)
-        # add to outputs
-        result[out_ram] = None
-        result[out_xip] = None
-        result[out_rdp] = None
+        ram = toolchain.objcopy(input, out_ram.path, sections_ram)
+        xip = toolchain.objcopy(input, out_xip.path, sections_xip)
+        toolchain.objcopy(input, out_rdp.path, sections_rdp)
         # return if images are up-to-date
-        if not isnewer(ram, output) and not isnewer(xip, output):
-            result[output] = xip_start
-            return result
+        if output.isnewer(than=ram) and output.isnewer(than=xip):
+            return output.group_get()
 
         # read and trim RAM image
         ram = readbin(ram).rstrip(b"\x00")
@@ -85,7 +95,7 @@ class AmebaZBinary(SocInterface, ABC):
         ram += b"\x00" * (((((len(ram) - 1) // 4) + 1) * 4) - len(ram))
         xip += b"\x00" * (((((len(xip) - 1) // 4) + 1) * 4) - len(xip))
         # write output file
-        with open(output, "wb") as f:
+        with output.write() as f:
             # write XIP header
             write_header(f, 0, len(xip))
             # write XIP image
@@ -94,8 +104,7 @@ class AmebaZBinary(SocInterface, ABC):
             write_header(f, ram_start, ram_end)
             # write RAM image
             f.write(ram)
-        result[output] = xip_start
-        return result
+        return output.group()
 
     def detect_file_type(
         self,

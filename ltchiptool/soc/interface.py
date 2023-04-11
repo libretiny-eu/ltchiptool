@@ -6,6 +6,7 @@ from typing import IO, Dict, Generator, List, Optional, Union
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.fwbinary import FirmwareBinary
 from uf2tool import UploadContext
 
 
@@ -77,7 +78,7 @@ class SocInterface(ABC):
         self,
         input: str,
         ota_idx: int,
-    ) -> Dict[str, Optional[int]]:
+    ) -> List[FirmwareBinary]:
         raise NotImplementedError()
 
     def link2bin(
@@ -85,7 +86,7 @@ class SocInterface(ABC):
         ota1: str,
         ota2: str,
         args: List[str],
-    ) -> Dict[str, Optional[int]]:
+    ) -> List[FirmwareBinary]:
         raise NotImplementedError()
 
     def detect_file_type(

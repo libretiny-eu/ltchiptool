@@ -5,15 +5,14 @@ from datetime import datetime
 from io import SEEK_SET, BytesIO
 from logging import warning
 from os import stat
-from os.path import basename
-from typing import IO, Dict, Optional, Union
+from typing import IO, List, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.crc16 import CRC16
 from ltchiptool.util.detection import Detection
-from ltchiptool.util.fileio import chext, chname, isnewer, peek
+from ltchiptool.util.fileio import chext, peek
+from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.intbin import betoint, gen2bytes, inttobe32, pad_data
-from ltchiptool.util.logging import graph
 from ltchiptool.util.obj import str2enum
 
 from .util import RBL, BekenBinary, DataType, OTACompression, OTAEncryption
@@ -41,9 +40,8 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 
 
 class BK72XXBinary(SocInterface, ABC):
-    def elf2bin(self, input: str, ota_idx: int) -> Dict[str, Optional[int]]:
+    def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
-        result: Dict[str, Optional[int]] = {}
 
         mcu = self.board["build.mcu"]
         coeffs = self.board["build.bkcrypt_coeffs"] or ("0" * 32)
@@ -69,26 +67,54 @@ class BK72XXBinary(SocInterface, ABC):
             )
 
         # build output names
-        out_rbl = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.rbl")
-        out_crc = chname(input, f"image_{mcu}_app.0x{app_offs:06X}.crc")
-        out_rblh = chname(input, f"image_{mcu}_app.0x{rbl_offs:06X}.rblh")
-        out_ota = chname(input, f"image_{mcu}_app.ota.rbl")
-        out_ug = chname(input, f"image_{mcu}_app.ota.ug.bin")
+        out_ug = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            subname="ota.ug",
+            ext="bin",
+            title="Cloudcutter Image",
+            description="UG Image for flashing with tuya-cloudcutter",
+            public=True,
+        )
+        out_ota = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            subname="ota",
+            ext="rbl",
+            title="Beken OTA Image",
+            description="For flashing using Beken or OpenBeken OTA",
+            public=True,
+        )
+        out_rbl = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            offset=app_offs,
+            ext="rbl",
+            title="Beken Application Image",
+            public=True,
+        )
+        out_crc = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            offset=app_offs,
+            ext="crc",
+            title="Beken CRC/UA App",
+        )
+        out_rblh = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            offset=rbl_offs,
+            ext="rblh",
+            title="Beken Application RBL Header",
+        )
         fw_bin = chext(input, "bin")
-        outputs = [out_rbl, out_crc, out_rblh, out_ota, out_ug]
         # print graph element
-        graph(1, basename(out_rbl))
+        out_rbl.graph(1)
         # objcopy ELF -> raw BIN
         toolchain.objcopy(input, fw_bin)
-        result[fw_bin] = None
         # return if all outputs are up-to-date
-        if all(map(lambda f: isnewer(f, fw_bin), outputs)):
-            result[out_rbl] = app_offs
-            result[out_crc] = None
-            result[out_rblh] = rbl_offs
-            result[out_ota] = None
-            result[out_ug] = None
-            return result
+        if all(binary.isnewer(than=fw_bin) for binary in out_rbl.group_get()):
+            return out_rbl.group()
 
         bk = BekenBinary(coeffs)
         rbl = RBL(
@@ -99,11 +125,11 @@ class BK72XXBinary(SocInterface, ABC):
 
         fw_size = stat(fw_bin).st_size
         raw = open(fw_bin, "rb")
-        out = open(out_rbl, "wb")
+        out = out_rbl.write()
 
         # open encrypted+CRC binary output
-        graph(1, basename(out_crc))
-        crc = open(out_crc, "wb")
+        out_crc.graph(1)
+        crc = out_crc.write()
 
         # get partial (type, bytes) data generator
         package_gen = bk.package(raw, app_addr, fw_size, rbl, partial=True)
@@ -120,8 +146,8 @@ class BK72XXBinary(SocInterface, ABC):
             out.write(b"\xff" * data)
 
         # open RBL header output
-        graph(1, basename(out_rblh))
-        rblh = open(out_rblh, "wb")
+        out_rblh.graph(1)
+        rblh = out_rblh.write()
 
         # write all RBL blocks
         for data_type, data in package_gen:
@@ -129,10 +155,6 @@ class BK72XXBinary(SocInterface, ABC):
                 break
             out.write(data)
             rblh.write(data)
-
-        result[out_rbl] = app_offs
-        result[out_crc] = None
-        result[out_rblh] = rbl_offs
 
         # write OTA package
         rbl = RBL(
@@ -142,12 +164,12 @@ class BK72XXBinary(SocInterface, ABC):
             compression=str2enum(OTACompression, ota_compression)
             or OTACompression.NONE,
         )
-        graph(1, basename(out_ota))
+        out_ota.graph(1)
         # seek back to start
         raw.seek(0, SEEK_SET)
         ota_gen = bk.ota_package(raw, rbl, key=ota_key, iv=ota_iv)
         ota_data = BytesIO()
-        ota = open(out_ota, "wb")
+        ota = out_ota.write()
         for data in ota_gen:
             ota.write(data)
             ota_data.write(data)
@@ -155,11 +177,10 @@ class BK72XXBinary(SocInterface, ABC):
             warning(
                 f"OTA size too large: {rbl.data_size} > {ota_size} (0x{ota_size:X})"
             )
-        result[out_ota] = None
 
         # write Tuya OTA package (UG)
-        graph(1, basename(out_ug))
-        with open(out_ug, "wb") as ug:
+        out_ug.graph(1)
+        with out_ug.write() as ug:
             hdr = BytesIO()
             ota_bin = ota_data.getvalue()
             hdr.write(b"\x55\xAA\x55\xAA")
@@ -170,7 +191,6 @@ class BK72XXBinary(SocInterface, ABC):
             ug.write(inttobe32(sum(hdr.getvalue())))
             ug.write(b"\xAA\x55\xAA\x55")
             ug.write(ota_bin)
-        result[out_ug] = None
 
         # close all files
         raw.close()
@@ -178,7 +198,7 @@ class BK72XXBinary(SocInterface, ABC):
         crc.close()
         rblh.close()
         ota.close()
-        return result
+        return out_rbl.group()
 
     def detect_file_type(
         self,
