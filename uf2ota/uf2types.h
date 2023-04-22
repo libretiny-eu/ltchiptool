@@ -61,12 +61,11 @@ typedef struct {
 	uint32_t erased_offset; // offset of region erased during update
 	uint32_t erased_length; // length of erased region
 
-	struct fal_partition *pt_default; // previous partition table
-	uint32_t pt_default_len;		  // partition count
-	struct fal_partition *pt_current; // current partition table (from UF2)
-	uint32_t pt_current_len;		  // partition count
-
-	const struct fal_partition *part; // target partition for the current scheme
+	struct fal_partition *part_table;  // partition table
+	uint32_t part_table_len;		   // partition count
+	bool part_table_copied;			   // whether partition table is dynamically allocated
+	const struct fal_partition *part;  // target partition for the current scheme
+	const struct fal_flash_dev *flash; // flash device structure of the target partition
 } uf2_ota_t;
 
 typedef struct {

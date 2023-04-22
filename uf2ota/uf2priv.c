@@ -66,11 +66,10 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info) 
 				ctx->binpatch_len = tag_len;
 				break;
 			case UF2_TAG_FAL_PTABLE:
-				ctx->pt_default		= (struct fal_partition *)fal_get_partition_table((size_t *)&ctx->pt_default_len);
-				ctx->pt_current		= malloc(tag_len);
-				ctx->pt_current_len = tag_len / sizeof(struct fal_partition);
-				memcpy(ctx->pt_current, tag, tag_len);
-				fal_set_partition_table_temp(ctx->pt_current, ctx->pt_current_len);
+				ctx->part_table		   = malloc(tag_len);
+				ctx->part_table_len	   = tag_len / sizeof(struct fal_partition);
+				ctx->part_table_copied = true;
+				memcpy(ctx->part_table, tag, tag_len);
 				break;
 			default:
 				break;
@@ -144,9 +143,18 @@ uf2_err_t uf2_parse_part_info(uf2_ota_t *ctx, const uint8_t *tag, uint8_t tag_le
 	if (current_index != index)
 		return UF2_ERR_PART_INVALID;
 
-	ctx->part = fal_partition_find(part_name);
+	ctx->part = NULL;
+	for (uint32_t i = 0; i < ctx->part_table_len; i++) {
+		if (strcmp(part_name, ctx->part_table[i].name) == 0) {
+			ctx->part = ctx->part_table + i;
+			break;
+		}
+	}
+
 	if (!ctx->part)
 		return UF2_ERR_PART_404;
+
+	ctx->flash = fal_flash_device_find(ctx->part->flash_name);
 
 	return UF2_ERR_OK;
 }

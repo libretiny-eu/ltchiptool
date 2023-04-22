@@ -10,6 +10,8 @@ uf2_ota_t *uf2_ctx_init(uf2_ota_scheme_t scheme, uint32_t family_id) {
 	ctx->scheme_shift	 = (scheme & 1 ^ 1) * 4;
 	ctx->scheme_binpatch = scheme == UF2_SCHEME_DEVICE_DUAL_2 || scheme == UF2_SCHEME_FLASHER_DUAL_2;
 
+	ctx->part_table = (struct fal_partition *)fal_get_partition_table((size_t *)&ctx->part_table_len);
+
 	return ctx;
 }
 
@@ -21,9 +23,8 @@ uf2_info_t *uf2_info_init() {
 void uf2_ctx_free(uf2_ota_t *ctx) {
 	if (!ctx)
 		return;
-	if (ctx->pt_default)
-		fal_set_partition_table_temp(ctx->pt_default, ctx->pt_default_len);
-	free(ctx->pt_current);
+	if (ctx->part_table_copied)
+		free(ctx->part_table);
 	free(ctx);
 }
 
@@ -72,6 +73,7 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 	uf2_err_t err = uf2_parse_block(ctx, block, NULL);
 	if (err)
 		return err;
+
 	if (block->not_main_flash || !block->len)
 		// ignore blocks not meant for flashing
 		return UF2_ERR_IGNORE;
@@ -79,8 +81,10 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 	if (!ctx->is_part_set)
 		// missing OTA_PART_INFO tag
 		return UF2_ERR_PART_UNSET;
-	const struct fal_partition *part = ctx->part;
-	if (!part)
+
+	const struct fal_partition *part  = ctx->part;
+	const struct fal_flash_dev *flash = ctx->flash;
+	if (!part || !flash)
 		// this block is not for current OTA scheme
 		return UF2_ERR_IGNORE;
 
@@ -91,21 +95,28 @@ uf2_err_t uf2_write(uf2_ota_t *ctx, uf2_block_t *block) {
 			return err;
 	}
 
+	// check writing length
+	if (block->addr + block->len > part->len)
+		return UF2_ERR_WRITE_FAILED;
+	uint32_t offset = part->offset + block->addr;
+
 	int ret;
 	// erase sectors if needed
-	if (!uf2_is_erased(ctx, part->offset + block->addr, block->len)) {
-		ret = fal_partition_erase(part, block->addr, block->len);
+	if (!uf2_is_erased(ctx, offset, block->len)) {
+		ret = flash->ops.erase(offset, block->len);
 		if (ret < 0)
 			return UF2_ERR_ERASE_FAILED;
-		ctx->erased_offset = part->offset + block->addr;
+		ctx->erased_offset = offset;
 		ctx->erased_length = ret;
 	}
+
 	// write data to flash
-	ret = fal_partition_write(part, block->addr, block->data, block->len);
+	ret = flash->ops.write(offset, block->data, block->len);
 	if (ret < 0)
 		return UF2_ERR_WRITE_FAILED;
 	if (ret != block->len)
 		return UF2_ERR_WRITE_LENGTH;
+
 	ctx->written += ret;
 	return UF2_ERR_OK;
 }
