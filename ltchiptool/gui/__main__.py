@@ -14,7 +14,7 @@ def gui_entrypoint(*args, **kwargs):
         import wx
     except ImportError:
         error("Cannot find wxPython or one of its dependencies")
-        error("Refer to https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/")
+        error("Refer to https://docs.libretiny.eu/docs/flashing/tools/ltchiptool/")
         exit(1)
 
     app = wx.App()

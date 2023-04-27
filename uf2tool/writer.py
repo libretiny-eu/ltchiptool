@@ -29,7 +29,7 @@ class UF2Writer:
 
     def set_board(self, board: Board):
         self.uf2.put_str(Tag.BOARD, board.name.lower())
-        key = f"LibreTuya {board.name.lower()}"
+        key = f"LibreTiny {board.name.lower()}"
         self.uf2.put_int32le(Tag.DEVICE_ID, crc32(key.encode()))
         self.board = board
 
@@ -83,7 +83,7 @@ class UF2Writer:
 
         self.uf2.put_int8(Tag.OTA_FORMAT_2, 2)
         if Tag.LT_VERSION in self.uf2.tags:
-            self.uf2.put_str(Tag.DEVICE, "LibreTuya")
+            self.uf2.put_str(Tag.DEVICE, "LibreTiny")
 
         schemes = set()
         for image in images:

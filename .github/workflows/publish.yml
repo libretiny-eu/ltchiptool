@@ -41,9 +41,8 @@ jobs:
     - name: Checkout LT repository
       uses: actions/checkout@v3
       with:
-        repository: kuba2k2/libretuya
-        path: libretuya
-        ref: structure-refactor
+        repository: kuba2k2/libretiny
+        path: libretiny
 
     - name: Set up Python
       uses: actions/setup-python@v3
@@ -56,10 +55,10 @@ jobs:
     - name: Copy LT data snapshot
       run: |
         mkdir -p ltchiptool/boards/_base
-        cp libretuya/platform.json ltchiptool/
-        cp libretuya/families.json ltchiptool/
-        cp libretuya/boards/*.json ltchiptool/boards/
-        cp -r libretuya/boards/_base/ ltchiptool/boards/
+        cp libretiny/platform.json ltchiptool/
+        cp libretiny/families.json ltchiptool/
+        cp libretiny/boards/*.json ltchiptool/boards/
+        cp -r libretiny/boards/_base/ ltchiptool/boards/
 
     - name: Build package
       run: poetry build
@@ -85,9 +84,8 @@ jobs:
       - name: Checkout LT repository
         uses: actions/checkout@v3
         with:
-          repository: kuba2k2/libretuya
-          path: libretuya
-          ref: structure-refactor
+          repository: kuba2k2/libretiny
+          path: libretiny
 
       - name: Set up Python Custom
         # Configure embedded Python 3.10 modified to work on Windows 7
@@ -120,10 +118,10 @@ jobs:
         shell: cmd
         run: |
           mkdir ltchiptool\boards\_base
-          copy libretuya\platform.json ltchiptool\
-          copy libretuya\families.json ltchiptool\
-          copy libretuya\boards\*.json ltchiptool\boards\
-          xcopy /S libretuya\boards\_base ltchiptool\boards\
+          copy libretiny\platform.json ltchiptool\
+          copy libretiny\families.json ltchiptool\
+          copy libretiny\boards\*.json ltchiptool\boards\
+          xcopy /S libretiny\boards\_base ltchiptool\boards\
 
       - name: Build GUI with PyInstaller
         shell: cmd

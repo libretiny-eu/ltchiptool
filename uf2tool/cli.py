@@ -38,7 +38,7 @@ def cli():
     required=True,
     type=BoardParamType(),
 )
-@click.option("-L", "--lt-version", help="LibreTuya core version")
+@click.option("-L", "--lt-version", help="LibreTiny core version")
 @click.option("-F", "--fw", help="Firmware name:version")
 @click.option(
     "-d",

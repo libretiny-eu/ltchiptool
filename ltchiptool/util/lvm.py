@@ -21,7 +21,7 @@ class LVM:
         f"- if you've opened the .EXE file or installed ltchiptool from PyPI, "
         f"report the error on GitHub issues\n"
         f"- if you're running a git-cloned copy of ltchiptool, install/update "
-        f"LibreTuya platform using PlatformIO IDE or CLI\n"
+        f"LibreTiny platform using PlatformIO IDE or CLI\n"
         f"- running the GUI in a git-cloned LT directory will use "
         f"that version, if no other is available"
     )
@@ -66,11 +66,15 @@ class LVM:
         self.platforms = []
         dirs = []
 
-        pio_path = expanduser("~/.platformio/platforms/libretuya")
-        if self.pio:
-            pkg = self.pio.get_package("libretuya")
-            if pkg:
-                pio_path = pkg.path
+        for name in ["libretiny", "libretuya"]:
+            pio_path = expanduser(f"~/.platformio/platforms/{name}")
+            if self.pio:
+                pkg = self.pio.get_package(name)
+                if pkg:
+                    pio_path = pkg.path
+            dirs += [
+                (LVMPlatform.Type.PLATFORMIO, pio_path),
+            ]
 
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             snapshot_path = join(sys._MEIPASS)
@@ -78,7 +82,6 @@ class LVM:
             snapshot_path = join(dirname(__file__), "..")
 
         dirs += [
-            (LVMPlatform.Type.PLATFORMIO, pio_path),
             (LVMPlatform.Type.CWD, "."),
             (LVMPlatform.Type.SNAPSHOT, snapshot_path),
         ]
@@ -97,7 +100,7 @@ class LVM:
             debug(f"Found {platform}")
             if platform.version not in self.compatible_version:
                 warning(
-                    f"LibreTuya version outdated (in {platform.path}). "
+                    f"LibreTiny version outdated (in {platform.path}). "
                     f"Update to v1.0.0 or newer"
                 )
             self.platforms.append(platform)
@@ -105,7 +108,7 @@ class LVM:
         if not self.platforms:
             raise FileNotFoundError(
                 f"Couldn't find required data files\n\n"
-                f"Neither LibreTuya package nor local data snapshot could be found.\n\n"
+                f"Neither LibreTiny package nor local data snapshot could be found.\n\n"
                 + self.message
             )
 
@@ -120,7 +123,7 @@ class LVM:
                 return
         raise RuntimeError(
             f"Couldn't find required data files\n\n"
-            f"LibreTuya platform has been found, but of an "
+            f"LibreTiny platform has been found, but of an "
             f"incompatible version (required is {spec}).\n\n"
             + self.message
             + f"\n\nFound directories:\n"
@@ -146,7 +149,7 @@ class LVM:
         if incompatible:
             raise RuntimeError(
                 f"Couldn't find file: '{name}'\n\n"
-                f"LibreTuya platform has been found, but of an "
+                f"LibreTiny platform has been found, but of an "
                 f"incompatible version (required is {spec}).\n\n" + self.message
             )
         raise FileNotFoundError(name)

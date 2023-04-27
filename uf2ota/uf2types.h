@@ -84,7 +84,7 @@ typedef enum {
 	// format versions
 	UF2_TAG_OTA_FORMAT_1 = 0x5D57D0,
 	UF2_TAG_OTA_FORMAT_2 = 0x6C8492,
-	// LibreTuya custom tags
+	// LibreTiny custom tags
 	UF2_TAG_OTA_PART_LIST = 0x6EC68A, // list of OTA schemes this package is usable in
 	UF2_TAG_OTA_PART_INFO = 0xC0EE0C, // partition names for each target type
 	UF2_TAG_BOARD		  = 0xCA25C8, // board name (lowercase code)

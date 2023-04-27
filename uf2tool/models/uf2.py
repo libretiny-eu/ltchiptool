@@ -112,7 +112,7 @@ class UF2:
         return cnt
 
     def write_header(self):
-        comment = "Hi! Please visit https://kuba2k2.github.io/libretuya/ to read specifications of this file format."
+        comment = "Hi! Please visit https://docs.libretiny.eu/ to read specifications of this file format."
         bl = Block(self.family)
         bl.flags.has_tags = True
         bl.flags.not_main_flash = True

@@ -14,7 +14,7 @@ class Tag(IntEnum):
     # format versions
     OTA_FORMAT_1 = 0x5D57D0
     OTA_FORMAT_2 = 0x6C8492
-    # LibreTuya custom tags
+    # LibreTiny custom tags
     OTA_PART_LIST = 0x6EC68A  # list of OTA schemes this package is usable in
     OTA_PART_INFO = 0xC0EE0C  # partition names for each OTA schemes
     BOARD = 0xCA25C8  # board name (lowercase code)

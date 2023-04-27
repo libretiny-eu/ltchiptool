@@ -49,7 +49,7 @@ void uf2_info_free(uf2_info_t *info);
 uf2_err_t uf2_check_block(uf2_ota_t *ctx, uf2_block_t *block);
 
 /**
- * @brief Parse header block (LibreTuya UF2 first block).
+ * @brief Parse header block (LibreTiny UF2 first block).
  *
  * Note: caller should call uf2_check_block() first.
  *

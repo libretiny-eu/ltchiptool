@@ -24,7 +24,7 @@ class AboutPanel(BasePanel):
             lt_path_title = "Local data snapshot path"
             lt_version = None
         else:
-            lt_path_title = "LibreTuya package path"
+            lt_path_title = "LibreTiny package path"
 
         tool_version = "v" + get_version()
         if "site-packages" not in __file__ and not hasattr(sys, "_MEIPASS"):
