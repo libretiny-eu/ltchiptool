@@ -21,6 +21,7 @@ class LoggingHandler(StreamHandler):
         "E": "bright_red",
         "C": "bright_magenta",
     }
+    exception_hook: Callable[[Exception], None] = None
 
     @staticmethod
     def get() -> "LoggingHandler":
@@ -122,6 +123,10 @@ class LoggingHandler(StreamHandler):
     def emit_exception(self, e: Exception):
         error(f"{type(e).__name__}: {e}")
         tb = e.__traceback__
+        if self.exception_hook:
+            self.exception_hook(e)
+        if not tb:
+            return
         while tb.tb_next:
             if self.full_traceback:
                 self.tb_echo(tb)

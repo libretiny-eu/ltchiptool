@@ -1,16 +1,20 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import logging
+from logging import debug, warning
 from os import makedirs
 from os.path import join
+from shutil import SameFileError, copyfile
 from time import time
-from typing import IO, Tuple
+from typing import IO, Optional, Tuple
 
 import click
 
-from ltchiptool import Family
-from ltchiptool.models import FamilyParamType
-from uf2tool.models import UF2, Input, InputParamType, UploadContext
+from ltchiptool import Board
+from ltchiptool.models import BoardParamType
+from ltchiptool.util.misc import sizeof
+from uf2tool.models import UF2, Image, ImageParamType, UploadContext
+from uf2tool.models.enums import OTAScheme, OTASchemeParamType
 from uf2tool.writer import UF2Writer
 
 
@@ -23,38 +27,63 @@ def cli():
 @click.option(
     "-o",
     "--output",
-    help="Output .uf2 binary",
-    type=click.File("wb"),
-    default="out.uf2",
+    help="Output .uf2 binary (can be specified multiple times)",
+    type=str,
+    multiple=True,
 )
 @click.option(
-    "-f", "--family", help="Family name", required=True, type=FamilyParamType()
+    "-b",
+    "--board",
+    help="Board name/code/JSON path",
+    required=True,
+    type=BoardParamType(),
 )
-@click.option("-b", "--board", help="Board name/code")
-@click.option("-v", "--version", help="LibreTuya core version")
+@click.option("-L", "--lt-version", help="LibreTiny core version")
 @click.option("-F", "--fw", help="Firmware name:version")
 @click.option(
-    "-d", "--date", help="Build date (Unix, default now)", type=int, default=time()
+    "-d",
+    "--date",
+    help="Build date (Unix, default now)",
+    type=int,
+    default=time(),
 )
-@click.argument("INPUTS", nargs=-1, type=InputParamType())
+@click.option("--legacy", help="Add legacy UF2 tags", is_flag=True)
+@click.argument("IMAGES", nargs=-1, type=ImageParamType())
 def write(
-    output: IO[bytes],
-    family: Family,
-    board: str,
-    version: str,
+    output: Tuple[str],
+    board: Board,
+    lt_version: str,
     fw: str,
     date: int,
-    inputs: Tuple[Input],
+    legacy: bool,
+    images: Tuple[Image],
 ):
-    writer = UF2Writer(output, family)
-    if board:
-        writer.set_board(board)
-    if version:
-        writer.set_version(version)
+    if not output:
+        output = ("out.uf2",)
+
+    family = board.family
+    if not family.is_chip:
+        raise ValueError(
+            f"Family {family} is not a Chip Family - it can't be used here"
+        )
+
+    out_file = open(output[0], "wb")
+    writer = UF2Writer(out_file, family, legacy)
+    writer.set_board(board)
+    if lt_version:
+        writer.set_version(lt_version)
     if fw:
         writer.set_firmware(fw)
     writer.set_date(date)
-    writer.write(inputs)
+    writer.write(images)
+    out_file.close()
+
+    for copy in output[1:]:
+        debug(f"Copying UF2 as {copy}")
+        try:
+            copyfile(output[0], copy)
+        except SameFileError:
+            pass
 
 
 @cli.command(help="Print info about UF2 file")
@@ -63,32 +92,53 @@ def info(file: IO[bytes]):
     uf2 = UF2(file)
     uf2.read()
     uf2.dump()
+    ctx = UploadContext(uf2)
+    if not ctx.part_table:
+        return
+    logging.info("Partition table:")
+    for part in ctx.part_table.partitions:
+        logging.info(
+            f" - {part.name}: "
+            f"0x{part.offset:06X}+0x{part.length:X} "
+            f"({sizeof(part.length)})"
+        )
 
 
 @cli.command(help="Dump UF2 contents")
 @click.argument("file", type=click.File("rb"))
 @click.option("-o", "--output", type=click.Path(file_okay=False), default=".")
-def dump(file: IO[bytes], output: str):
+@click.option("-s", "--scheme", type=OTASchemeParamType(), default=None, multiple=True)
+def dump(file: IO[bytes], output: str, scheme: Optional[OTAScheme]):
     uf2 = UF2(file)
     uf2.read()
     ctx = UploadContext(uf2)
     makedirs(output, exist_ok=True)
 
-    ota_idxs = []
-    if ctx.has_ota1:
-        ota_idxs.append(1)
-    if ctx.has_ota2:
-        ota_idxs.append(2)
+    scheme_map = {
+        OTAScheme.DEVICE_SINGLE: "device",
+        OTAScheme.DEVICE_DUAL_1: "device1",
+        OTAScheme.DEVICE_DUAL_2: "device2",
+        OTAScheme.FLASHER_SINGLE: "flasher",
+        OTAScheme.FLASHER_DUAL_1: "flasher1",
+        OTAScheme.FLASHER_DUAL_2: "flasher2",
+    }
+    schemes = scheme or OTAScheme
 
-    prefix = f"image_{ctx.board_name}_{ctx.uf2.family.code}"
-
-    for ota_idx in ota_idxs:
+    written = False
+    for scheme in schemes:
+        prefix = f"uf2dump_{uf2.family.code}_{scheme_map[scheme]}"
         ctx.seq = 0
-        for offset, data in ctx.collect(ota_idx).items():
-            path = f"{prefix}_ota{ota_idx}_0x{offset:X}.bin"
+        for offset, data in ctx.collect_data(scheme).items():
+            path = f"{prefix}_0x{offset:06X}.bin"
             logging.info(f"Writing to {path}")
             with open(join(output, path), "wb") as f:
                 f.write(data.read())
+                written = True
+    if not written:
+        warning(
+            f"No data found for the specified OTA scheme(s): "
+            + ", ".join(scheme.name for scheme in schemes)
+        )
 
 
 @cli.command(

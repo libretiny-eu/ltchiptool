@@ -12,7 +12,7 @@ from ltchiptool import SocInterface
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
-from uf2tool import UploadContext
+from uf2tool import OTAScheme, UploadContext
 
 BK72XX_GUIDE = [
     "Connect UART1 of the BK7231 to the USB-TTL adapter:",
@@ -82,7 +82,8 @@ class BK72XXFlash(SocInterface, ABC):
         if self.bk:
             self.bk.close()
         self.bk = None
-        self.conn.linked = False
+        if self.conn:
+            self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
@@ -180,7 +181,7 @@ class BK72XXFlash(SocInterface, ABC):
         callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         # collect continuous blocks of data (before linking, as this takes time)
-        parts = ctx.collect(ota_idx=1)
+        parts = ctx.collect_data(OTAScheme.FLASHER_SINGLE)
         callback.on_total(sum(len(part.getvalue()) for part in parts.values()))
 
         # connect to chip

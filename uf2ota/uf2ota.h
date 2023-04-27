@@ -11,11 +11,11 @@ extern "C" {
 /**
  * @brief Create an UF2 OTA context.
  *
- * @param ota_idx target OTA index
+ * @param scheme the device's target OTA scheme
  * @param family_id expected family ID
  * @return uf2_ota_t* heap-allocated structure
  */
-uf2_ota_t *uf2_ctx_init(uint8_t ota_idx, uint32_t family_id);
+uf2_ota_t *uf2_ctx_init(uf2_ota_scheme_t scheme, uint32_t family_id);
 
 /**
  * @brief Create an UF2 Info structure.
@@ -23,6 +23,14 @@ uf2_ota_t *uf2_ctx_init(uint8_t ota_idx, uint32_t family_id);
  * @return uf2_info_t* heap-allocated structure
  */
 uf2_info_t *uf2_info_init();
+
+/**
+ * @brief Free values in the context AND the context itself.
+ * Also restore the FAL partition table if changed during the update process.
+ *
+ * @param ctx structure to free; may be NULL
+ */
+void uf2_ctx_free(uf2_ota_t *ctx);
 
 /**
  * @brief Free values in the info structure AND the structure itself.
@@ -41,7 +49,7 @@ void uf2_info_free(uf2_info_t *info);
 uf2_err_t uf2_check_block(uf2_ota_t *ctx, uf2_block_t *block);
 
 /**
- * @brief Parse header block (LibreTuya UF2 first block).
+ * @brief Parse header block (LibreTiny UF2 first block).
  *
  * Note: caller should call uf2_check_block() first.
  *

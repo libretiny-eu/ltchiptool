@@ -36,7 +36,7 @@ class FlashThread(BaseThread):
         skip: int,
         length: int | None,
         verify: bool,
-        uf2: UF2 | None,
+        ctx: UploadContext | None,
         on_chip_info: Callable[[str], None],
     ):
         super().__init__()
@@ -49,7 +49,7 @@ class FlashThread(BaseThread):
         self.skip = skip
         self.length = length
         self.verify = verify
-        self.uf2 = uf2
+        self.ctx = ctx
         self.on_chip_info = on_chip_info
 
     def run_impl(self):
@@ -70,16 +70,12 @@ class FlashThread(BaseThread):
                 print(e)
                 if self.should_run():
                     # show exceptions only if not cancelled
-                    wx.MessageBox(
-                        message=str(e),
-                        caption="Error",
-                        style=wx.ICON_ERROR,
-                    )
+                    LoggingHandler.get().emit_exception(e)
         self.soc.flash_disconnect()
 
     def stop(self):
         super().stop()
-        if self.uf2:
+        if self.ctx:
             # try to break UF2 flashing
             self.soc.flash_disconnect()
 
@@ -93,10 +89,14 @@ class FlashThread(BaseThread):
                     # guide the user how to reset the chip
                     for line in format_flash_guide(self.soc):
                         LoggingHandler.get().emit_string("I", line, color="bright_blue")
-                case _ if elapsed and elapsed % 4 == 0:
-                    # HW-reset every 2.0 seconds
+                case _ if elapsed and elapsed % 8 == 0:
+                    # HW-reset every 4.0 seconds
                     self.callback.on_message("Hardware reset...")
                     self.soc.flash_hw_reset()
+                case _ if elapsed and elapsed % 8 == 4:
+                    # SW-reset every 4.0 seconds
+                    self.callback.on_message("Software reset...")
+                    self.soc.flash_sw_reset()
                 case _:
                     self.callback.on_message("Connecting to the chip")
 
@@ -118,10 +118,9 @@ class FlashThread(BaseThread):
             return
         self.callback.on_message(None)
 
-        if self.uf2:
-            ctx = UploadContext(self.uf2)
+        if self.ctx:
             self.soc.flash_write_uf2(
-                ctx=ctx,
+                ctx=self.ctx,
                 verify=self.verify,
                 callback=self.callback,
             )

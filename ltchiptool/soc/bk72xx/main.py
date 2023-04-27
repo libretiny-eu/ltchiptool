@@ -2,8 +2,10 @@
 
 from abc import ABC
 from logging import info
+from typing import Optional
 
 from ltchiptool import Family
+from ltchiptool.models import OTAType
 from ltchiptool.soc import SocInterfaceCommon
 
 from .binary import BK72XXBinary
@@ -24,5 +26,9 @@ class BK72XXMain(
         info("Hello from BK72xx")
 
     @property
-    def elf_has_dual_ota(self) -> bool:
-        return False
+    def ota_type(self) -> Optional[OTAType]:
+        return OTAType.SINGLE
+
+    @property
+    def ota_supports_format_1(self) -> bool:
+        return True

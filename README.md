@@ -7,14 +7,14 @@ Universal, easy-to-use GUI flashing/dumping tool for BK7231, RTL8710B and RTL872
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyPI](https://img.shields.io/pypi/v/ltchiptool)](https://pypi.org/project/ltchiptool/)
 
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/libretuya/ltchiptool?include_prereleases&label=GUI%20release)](https://github.com/libretuya/ltchiptool/releases/latest)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/libretiny-eu/ltchiptool?include_prereleases&label=GUI%20release)](https://github.com/libretiny-eu/ltchiptool/releases/latest)
 
 ![Screenshot](.github/screenshot.png)
 </div>
 
 ## What is this?
 
-This repository is a collection of tools, used in the [LibreTuya project](https://github.com/kuba2k2/libretuya), that perform some chip-specific tasks, like packaging binary images or uploading firmware to the chip.
+This repository is a collection of tools, used in the [LibreTiny project](https://github.com/kuba2k2/libretiny), that perform some chip-specific tasks, like packaging binary images or uploading firmware to the chip.
 
 Since v2.0.0, it contains a common, chip-independent CLI and API for interacting with supported chips in download mode (reading/writing flash).
 
@@ -23,7 +23,7 @@ Since v3.0.0, it contains a beginner-friendly GUI for flashing firmware or dumpi
 # Usage/documentation
 <div style="text-align: center">
 
-## [Available here](https://docs.libretuya.ml/docs/flashing/tools/ltchiptool/)
+## [Available here](https://docs.libretiny.eu/docs/flashing/tools/ltchiptool/)
 </div>
 
 ## License

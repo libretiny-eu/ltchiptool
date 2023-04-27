@@ -17,7 +17,7 @@ from ._utils import flash_link_interactive
 
 
 @click.command(short_help="Read flash contents")
-@click.argument("family", type=FamilyParamType(by_parent=True))
+@click.argument("family", type=FamilyParamType())
 @click.argument("file", type=File("wb"))
 @click.option(
     "-d",

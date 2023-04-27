@@ -35,7 +35,7 @@ def has(data: dict, path: str) -> bool:
     return has(dict.get(data, key, None), path)
 
 
-def set_(data: dict, path: str, value):
+def set_(data: dict, path: str, value, newtype=dict):
     if not isinstance(data, dict) or not path:
         return
     # can't use __contains__ here, as we're setting,
@@ -48,7 +48,7 @@ def set_(data: dict, path: str, value):
         if key in data:
             sub_data = dict.__getitem__(data, key)
         else:
-            sub_data = {}
+            sub_data = newtype()
             dict.__setitem__(data, key, sub_data)
         set_(sub_data, path, value)
 

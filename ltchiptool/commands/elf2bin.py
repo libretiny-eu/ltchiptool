@@ -26,8 +26,8 @@ def cli(board: Board, input: str, ota_idx: int):
     soc.set_board(board)
     files = soc.elf2bin(input, ota_idx)
     info("Generated files:")
-    for name, offset in files.items():
-        if offset is None:
-            info(f" - {name}")
+    for file in files:
+        if file.offset is None:
+            info(f" - {file.filename}")
         else:
-            info(f" - {name} - flashable at 0x{offset:X}")
+            info(f" - {file.filename} - flashable at 0x{file.offset:X}")

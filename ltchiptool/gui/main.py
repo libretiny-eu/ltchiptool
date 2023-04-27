@@ -12,8 +12,8 @@ import wx.adv
 import wx.xrc
 from click import get_app_dir
 
-from ltchiptool.util.env import lt_find_json
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.lvm import LVM
 
 from .panels.about import AboutPanel
 from .panels.base import BasePanel
@@ -25,11 +25,13 @@ from .utils import with_target
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
     panels: dict[str, BasePanel]
+    init_params: dict
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         sys.excepthook = self.OnException
         threading.excepthook = self.OnException
+        LoggingHandler.get().exception_hook = self.ShowExceptionMessage
 
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             xrc = join(sys._MEIPASS, "ltchiptool.xrc")
@@ -45,25 +47,16 @@ class MainFrame(wx.Frame):
 
         try:
             # try to find LT directory or local data snapshot
-            lt_find_json("families.json")
-        except FileNotFoundError:
-            message = (
-                f"Couldn't find required data files\n\n"
-                f"Neither LibreTuya package nor local data snapshot could be found.\n\n"
-                f"- if you've opened the .EXE file or installed ltchiptool from PyPI, "
-                f"report the error on GitHub issues\n"
-                f"- if you're running a git-cloned copy of ltchiptool, install "
-                f"LibreTuya platform using PlatformIO IDE or CLI\n"
-                f"- running the GUI in a git-cloned LT directory will use "
-                f"that version, if no other is available"
-            )
-            wx.MessageBox(message=message, caption="Error", style=wx.ICON_ERROR)
+            LVM.get().require_version()
+        except Exception as e:
+            wx.MessageBox(message=str(e), caption="Error", style=wx.ICON_ERROR)
             wx.Exit()
             return
 
         self.config_file = join(get_app_dir("ltchiptool"), "config.json")
         self.loaded = False
         self.panels = {}
+        self.init_params = {}
 
         # initialize logging
         self.Log = LogPanel(res, self)
@@ -139,11 +132,20 @@ class MainFrame(wx.Frame):
         else:
             LoggingHandler.get().emit_exception(args[0].exc_value)
 
+    @staticmethod
+    def ShowExceptionMessage(e):
+        wx.MessageBox(
+            message=str(e),
+            caption="Error",
+            style=wx.ICON_ERROR,
+        )
+
     def OnShow(self, *_):
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
         for name, panel in self.panels.items():
             panel.SetSettings(**settings.get(name, {}))
+            panel.SetInitParams(**self.init_params)
         if settings:
             info(f"Loaded settings from {self.config_file}")
         for name, panel in self.panels.items():

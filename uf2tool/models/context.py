@@ -9,27 +9,34 @@ from ltchiptool import Board
 from ltchiptool.util.intbin import letoint
 from uf2tool.binpatch import binpatch_apply
 
-from .enums import Tag
+from .enums import OTAScheme, Tag
+from .partition import PartitionTable
 from .uf2 import UF2
 
 
 class UploadContext:
     uf2: UF2
-
+    part: Optional[str] = None
     seq: int = 0
-
-    part1: str = None
-    part2: str = None
-
-    has_ota1: bool
-    has_ota2: bool
-
+    part_table: PartitionTable = None
     _board: Board = None
 
     def __init__(self, uf2: UF2) -> None:
         self.uf2 = uf2
-        self.has_ota1 = uf2.tags.get(Tag.LT_HAS_OTA1, None) == b"\x01"
-        self.has_ota2 = uf2.tags.get(Tag.LT_HAS_OTA2, None) == b"\x01"
+        if not uf2.data:
+            raise ValueError("UF2 file is empty (or not loaded yet)")
+        if Tag.OTA_FORMAT_2 not in uf2.tags:
+            raise ValueError(
+                "This UF2 is of legacy format and can't be read. "
+                "Use ltchiptool v3.0.0 or older to read this package."
+            )
+        if Tag.FAL_PTABLE in uf2.tags:
+            partition_table = uf2.tags[Tag.FAL_PTABLE]
+            self.part_table = PartitionTable.unpack(
+                partition_table,
+                name_len=16,
+                length=len(partition_table),
+            )
 
     @property
     def fw_name(self) -> str:
@@ -61,86 +68,96 @@ class UploadContext:
 
     @property
     def baudrate(self) -> int:
+        # TODO move this out of here
         return self.board["upload.speed"]
 
     def get_offset(self, part: str, offs: int) -> Optional[int]:
-        (start, length, end) = self.board.region(part)
+        if self.part_table:
+            try:
+                partition = next(
+                    p for p in self.part_table.partitions if p.name == part
+                )
+            except StopIteration:
+                raise ValueError(
+                    f"Partition '{part}' not found in custom partition table"
+                )
+            start = partition.offset
+            length = partition.length
+        else:
+            (start, length, _) = self.board.region(part)
+
         if offs >= length:
             error(f"Partition '{part}' rel. offset 0x{offs:X} larger than 0x{length:X}")
             return None
         return start + offs
 
-    def read(self, ota_idx: int = 1) -> Optional[Tuple[str, int, bytes]]:
-        """Read next available data block for the specified OTA scheme.
+    def read_next(self, scheme: OTAScheme) -> Optional[Tuple[str, int, bytes]]:
+        """
+        Read next available data block for the specified OTA scheme.
 
         Returns:
             Tuple[str, int, bytes]: target partition, relative offset, data block
         """
 
-        if ota_idx not in [1, 2]:
-            raise ValueError(f"Invalid OTA index - {ota_idx}")
-
-        if ota_idx == 1 and not self.has_ota1:
-            raise ValueError(f"No data for OTA index - {ota_idx}")
-        if ota_idx == 2 and not self.has_ota2:
-            raise ValueError(f"No data for OTA index - {ota_idx}")
-
         for _ in range(self.seq, len(self.uf2.data)):
             block = self.uf2.data[self.seq]
             self.seq += 1
 
-            part1 = block.tags.get(Tag.LT_PART_1, None)
-            part2 = block.tags.get(Tag.LT_PART_2, None)
+            part_info = block.tags.get(Tag.OTA_PART_INFO, None)
+            if part_info is not None:
+                self.parse_part_info(scheme, part_info)
 
-            if part1 is not None and part2 is not None:
-                # decode empty tags too
-                self.part1 = part1.decode()
-                self.part2 = part2.decode()
-            elif part1 or part2:
-                raise ValueError(
-                    f"Only one target partition specified - {part1} / {part2}"
-                )
-
-            if not block.data:
-                continue
-
-            part = None
-            if ota_idx == 1:
-                part = self.part1
-            elif ota_idx == 2:
-                part = self.part2
-            if not part:
+            if not self.part or not block.data:
                 continue
 
             # got data and target partition
             offs = block.address
             data = block.data
 
-            if ota_idx == 2 and Tag.LT_BINPATCH in block.tags:
-                binpatch = block.tags[Tag.LT_BINPATCH]
+            if Tag.BINPATCH in block.tags and scheme.name.endswith("2"):
+                binpatch = block.tags[Tag.BINPATCH]
                 data = bytearray(data)
                 data = binpatch_apply(data, binpatch)
                 data = bytes(data)
 
-            return part, offs, data
-        return None, 0, None
+            return self.part, offs, data
+        return None
 
-    def collect(self, ota_idx: int = 1) -> Optional[Dict[int, BytesIO]]:
-        """Read all UF2 blocks. Gather continuous data parts into sections
+    def parse_part_info(self, scheme: OTAScheme, info: bytes) -> None:
+        if len(info) < 3:
+            raise ValueError("Invalid OTA_PART_INFO: too short")
+        part_names = info[3:].split(b"\x00")
+        part_names = [part.decode() for part in part_names if part]
+        part_indexes = list(map(int, info[0:3].hex()))
+        assert len(part_indexes) == 6
+        self.part = None
+        if not part_names:
+            return
+        index = part_indexes[scheme]
+        if index == 0:
+            return
+        if index > len(part_names):
+            raise ValueError("Invalid OTA_PART_INFO: missing partition name")
+        self.part = part_names[index - 1]
+
+    def collect_data(self, scheme: OTAScheme) -> Optional[Dict[int, BytesIO]]:
+        """
+        Read all UF2 blocks. Gather continuous data parts into sections
         and their flashing offsets.
 
         Returns:
             Dict[int, BytesIO]: map of flash offsets to streams with data
         """
 
+        if not self.board_name:
+            raise ValueError("This UF2 is not readable, since no board name is present")
+
         out: Dict[int, BytesIO] = {}
         while True:
-            ret = self.read(ota_idx)
+            ret = self.read_next(scheme)
             if not ret:
-                return None
-            (part, offs, data) = ret
-            if not data:
                 break
+            (part, offs, data) = ret
             offs = self.get_offset(part, offs)
             if offs is None:
                 return None

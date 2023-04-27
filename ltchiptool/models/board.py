@@ -8,8 +8,8 @@ from typing import List, Optional, Tuple, Union
 import click
 
 from ltchiptool.util.dict import RecursiveDict, merge_dicts
-from ltchiptool.util.env import lt_find_path, lt_read_json
 from ltchiptool.util.fileio import readjson
+from ltchiptool.util.lvm import LVM
 from ltchiptool.util.toolchain import Toolchain
 
 from .family import Family
@@ -28,7 +28,7 @@ class Board(RecursiveDict):
                 board = readjson(board)
             else:
                 source = board
-                board = lt_read_json(f"boards/{board}.json")
+                board = LVM.get().load_json(f"boards/{board}.json")
                 board["source"] = source
         if "_base" in board:
             base = board["_base"]
@@ -36,7 +36,7 @@ class Board(RecursiveDict):
                 base = [base]
             result = {}
             for base_name in base:
-                board_base = lt_read_json(f"boards/_base/{base_name}.json")
+                board_base = LVM.get().load_json(f"boards/_base/{base_name}.json")
                 merge_dicts(result, board_base)
             merge_dicts(result, board)
             board = result
@@ -44,7 +44,7 @@ class Board(RecursiveDict):
 
     @classmethod
     def get_list(cls) -> List[str]:
-        boards_glob = join(lt_find_path(), "boards", "*.json")
+        boards_glob = join(LVM.path(), "boards", "*.json")
         return [basename(file)[:-5] for file in glob(boards_glob)]
 
     def json(self) -> str:
@@ -87,7 +87,12 @@ class Board(RecursiveDict):
         return None
 
     def region(self, name: str) -> Tuple[int, int, int]:
-        (start, length) = self[f"flash.{name}"].split("+")
+        region = self[f"flash.{name}"]
+        if not region:
+            raise ValueError(
+                f"The flash region '{name}' does not exist for board '{self.name}'."
+            )
+        (start, length) = region.split("+")
         start = int(start, 0)
         length = int(length, 0)
         return start, length, start + length
