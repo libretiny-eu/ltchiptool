@@ -8,6 +8,10 @@ packages = [
     { include = "ltchiptool" },
     { include = "uf2tool" },
 ]
+include = [
+    "ltchiptool/platform.json",
+    "ltchiptool/families.json",
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
