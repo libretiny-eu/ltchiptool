@@ -28,10 +28,10 @@ class LVM:
     compatible_version = SimpleSpec(">0.99.99")
 
     @staticmethod
-    def get() -> "LVM":
+    def get(find: bool = True) -> "LVM":
         if LVM.INSTANCE:
             return LVM.INSTANCE
-        LVM.INSTANCE = LVM()
+        LVM.INSTANCE = LVM(find)
         return LVM.INSTANCE
 
     @staticmethod
@@ -42,14 +42,27 @@ class LVM:
     def path() -> str:
         return LVM.default().path
 
-    def __init__(self):
+    @staticmethod
+    def add_path(path: str) -> None:
+        lvm = LVM.get(find=False)
+        platform = LVMPlatform(
+            type=LVMPlatform.Type.RUNTIME,
+            path=realpath(path),
+            version=LVM.read_version(join(path, "platform.json")),
+        )
+        lvm.platforms.insert(0, platform)
+        lvm.find_all()
+
+    def __init__(self, find: bool = True):
         try:
             from platformio.package.manager.platform import PlatformPackageManager
 
             self.pio = PlatformPackageManager()
         except (ImportError, AttributeError):
             pass
-        self.find_all()
+        self.platforms = []
+        if find:
+            self.find_all()
 
     @staticmethod
     def read_version(manifest: str) -> Optional[Version]:
@@ -63,7 +76,6 @@ class LVM:
         return None
 
     def find_all(self) -> None:
-        self.platforms = []
         dirs = []
 
         for name in ["libretiny", "libretuya"]:
@@ -170,6 +182,7 @@ class LVMPlatform:
         PLATFORMIO = auto()
         CWD = auto()
         SNAPSHOT = auto()
+        RUNTIME = auto()
 
     type: Type
     path: str
@@ -199,6 +212,8 @@ class LVMPlatform:
             type_name = "Current directory"
         elif self.type == LVMPlatform.Type.SNAPSHOT:
             type_name = "Local data snapshot"
+        elif self.type == LVMPlatform.Type.RUNTIME:
+            type_name = "PlatformIO (run-time)"
         else:
             type_name = "Unknown"
         return f"{type_name} (v{self.version}) - {self.path}"
