@@ -183,6 +183,8 @@ class LogPanel(BasePanel):
 
     def OnShow(self):
         super().OnShow()
+        if self.delayed_lines is None:
+            return
         for log_prefix, message, color in self.delayed_lines:
             self.emit_raw(log_prefix, message, color)
         self.delayed_lines = None
