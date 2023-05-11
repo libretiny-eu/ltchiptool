@@ -2,8 +2,10 @@
 
 from abc import ABC
 from logging import info
+from typing import Optional
 
 from ltchiptool import Family
+from ltchiptool.models import OTAType
 from ltchiptool.soc import SocInterfaceCommon
 
 from .binary import AmebaZ2Binary
@@ -24,7 +26,5 @@ class AmebaZ2Main(
         info("Hello from AmebaZ2")
 
     @property
-    def elf_has_dual_ota(self) -> bool:
-        # target has dual ota, but requires only single elf
-        # flash pages are remapped
-        return False
+    def ota_type(self) -> Optional[OTAType]:
+        return OTAType.DUAL

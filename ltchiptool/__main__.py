@@ -1,5 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
+import os
 from logging import DEBUG, INFO
 
 import click
@@ -30,7 +31,7 @@ VERBOSITY_LEVEL = {
 
 @click.command(
     cls=get_multi_command_class(COMMANDS),
-    help="Tools for working with LT-supported IoT chips",
+    help="Universal flashing and binary manipulation tool for IoT chips",
     context_settings=dict(help_option_names=["-h", "--help"]),
 )
 @click.option(
@@ -80,6 +81,8 @@ def cli_entrypoint(
     indent: int,
 ):
     ctx.ensure_object(dict)
+    if verbose == 0 and "LTCHIPTOOL_VERBOSE" in os.environ:
+        verbose = int(os.environ["LTCHIPTOOL_VERBOSE"])
     logger = LoggingHandler.get()
     logger.level = VERBOSITY_LEVEL[min(verbose, 2)]
     logger.timed = timed

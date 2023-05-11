@@ -4,14 +4,14 @@ from .block import Block
 from .context import UploadContext
 from .enums import Opcode, Tag
 from .flags import Flags
-from .input import Input, InputParamType
+from .image import Image, ImageParamType
 from .uf2 import UF2
 
 __all__ = [
     "Block",
     "Flags",
-    "Input",
-    "InputParamType",
+    "Image",
+    "ImageParamType",
     "Opcode",
     "Tag",
     "UF2",

@@ -1,7 +1,6 @@
 # Copyright (c) Kuba Szczodrzyński 2022-05-27.
 
 from hashlib import md5
-from io import BytesIO
 from logging import info
 from typing import IO, Dict, List
 
@@ -65,7 +64,7 @@ class UF2:
     def put_int8(self, tag: Tag, value: int):
         self.tags[tag] = intto8(value)
 
-    def read(self, block_tags: bool = True):
+    def read(self, block_tags: bool = True, count: int = 0):
         while True:
             data = self.f.read(512)
             if len(data) not in [0, 512]:
@@ -88,8 +87,10 @@ class UF2:
 
             if block_tags or not block.length:
                 self.tags.update(block.tags)
-            if block.length and not block.flags.not_main_flash:
-                self.data.append(block)
+            self.data.append(block)
+
+            if count and self.seq >= count:
+                break
 
     def dump(self):
         info(f"Family: {self.family.short_name} / {self.family.description}")
@@ -100,7 +101,7 @@ class UF2:
             else:
                 v = v.hex()
             info(f" - {k.name}: {v}")
-        info(f"Data chunks: {len(self.data)}")
+        info(f"Block count: {len(self.data)}")
         info(f"Total binary size: {sum(bl.length for bl in self.data)}")
 
     @property
@@ -111,7 +112,7 @@ class UF2:
         return cnt
 
     def write_header(self):
-        comment = "Hi! Please visit https://kuba2k2.github.io/libretuya/ to read specifications of this file format."
+        comment = "Hi! Please visit https://docs.libretiny.eu/ to read specifications of this file format."
         bl = Block(self.family)
         bl.flags.has_tags = True
         bl.flags.not_main_flash = True
@@ -144,14 +145,8 @@ class UF2:
             self.write_header()
             self.seq += 1
 
-        bio = BytesIO()
         for bl in self.data:
             bl.block_count = self.block_count
             bl.block_seq = self.seq
-            bio.write(bl.encode())
-            if self.seq % 128 == 0:
-                # write the buffer every 64 KiB
-                self.f.write(bio.getvalue())
-                bio = BytesIO()
+            self.f.write(bl.encode())
             self.seq += 1
-        self.f.write(bio.getvalue())

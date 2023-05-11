@@ -98,9 +98,9 @@ class AmebaZ2Binary(SocInterface, ABC):
         if not isfile(input_boot):
             raise FileNotFoundError("Bootloader image not found")
         # build output name
-        output = chname(input, f"flash_is.bin")
-        out_ota1 = chname(input, f"firmware_is.bin")
-        out_boot = chname(input, f"bootloader.bin")
+        output = chname(input, f"image_flash_is.0x{0:06X}.bin")
+        out_ota1 = chname(input, f"image_firmware_is.0x{ota1_offset:06X}.bin")
+        out_boot = chname(input, f"image_bootloader.0x{boot_offset:06X}.bin")
         # print graph element
         graph(1, basename(output))
         # add to outputs

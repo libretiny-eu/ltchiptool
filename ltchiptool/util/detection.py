@@ -6,6 +6,7 @@ from os import SEEK_CUR, stat
 from typing import IO, Optional
 
 from ltchiptool import Board, Family, SocInterface
+from uf2tool import UploadContext
 from uf2tool.models import UF2, Tag
 
 from .fileio import peek
@@ -49,7 +50,6 @@ class Detection:
 
     family: Optional[Family] = None
     soc: Optional[SocInterface] = None
-    uf2: Optional[UF2] = None
 
     def __post_init__(self):
         if not self.length:
@@ -74,6 +74,14 @@ class Detection:
             Detection.Type.UNSUPPORTED_UF2,
             Detection.Type.VALID_UF2,
         ]
+
+    def get_uf2_ctx(self) -> Optional[UploadContext]:
+        if not self.is_uf2:
+            return None
+        with open(self.name, "rb") as f:
+            uf2 = UF2(f)
+            uf2.read(block_tags=False)
+        return UploadContext(uf2)
 
     @property
     def need_offset(self) -> bool:
@@ -143,7 +151,7 @@ def _detect_file(file: IO[bytes], family: Family = None) -> Detection:
         uf2 = UF2(file)
         uf2_type = Detection.Type.VALID_UF2
         try:
-            uf2.read(block_tags=False)
+            uf2.read(block_tags=False, count=8)
             fw_name = uf2.tags.get(Tag.FIRMWARE, b"").decode()
             fw_version = uf2.tags.get(Tag.VERSION, b"").decode()
             board_name = uf2.tags.get(Tag.BOARD, b"").decode()
@@ -167,7 +175,6 @@ def _detect_file(file: IO[bytes], family: Family = None) -> Detection:
             type=uf2_type,
             file_type=file_type,
             family=uf2.family,
-            uf2=uf2,
         )
     elif file_type == "Tuya UG":
         wrap_type = file_type

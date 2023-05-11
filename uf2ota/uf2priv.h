@@ -2,11 +2,16 @@
 
 #pragma once
 
-// include family stdlib APIs
-#include <Arduino.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "uf2binpatch.h"
 #include "uf2types.h"
+
+#include <fal.h>
 
 /**
  * @brief Parse a block and extract information from tags.
@@ -28,30 +33,27 @@ uf2_err_t uf2_parse_block(uf2_ota_t *ctx, uf2_block_t *block, uf2_info_t *info);
 uint8_t uf2_read_tag(const uint8_t *data, uf2_tag_type_t *type);
 
 /**
- * @brief Update destination partitions in context.
- *
- * Partition names cannot be NULL.
- *
- * Returns UF2_ERR_IGNORE if specified partitions don't match the
- * current OTA index.
+ * @brief Parse OTA_PART_LIST tag to ensure the UF2 package is usable in this OTA scheme.
  *
  * @param ctx context
- * @param part1 partition 1 name or empty string
- * @param part2 partition 2 name or empty string
+ * @param tag OTA_PART_LIST tag data
+ * @param tag_len length of the tag data
  * @return uf2_err_t error code
  */
-uf2_err_t uf2_update_parts(uf2_ota_t *ctx, char *part1, char *part2);
+uf2_err_t uf2_parse_part_list(uf2_ota_t *ctx, const uint8_t *tag, uint8_t tag_len);
 
 /**
- * @brief Get target flashing partition, depending on OTA index.
+ * @brief Parse OTA_PART_INFO tag to update the target partition.
  *
  * @param ctx context
- * @return fal_partition_t target partition or NULL if not set
+ * @param tag OTA_PART_INFO tag data
+ * @param tag_len length of the tag data
+ * @return uf2_err_t error code
  */
-fal_partition_t uf2_get_target_part(uf2_ota_t *ctx);
+uf2_err_t uf2_parse_part_info(uf2_ota_t *ctx, const uint8_t *tag, uint8_t tag_len);
 
 /**
- * Check if specified flash memory region was already erased during update.
+ * Check if specified flash memory region has already been erased during update.
  *
  * @param ctx context
  * @param offset offset to check

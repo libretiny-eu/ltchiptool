@@ -112,7 +112,7 @@ class RTLXMD:
                     # received CAN
                     if cancel:
                         # Transmission canceled: received 2xCAN at start-sequence
-                        return False
+                        continue
                     else:
                         # Cancellation at start sequence
                         cancel = 1
@@ -144,7 +144,7 @@ class RTLXMD:
                     # send error: error_count reached 15, aborting.
                     self._port.write(CAN)
                     self._port.write(CAN)
-                return False
+                continue
         return False
 
     def ModeXmodem(self):

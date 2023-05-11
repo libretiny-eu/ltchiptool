@@ -1,9 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-08-06.
 
+from typing import List
+
 import click
 from prettytable import PrettyTable
 
-from ltchiptool import Board, Family
+from ltchiptool import Board, Family, SocInterface
 from ltchiptool.util.misc import sizeof
 
 
@@ -48,29 +50,37 @@ def boards():
 def families():
     table = PrettyTable()
     table.field_names = [
-        "Title (parent)",
-        "Name (parent)",
-        "Code (parent)",
+        "Title",
+        "Name",
+        "Code",
         "Short name / ID",
+        "Supported?",
+        "Arduino?",
+        "SDK package",
     ]
-    table.align["Title (parent)"] = "l"
-    for family in Family.get_all():
-        table.add_row(
-            [
-                f"{family.description} ({family.parent_description})"
-                if family.parent_description
-                else family.description,
-                f"{family.name} ({family.parent})"
-                if family.parent
-                else family.name
-                if family.name
-                else "-",
-                f"{family.code} ({family.parent_code})"
-                if family.parent_code
-                else family.code
-                if family.code
-                else "-",
-                f"{family.short_name.upper()} / 0x{family.id:08X}",
-            ]
-        )
+    table.align = "l"
+
+    def add_families(families: List[Family], level: int):
+        indent = (" " + "|   " * (level - 1) + "+-- ") if level else ""
+        for family in families:
+            table.add_row(
+                [
+                    indent + family.description,
+                    family.name,
+                    family.code,
+                    f"{family.short_name.upper()} / 0x{family.id:08X}"
+                    if family.short_name and family.id
+                    else "-",
+                    "-" if not family.id else "Yes" if family.is_supported else "No",
+                    "-"
+                    if not family.id
+                    else "Yes"
+                    if family.is_supported and family.has_arduino_core
+                    else "No",
+                    family.target_package or "-",
+                ]
+            )
+            add_families(family.children, level + 1)
+
+    add_families(Family.get_all_root(), level=0)
     click.echo_via_pager(table.get_string())

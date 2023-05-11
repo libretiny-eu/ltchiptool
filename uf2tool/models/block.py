@@ -25,14 +25,17 @@ class Block:
     data: bytes = None
     md5_data: bytes = None
     tags: Dict[Tag, bytes] = None
+    padding: bytes = None
 
     def __init__(self, family: Family = None) -> None:
         self.flags = Flags()
         self.family = family
+        self.tags = {}
         self.flags.has_family_id = not not self.family
 
     def encode(self) -> bytes:
         self.flags.has_tags = not not self.tags
+        self.length = self.data and len(self.data) or 0
         # UF2 magic 1 and 2
         data = b"\x55\x46\x32\x0A\x57\x51\x5D\x9E"
         # encode integer variables
@@ -62,8 +65,12 @@ class Block:
                     tags += b"\x00" * (4 - tag_size)
         # append block data with padding
         data += self.data
-        data += tags
-        data += b"\x00" * (476 - len(self.data) - len(tags))
+        data += tags + b"\x00\x00\x00\x00"
+        if self.padding:
+            if len(self.padding) > 512 - 4 - len(data):
+                raise ValueError("Padding too long")
+            data += self.padding
+        data += b"\x00" * (512 - 4 - len(data))
         data += b"\x30\x6F\xB1\x0A"  # magic 3
         return data
 
@@ -97,17 +104,19 @@ class Block:
         # decode tags
         self.tags = {}
         if self.flags.has_tags:
-            tags = data[32 + self.length :]
+            tags = data[32 + self.length : -4]
             i = 0
             while i < len(tags):
                 length = tags[i]
                 if not length:
+                    tags = tags[i + 4 :]
                     break
                 tag_type = letoint(tags[i + 1 : i + 4])
                 tag_data = tags[i + 4 : i + length]
                 self.tags[Tag(tag_type)] = tag_data
                 i += length
                 i = int(ceil(i / 4) * 4)
+            self.padding = tags
 
         self.data = data[32 : 32 + self.length]
 

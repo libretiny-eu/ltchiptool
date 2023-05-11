@@ -20,7 +20,7 @@ from ltchiptool.util.logging import verbose
     "-f",
     "--family",
     help="Chip family name/code (default: based on file type)",
-    type=FamilyParamType(by_parent=True),
+    type=FamilyParamType(),
 )
 @click.option(
     "-S",

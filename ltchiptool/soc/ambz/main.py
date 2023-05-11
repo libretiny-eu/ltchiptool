@@ -2,8 +2,10 @@
 
 from abc import ABC
 from logging import info
+from typing import Optional
 
 from ltchiptool import Family
+from ltchiptool.models import OTAType
 from ltchiptool.soc import SocInterfaceCommon
 
 from .binary import AmebaZBinary
@@ -24,5 +26,9 @@ class AmebaZMain(
         info("Hello from AmebaZ")
 
     @property
-    def elf_has_dual_ota(self) -> bool:
+    def ota_type(self) -> Optional[OTAType]:
+        return OTAType.DUAL
+
+    @property
+    def ota_supports_format_1(self) -> bool:
         return True

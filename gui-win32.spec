@@ -5,6 +5,7 @@ a = Analysis(
     datas=[
         ("ltchiptool.txt", "."),
         ("ltchiptool/boards/", "./boards/"),
+        ("ltchiptool/platform.json", "."),
         ("ltchiptool/families.json", "."),
         ("ltchiptool/gui/ltchiptool-192x192.png", "."),
         ("ltchiptool/gui/ltchiptool.ico", "."),

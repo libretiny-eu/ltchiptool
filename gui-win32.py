@@ -6,11 +6,11 @@ if __name__ == "__main__":
     from datetime import datetime
     from os import rename, unlink
     from os.path import isfile
-    from shutil import copy
+    from shutil import SameFileError, copy
 
     import PyInstaller.__main__
 
-    from ltchiptool.util.env import lt_find_json
+    from ltchiptool.util.lvm import LVM
 
     with open("pyproject.toml", "r", encoding="utf-8") as f:
         text = f.read()
@@ -19,9 +19,19 @@ if __name__ == "__main__":
         version_tuple = ", ".join(version_raw.split("."))
         description = re.search(r"description\s?=\s?\"(.+?)\"", text).group(1)
 
-    if not isfile("ltchiptool/families.json"):
-        families = lt_find_json("families.json")
+    try:
+        lvm = LVM.get()
+        lvm.require_version()
+        platform = lvm.find_json("platform.json", version=True)
+        families = lvm.find_json("families.json", version=True)
+        copy(platform, "ltchiptool/platform.json")
         copy(families, "ltchiptool/families.json")
+    except (FileNotFoundError, SameFileError):
+        # ignore if LT is not installed; fall back to locally available files
+        pass
+
+    if not (isfile("ltchiptool/platform.json") and isfile("ltchiptool/families.json")):
+        raise FileNotFoundError("Data files are missing")
 
     with open(__file__, "r") as f:
         code = f.read()

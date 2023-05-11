@@ -4,10 +4,9 @@ import gzip
 from binascii import crc32
 from typing import IO, Union
 
-from Cryptodome.Cipher import AES
-
 from ltchiptool.util.bitint import BitInt
 from ltchiptool.util.crc16 import CRC16
+from ltchiptool.util.crypto import make_aes_crypto
 from ltchiptool.util.intbin import (
     ByteGenerator,
     ByteSource,
@@ -162,14 +161,14 @@ class BekenBinary:
         rbl.update(data)
 
         if rbl.compression == OTACompression.GZIP:
-            data = gzip.compress(data, compresslevel=9)
+            data = gzip.compress(data, compresslevel=9, mtime=0)
         elif rbl.compression != OTACompression.NONE:
             raise ValueError("Unsupported compression algorithm")
 
         if rbl.encryption == OTAEncryption.AES256:
             padding = pad_up(len(data), 16)
             data += bytes([padding] * padding)
-            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            aes = make_aes_crypto(key=key, iv=iv)
             data = aes.encrypt(data)
         elif rbl.encryption != OTAEncryption.NONE:
             raise ValueError("Unsupported encryption algorithm")
@@ -196,7 +195,7 @@ class BekenBinary:
         data = f.read()
 
         if rbl.encryption == OTAEncryption.AES256:
-            aes = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+            aes = make_aes_crypto(key=key, iv=iv)
             data = aes.decrypt(data)
             # trim AES padding
             padding_bytes = data[-1:]

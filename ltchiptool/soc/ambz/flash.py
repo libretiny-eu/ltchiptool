@@ -2,12 +2,13 @@
 
 from abc import ABC
 from io import BytesIO
+from time import sleep
 from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
-from uf2tool import UploadContext
+from uf2tool import OTAScheme, UploadContext
 
 from .util.rtltool import CAN, RTL_ROM_BAUD, RTLXMD
 
@@ -36,6 +37,7 @@ AMEBAZ_GUIDE = [
 # noinspection PyProtectedMember
 class AmebaZFlash(SocInterface, ABC):
     rtl: Optional[RTLXMD] = None
+    is_can_sent: bool = False
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
@@ -50,7 +52,7 @@ class AmebaZFlash(SocInterface, ABC):
         self.rtl = RTLXMD(
             port=self.conn.port,
             baud=self.conn.link_baudrate,
-            timeout=0.1,
+            timeout=0.07,
         )
         self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
 
@@ -63,6 +65,18 @@ class AmebaZFlash(SocInterface, ABC):
             self.rtl.sync_timeout = link_timeout
             self.conn.link_timeout = link_timeout
 
+    def flash_sw_reset(self) -> None:
+        self.flash_build_protocol()
+        port = self.rtl._port
+        prev_baudrate = port.baudrate
+        port.baudrate = 115200
+        sleep(0.1)
+        # try software reset by writing the family ID, preceded by 55AA
+        magic_word = b"\x55\xAA" + self.family.id.to_bytes(length=4, byteorder="big")
+        port.write(magic_word)
+        sleep(0.5)
+        port.baudrate = prev_baudrate
+
     def flash_hw_reset(self) -> None:
         self.flash_build_protocol()
         self.rtl.connect()
@@ -71,8 +85,11 @@ class AmebaZFlash(SocInterface, ABC):
         if self.rtl and self.conn.linked:
             return
         self.flash_build_protocol()
-        # try to exit interrupted write operations
-        self.rtl._port.write(CAN)
+        if not self.is_can_sent:
+            # try to exit interrupted write operations
+            # sending 'CAN' exits the download mode, unless it's invoked via hardware
+            self.rtl._port.write(CAN)
+            self.is_can_sent = True
         if not self.rtl.sync():
             raise TimeoutError(f"Failed to connect on port {self.conn.port}")
         self.conn.linked = True
@@ -82,7 +99,8 @@ class AmebaZFlash(SocInterface, ABC):
             self.rtl._port.close()
             self.rtl._port = None
         self.rtl = None
-        self.conn.linked = False
+        if self.conn:
+            self.conn.linked = False
 
     def flash_get_chip_info_string(self) -> str:
         return "Realtek RTL87xxB"
@@ -156,7 +174,9 @@ class AmebaZFlash(SocInterface, ABC):
                 )
 
         # collect continuous blocks of data
-        parts = ctx.collect(ota_idx=ota_idx)
+        parts = ctx.collect_data(
+            OTAScheme.FLASHER_DUAL_1 if ota_idx == 1 else OTAScheme.FLASHER_DUAL_2
+        )
         callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
 
         callback.on_message(f"OTA {ota_idx}")

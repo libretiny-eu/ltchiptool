@@ -4,7 +4,9 @@ from abc import ABC
 from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
+from ltchiptool.models import OTAType
 from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.fwbinary import FirmwareBinary
 from uf2tool import UploadContext
 
 
@@ -16,25 +18,25 @@ class SocInterface(ABC):
     @classmethod
     def get(cls, family: Family) -> "SocInterface":
         # fmt: off
-        if family.parent_code == "bk72xx":
+        if family.is_child_of("beken-72xx"):
             from .bk72xx import BK72XXMain
             return BK72XXMain(family)
-        if family.code == "ambz":
+        if family.is_child_of("realtek-ambz"):
             from .ambz import AmebaZMain
             return AmebaZMain(family)
-        if family.code == "ambz2":
+        if family.is_child_of("realtek-ambz2"):
             from .ambz2 import AmebaZ2Main
             return AmebaZ2Main(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
     @classmethod
-    def get_family_codes(cls) -> List[str]:
-        """Return family codes (or parent codes) implemented in SocInterface."""
+    def get_family_names(cls) -> List[str]:
+        """Return family names (or parent names) implemented in SocInterface."""
         return [
-            "bk72xx",
-            "ambz",
-            "ambz2",
+            "beken-72xx",
+            "realtek-ambz",
+            "realtek-ambz2",
         ]
 
     #########################
@@ -52,8 +54,13 @@ class SocInterface(ABC):
         raise NotImplementedError()
 
     @property
-    def elf_has_dual_ota(self) -> bool:
+    def ota_type(self) -> Optional[OTAType]:
         raise NotImplementedError()
+
+    @property
+    def ota_supports_format_1(self) -> bool:
+        """Returns True if the chip family should support legacy OTA."""
+        return False
 
     ##################################
     # Linking - ELF and BIN building #
@@ -71,7 +78,7 @@ class SocInterface(ABC):
         self,
         input: str,
         ota_idx: int,
-    ) -> Dict[str, Optional[int]]:
+    ) -> List[FirmwareBinary]:
         raise NotImplementedError()
 
     def link2bin(
@@ -79,7 +86,7 @@ class SocInterface(ABC):
         ota1: str,
         ota2: str,
         args: List[str],
-    ) -> Dict[str, Optional[int]]:
+    ) -> List[FirmwareBinary]:
         raise NotImplementedError()
 
     def detect_file_type(
@@ -110,9 +117,13 @@ class SocInterface(ABC):
         """Change device connection timeout values."""
         raise NotImplementedError()
 
+    def flash_sw_reset(self) -> None:
+        """Perform a software reset by transmitting a magic word."""
+        pass  # Optional; do not fail here
+
     def flash_hw_reset(self) -> None:
         """Perform a hardware reset using UART GPIO lines."""
-        raise NotImplementedError()
+        pass  # Optional; do not fail here
 
     def flash_connect(self) -> None:
         """Link with the chip for read/write operations. Do nothing if

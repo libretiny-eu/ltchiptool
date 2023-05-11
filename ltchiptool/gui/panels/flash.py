@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 from logging import debug, info
-from os.path import dirname, isfile
+from os.path import dirname, isfile, realpath
 
 import wx
 import wx.adv
@@ -73,13 +73,16 @@ class FlashPanel(BasePanel):
         self.Cancel.SetNote("")
 
         families = set()
-        family_codes = SocInterface.get_family_codes()
+        family_names = SocInterface.get_family_names()
         for family in Family.get_all():
-            if family.code in family_codes and family.description:
+            if family.name in family_names:
                 families.add(family.description)
-            if family.parent_code in family_codes:
-                families.add(family.parent_description or family.description)
         self.Family.Set(sorted(families))
+
+    def SetInitParams(self, file: str = None, **kwargs):
+        if file and isfile(file):
+            self.operation = FlashOp.WRITE
+            self.file = realpath(file)
 
     def GetSettings(self) -> dict:
         return dict(
@@ -87,7 +90,7 @@ class FlashPanel(BasePanel):
             baudrate=self.baudrate,
             operation=self.operation.value,
             auto_detect=self.auto_detect,
-            family=self.family and self.family.short_name,
+            family=self.family and self.family.name,
             file=self.file,
             offset=self.offset,
             skip=self.skip,
@@ -116,7 +119,7 @@ class FlashPanel(BasePanel):
         self.operation = FlashOp(operation)
         self.auto_detect = auto_detect
         try:
-            self.family = Family.get(short_name=family)
+            self.family = Family.get(name=family)
         except ValueError:
             self.family = None
         self.file = file
@@ -323,7 +326,7 @@ class FlashPanel(BasePanel):
     @property
     def family(self):
         try:
-            return Family.get(description=self.Family.GetValue(), by_parent=True)
+            return Family.get(description=self.Family.GetValue())
         except ValueError:
             return None
 
@@ -331,10 +334,8 @@ class FlashPanel(BasePanel):
     def family(self, value: Family | None):
         self.Family.SetSelection(wx.NOT_FOUND)
         if value:
-            if value.description:
-                self.Family.SetValue(value.description)
-            if value.parent_description:
-                self.Family.SetValue(value.parent_description)
+            for family in value.inheritance:
+                self.Family.SetValue(family.description)
         self.DoUpdate(self.Family)
 
     @property
@@ -456,10 +457,8 @@ class FlashPanel(BasePanel):
     def on_start_click(self):
         if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
             soc = self.detection.soc or SocInterface.get(self.family)
-            uf2 = self.detection.uf2
         else:
             soc = SocInterface.get(self.family)
-            uf2 = None
 
         if self.operation != FlashOp.WRITE:
             if self.file == self.auto_file:
@@ -483,7 +482,7 @@ class FlashPanel(BasePanel):
             skip=self.skip,
             length=self.length,
             verify=True,
-            uf2=uf2,
+            ctx=self.detection and self.detection.get_uf2_ctx(),
             on_chip_info=self.Start.SetNote,
         )
         self.start_work(work, freeze_ui=True)
