@@ -31,15 +31,15 @@ def list_serial_ports() -> List[Tuple[str, bool, str]]:
 
     ports = []
     for port in comports():
+        port.description = port.description.replace(f"({port.name})", "").strip()
         is_usb = port.hwid.startswith("USB")
         if is_usb:
             description = (
                 f"{port.name} - {port.description} - "
-                f"VID={port.vid:04X} ({port.manufacturer}), "
-                f"PID={port.pid:04X} "
+                f"{port.manufacturer} ({port.vid:04X}/{port.pid:04X})"
             )
         else:
-            description = f"{port.name} - {port.description} - HWID={port.hwid}"
+            description = f"{port.name} - {port.description}"
         ports.append((port.device, is_usb, description))
 
     return sorted(ports, key=lambda x: (not x[1], x[2]))

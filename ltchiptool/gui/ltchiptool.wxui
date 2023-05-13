@@ -153,7 +153,7 @@
           style="wxTE_MULTILINE|wxTE_READONLY|wxTE_RICH|wxTE_DONTWRAP"
           var_name="text_log"
           background_colour="12,12,12"
-          font="Cascadia Code,10"
+          font="Consolas,11"
           foreground_colour="255,255,255"
           border_size="0"
           flags="wxEXPAND"
@@ -542,7 +542,7 @@
           row="8">
           <node
             class="wxStaticText"
-            label="Discord server of LT community"
+            label="Discord server of LibreTiny community"
             var_name="m_staticText_3"
             border_size="0" />
           <node

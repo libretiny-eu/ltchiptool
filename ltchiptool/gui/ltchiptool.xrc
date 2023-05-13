@@ -135,8 +135,8 @@
 				<object class="wxTextCtrl" name="text_log">
 					<style>wxTE_MULTILINE|wxTE_READONLY|wxTE_RICH|wxTE_DONTWRAP</style>
 					<font>
-						<size>10</size>
-						<face>Cascadia Code</face>
+						<size>11</size>
+						<face>Consolas</face>
 					</font>
 					<bg>#0C0C0C</bg>
 					<fg>#FFFFFF</fg>
@@ -647,7 +647,7 @@
 						<flag>wxALL</flag>
 						<border>0</border>
 						<object class="wxStaticText" name="m_staticText_3">
-							<label>Discord server of LT community</label>
+							<label>Discord server of LibreTiny community</label>
 							<wrap>-1</wrap>
 						</object>
 					</object>

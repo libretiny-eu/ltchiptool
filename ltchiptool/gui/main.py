@@ -41,7 +41,11 @@ class MainFrame(wx.Frame):
             icon = join(dirname(__file__), "ltchiptool.ico")
 
         try:
-            res = wx.xrc.XmlResource(xrc)
+            with open(xrc, "r") as f:
+                xrc_str = f.read()
+                xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
+            res = wx.xrc.XmlResource()
+            res.LoadFromBuffer(xrc_str.encode())
         except SystemError:
             raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
 
@@ -109,21 +113,26 @@ class MainFrame(wx.Frame):
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
         size: wx.Size = self.GetSize()
+        page: int = self.Notebook.GetSelection()
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
+            page=page,
         )
 
     def SetSettings(
         self,
         pos: tuple[int, int] = None,
         size: tuple[int, int] = None,
+        page: int = None,
         **_,
     ):
         if pos:
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
+        if page is not None:
+            self.Notebook.SetSelection(page)
 
     @staticmethod
     def OnException(*args):
