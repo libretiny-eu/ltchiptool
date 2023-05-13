@@ -19,6 +19,7 @@ from .panels.about import AboutPanel
 from .panels.base import BasePanel
 from .panels.flash import FlashPanel
 from .panels.log import LogPanel
+from .panels.upk import UpkPanel
 from .utils import with_target
 
 
@@ -78,6 +79,10 @@ class MainFrame(wx.Frame):
             self.Flash = FlashPanel(res, self.Notebook)
             self.panels["flash"] = self.Flash
             self.Notebook.AddPage(self.Flash, "Flashing")
+
+            self.Upk = UpkPanel(res, self.Notebook)
+            self.panels["upk"] = self.Upk
+            self.Notebook.AddPage(self.Upk, "UPK2ESPHome")
 
             self.About = AboutPanel(res, self.Notebook)
             self.panels["about"] = self.About
