@@ -62,6 +62,9 @@ class BasePanel(wx.Panel):
     def OnMenu(self, title: str, label: str, checked: bool):
         pass
 
+    def OnFileDrop(self, *files):
+        pass
+
     def _OnUpdate(self, event: wx.Event | None):
         if self._in_update:
             event.Skip()
@@ -140,3 +143,19 @@ class BasePanel(wx.Panel):
             return
         for window in self._components:
             window.Disable()
+
+    def EnableFileDrop(self):
+        panel = self
+
+        class FileDropTarget(wx.FileDropTarget):
+            def __init__(self):
+                wx.FileDropTarget.__init__(self)
+
+            def OnDropFiles(self, x, y, filenames) -> bool:
+                panel.OnFileDrop(*filenames)
+                return True
+
+        self.SetDropTarget(FileDropTarget())
+
+    def DisableFileDrop(self):
+        self.SetDropTarget(None)
