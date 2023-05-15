@@ -71,7 +71,10 @@ class UpkThread(BaseThread):
             with requests.get(url, params) as r:
                 data = r.content
                 if len(data) != init_size:
-                    self.on_error(f"Incomplete response read: {len(data)}/{init_size}")
+                    self.on_error(
+                        f"Incomplete response read: {len(data)}/{init_size}\n\n"
+                        f"Is the chip running Kickstart firmware?"
+                    )
                     return
 
             while start < end and self.should_run():
@@ -121,7 +124,7 @@ class UpkThread(BaseThread):
     def run_data(self, data: bytes):
         # parse raw storage
         st = TuyaStorage()
-        if st.load_raw(data) is None:
+        if st.load_raw(data, allow_incomplete=True) is None:
             self.on_error("File doesn't contain known storage area")
             return
         if not st.decrypt():
@@ -129,6 +132,15 @@ class UpkThread(BaseThread):
             return
         keys = st.find_all_keys()
         debug(f"Found {len(keys)} keys! {keys}")
+        if not keys:
+            self.on_error("No keys found in storage! Is the data corrupt?")
+            try:
+                from hexdump import hexdump
+
+                hexdump(st.data)
+            except (ImportError, ModuleNotFoundError):
+                pass
+            return
         storage = st.read_all_keys()
         self.on_storage(storage)
 
