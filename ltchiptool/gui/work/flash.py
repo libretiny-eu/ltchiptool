@@ -5,8 +5,6 @@ from os import SEEK_SET, makedirs, stat
 from os.path import dirname
 from typing import Callable
 
-import wx
-
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import (
     ClickProgressCallback,
@@ -17,7 +15,6 @@ from ltchiptool.util.flash import (
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 from uf2tool import UploadContext
-from uf2tool.models import UF2
 
 from .base import BaseThread
 

@@ -120,10 +120,10 @@ class LoggingHandler(StreamHandler):
         line = tb.tb_lineno
         graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
 
-    def emit_exception(self, e: Exception):
+    def emit_exception(self, e: Exception, no_hook: bool = False):
         error(f"{type(e).__name__}: {e}")
         tb = e.__traceback__
-        if self.exception_hook:
+        if self.exception_hook and not no_hook:
             self.exception_hook(e)
         if not tb:
             return

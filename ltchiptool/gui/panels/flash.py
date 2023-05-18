@@ -79,6 +79,8 @@ class FlashPanel(BasePanel):
                 families.add(family.description)
         self.Family.Set(sorted(families))
 
+        self.EnableFileDrop()
+
     def SetInitParams(self, file: str = None, **kwargs):
         if file and isfile(file):
             self.operation = FlashOp.WRITE
@@ -251,6 +253,12 @@ class FlashPanel(BasePanel):
             self.Start.Enable()
 
         self.Cancel.Disable()
+
+    def OnFileDrop(self, *files):
+        if not files:
+            return
+        self.operation = FlashOp.WRITE
+        self.file = files[0]
 
     @with_target
     def OnBlur(self, event: wx.FocusEvent, target: wx.Window):
