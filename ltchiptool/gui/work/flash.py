@@ -6,14 +6,10 @@ from os.path import dirname
 from typing import Callable
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import (
-    ClickProgressCallback,
-    FlashConnection,
-    FlashOp,
-    format_flash_guide,
-)
+from ltchiptool.util.flash import FlashConnection, FlashOp, format_flash_guide
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
+from ltchiptool.util.streams import ClickProgressCallback
 from uf2tool import UploadContext
 
 from .base import BaseThread

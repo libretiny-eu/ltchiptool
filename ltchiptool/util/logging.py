@@ -2,13 +2,24 @@
 
 import logging
 import sys
-from logging import DEBUG, ERROR, INFO, Logger, LogRecord, StreamHandler, error, log
+from logging import (
+    CRITICAL,
+    DEBUG,
+    ERROR,
+    INFO,
+    Logger,
+    LogRecord,
+    StreamHandler,
+    error,
+    log,
+)
 from time import time
 from typing import Callable
 
 import click
 
 VERBOSE = DEBUG // 2
+STREAM = CRITICAL + 1
 
 
 class LoggingHandler(StreamHandler):
@@ -20,6 +31,7 @@ class LoggingHandler(StreamHandler):
         "W": "bright_yellow",
         "E": "bright_red",
         "C": "bright_magenta",
+        "S": "bright_magenta",
     }
     exception_hook: Callable[[Exception], None] = None
 
@@ -57,6 +69,7 @@ class LoggingHandler(StreamHandler):
 
     def attach(self, logger: Logger = None):
         logging.addLevelName(VERBOSE, "VERBOSE")
+        logging.addLevelName(STREAM, "STREAM")
         if logger:
             root = logging.root
             logger.setLevel(root.level)
@@ -156,6 +169,10 @@ def log_setup_click_bars():
 
 def verbose(msg, *args, **kwargs):
     logging.log(VERBOSE, msg, *args, **kwargs)
+
+
+def stream(msg, *args, **kwargs):
+    logging.log(STREAM, msg, *args, **kwargs)
 
 
 def graph(level: int, *message, loglevel: int = INFO):

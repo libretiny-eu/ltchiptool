@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 import requests
 from bk7231tools.analysis.storage import TuyaStorage
 
-from ltchiptool.util.flash import ClickProgressCallback
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.streams import ClickProgressCallback
 
 from .base import BaseThread
 

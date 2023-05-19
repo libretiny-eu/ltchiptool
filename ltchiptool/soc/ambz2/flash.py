@@ -4,8 +4,9 @@ from abc import ABC
 from typing import IO, Generator, Optional
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, ProgressCallback
-from uf2tool import UploadContext
+from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.streams import ProgressCallback
+from uf2tool import OTAScheme, UploadContext
 
 from .util.ambz2tool import AmbZ2Tool
 
@@ -133,7 +134,7 @@ class AmebaZ2Flash(SocInterface, ABC):
         # In reality, there's not much sense in keeping two FW images anyway.
 
         # collect continuous blocks of data
-        parts = ctx.collect(ota_idx=1)
+        parts = ctx.collect_data(OTAScheme.FLASHER_DUAL_1)
         callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
 
         # write blocks to flash

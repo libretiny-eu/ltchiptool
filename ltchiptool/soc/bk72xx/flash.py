@@ -9,9 +9,10 @@ from typing import IO, Generator, List, Optional, Union
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.flash import FlashConnection
 from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
+from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
 BK72XX_GUIDE = [

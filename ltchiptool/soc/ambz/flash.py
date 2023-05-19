@@ -6,8 +6,9 @@ from time import sleep
 from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.flash import FlashConnection
 from ltchiptool.util.intbin import gen2bytes, inttole32, letoint
+from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
 from .util.rtltool import CAN, RTL_ROM_BAUD, RTLXMD

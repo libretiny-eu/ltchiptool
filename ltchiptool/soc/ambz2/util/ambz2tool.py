@@ -44,7 +44,7 @@ class AmbZ2Tool:
         port: str,
         baudrate: int,
         link_timeout: float = 10.0,
-        read_timeout: float = 0.3,
+        read_timeout: float = 0.6,
     ):
         self.prev_timeout_list = []
         self.link_timeout = link_timeout
@@ -70,12 +70,10 @@ class AmbZ2Tool:
         self.s = None
 
     def write(self, data: bytes) -> None:
-        verbose(f"<- TX: {data}")
         self.s.write(data)
 
     def command(self, cmd: str) -> None:
         self.flush()
-        verbose(f"<- TX: {cmd}")
         self.s.write(cmd.encode() + b"\n")
 
     def read(self, count: int = None) -> bytes:
@@ -94,7 +92,6 @@ class AmbZ2Tool:
 
         if not response:
             raise TimeoutError(f"Timeout in read({count}) - no data received")
-        verbose(f"-> RX: {response}")
         if not count:
             return response
         response = response[:count]
@@ -116,7 +113,6 @@ class AmbZ2Tool:
                 line = (response + line).decode().strip()
                 if not line:
                     continue
-                verbose(f"-> RX: {line}")
                 yield line
                 response = b""
             response += read

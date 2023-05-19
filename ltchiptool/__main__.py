@@ -5,9 +5,11 @@ from logging import DEBUG, INFO
 
 import click
 from click import Context
+from serial import Serial
 
 from ltchiptool.util.cli import get_multi_command_class
 from ltchiptool.util.logging import VERBOSE, LoggingHandler, log_setup_click_bars
+from ltchiptool.util.streams import LoggingStreamHook
 
 from .version import get_version
 
@@ -65,6 +67,12 @@ VERBOSITY_LEVEL = {
     type=int,
     default=0,
 )
+@click.option(
+    "-s",
+    "--dump-serial",
+    help="Dump transmitted Serial data",
+    is_flag=True,
+)
 @click.version_option(
     get_version(),
     "-V",
@@ -79,6 +87,7 @@ def cli_entrypoint(
     timed: bool,
     raw_log: bool,
     indent: int,
+    dump_serial: bool,
 ):
     ctx.ensure_object(dict)
     if verbose == 0 and "LTCHIPTOOL_VERBOSE" in os.environ:
@@ -90,6 +99,7 @@ def cli_entrypoint(
     logger.indent = indent
     logger.full_traceback = traceback
     log_setup_click_bars()
+    LoggingStreamHook.set_registered(Serial, dump_serial)
 
 
 def cli():

@@ -43,6 +43,10 @@
           label="Colors"
           var_name="menu_item_13" />
         <node
+          class="wxMenuItem"
+          kind="wxITEM_CHECK"
+          label="Dump serial data" />
+        <node
           class="separator"
           var_name="separator_3" />
         <node
@@ -761,18 +765,18 @@
                 wrap="500"
                 flags="wxEXPAND" />
               <node
+                class="wxButton"
+                label="Copy"
+                var_name="button_esphome_copy"
+                column="1"
+                rowspan="2" />
+              <node
                 class="wxStaticText"
                 label="We do not take responsibility for using this tool and the generated configs."
                 var_name="text_esphome_2"
                 wrap="500"
                 font="normal size,,bold"
                 row="1" />
-              <node
-                class="wxButton"
-                label="Copy"
-                var_name="button_esphome_copy"
-                column="1"
-                rowspan="2" />
               <node
                 class="wxTextCtrl"
                 style="wxTE_MULTILINE|wxTE_READONLY"

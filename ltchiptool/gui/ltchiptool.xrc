@@ -26,6 +26,10 @@
 				<checked>1</checked>
 				<checkable>1</checkable>
 			</object>
+			<object class="wxMenuItem" name="menu_item">
+				<label>Dump serial data</label>
+				<checkable>1</checkable>
+			</object>
 			<object class="separator" name="separator_3" />
 			<object class="wxMenuItem" name="menu_item_10">
 				<label>Log level</label>
@@ -914,6 +918,15 @@ The default choices are usually fine in most cases.</label>
 									</object>
 								</object>
 								<object class="sizeritem">
+									<cellpos>0,1</cellpos>
+									<cellspan>2,1</cellspan>
+									<flag>wxALL</flag>
+									<border>5</border>
+									<object class="wxButton" name="button_esphome_copy">
+										<label>Copy</label>
+									</object>
+								</object>
+								<object class="sizeritem">
 									<cellpos>1,0</cellpos>
 									<cellspan>1,1</cellspan>
 									<flag>wxALL</flag>
@@ -925,15 +938,6 @@ The default choices are usually fine in most cases.</label>
 											<size>9</size>
 											<weight>bold</weight>
 										</font>
-									</object>
-								</object>
-								<object class="sizeritem">
-									<cellpos>0,1</cellpos>
-									<cellspan>2,1</cellspan>
-									<flag>wxALL</flag>
-									<border>5</border>
-									<object class="wxButton" name="button_esphome_copy">
-										<label>Copy</label>
 									</object>
 								</object>
 								<object class="sizeritem">
