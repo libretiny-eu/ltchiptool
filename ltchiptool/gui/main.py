@@ -113,7 +113,11 @@ class MainFrame(wx.Frame):
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
         size: wx.Size = self.GetSize()
-        page: int = self.Notebook.GetSelection()
+        page: str | None = None
+        for name, panel in self.panels.items():
+            if panel == self.Notebook.GetCurrentPage():
+                page = name
+                break
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
@@ -124,15 +128,19 @@ class MainFrame(wx.Frame):
         self,
         pos: tuple[int, int] = None,
         size: tuple[int, int] = None,
-        page: int = None,
+        page: str = None,
         **_,
     ):
         if pos:
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
-        if page is not None:
-            self.Notebook.SetSelection(page)
+        if isinstance(page, str):
+            panel = self.panels.get(page, None)
+            for i in range(self.Notebook.GetPageCount()):
+                if panel == self.Notebook.GetPage(i):
+                    self.Notebook.SetSelection(i)
+                    break
 
     @staticmethod
     def OnException(*args):
@@ -165,9 +173,8 @@ class MainFrame(wx.Frame):
             # avoid writing partial settings in case of loading failure
             self.Destroy()
             return
-        settings = dict(
-            main=self.GetSettings(),
-        )
+        settings = self._settings
+        settings["main"] = self.GetSettings()
         for name, panel in self.panels.items():
             panel.OnClose()
             settings[name] = panel.GetSettings() or {}
