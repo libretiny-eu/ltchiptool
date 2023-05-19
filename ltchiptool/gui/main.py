@@ -2,7 +2,7 @@
 
 import sys
 import threading
-from logging import debug, info
+from logging import debug, info, warning
 from os import rename, unlink
 from os.path import dirname, isfile, join
 
@@ -13,6 +13,7 @@ from click import get_app_dir
 
 from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
 from .panels.about import AboutPanel
@@ -91,6 +92,20 @@ class MainFrame(wx.Frame):
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
             self.OnClose()
+
+        try:
+            lpm = LPM.get()
+            for name, plugin in lpm.plugins.items():
+                if not plugin or not plugin.has_gui:
+                    continue
+                for gui_name, cls in plugin.build_gui().items():
+                    if issubclass(cls, BasePanel):
+                        panel = cls(notebook=self.Notebook, menu_bar=self.GetMenuBar())
+                        self.panels[f"plugin.{name}.{gui_name}"] = panel
+                    else:
+                        warning(f"Unknown GUI element: {cls}")
+        except Exception as e:
+            LoggingHandler.get().emit_exception(e)
 
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)

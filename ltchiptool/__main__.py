@@ -18,6 +18,9 @@ COMMANDS = {
     "uf2": "uf2tool/cli.py",
     # flash commands
     "flash": "ltchiptool/commands/flash/__main__.py",
+    # plugin commands
+    "plugin": "ltchiptool/commands/plugin/run.py",
+    "plugins": "ltchiptool/commands/plugin/manage.py",
     # other commands
     "gui": "ltchiptool/gui/__main__.py",
     "list": "ltchiptool/commands/list.py",
