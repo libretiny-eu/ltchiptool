@@ -1,8 +1,10 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
+from os.path import join
 from typing import Callable
 
 import wx
+import wx.xrc
 
 
 def with_target(
@@ -30,3 +32,16 @@ def int_or_zero(value: str) -> int:
         if value.startswith("0"):
             return int_or_zero(value.lstrip("0"))
         return 0
+
+
+def load_xrc_file(*path: str) -> wx.xrc.XmlResource:
+    xrc = join(*path)
+    try:
+        with open(xrc, "r") as f:
+            xrc_str = f.read()
+            xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
+        res = wx.xrc.XmlResource()
+        res.LoadFromBuffer(xrc_str.encode())
+        return res
+    except SystemError:
+        raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")

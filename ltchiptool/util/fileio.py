@@ -2,6 +2,8 @@
 
 import json
 from io import SEEK_CUR, BytesIO
+from json import JSONDecodeError
+from os import makedirs
 from os.path import dirname, getmtime, isfile, join
 from typing import IO, List, Optional, Union
 
@@ -47,16 +49,22 @@ def writebin(file: str, data: Union[bytes, BytesIO]):
 
 
 # same as load_json
-def readjson(file: str) -> Union[dict, list]:
+def readjson(file: str) -> Optional[Union[dict, list]]:
     """Read a JSON file into a dict or list."""
+    if not isfile(file):
+        return None
     with open(file, "r", encoding="utf-8") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except JSONDecodeError:
+            return None
 
 
 def writejson(file: str, data: Union[dict, list]):
     """Write a dict or list to a JSON file."""
+    makedirs(dirname(file), exist_ok=True)
     with open(file, "w", encoding="utf-8") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent="\t")
 
 
 def readtext(file: str) -> str:

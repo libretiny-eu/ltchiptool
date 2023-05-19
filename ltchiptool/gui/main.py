@@ -1,10 +1,9 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
-import json
 import sys
 import threading
 from logging import debug, info
-from os import makedirs
+from os import rename, unlink
 from os.path import dirname, isfile, join
 
 import wx
@@ -12,6 +11,7 @@ import wx.adv
 import wx.xrc
 from click import get_app_dir
 
+from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.lvm import LVM
 
@@ -20,7 +20,7 @@ from .panels.base import BasePanel
 from .panels.flash import FlashPanel
 from .panels.log import LogPanel
 from .panels.upk import UpkPanel
-from .utils import with_target
+from .utils import load_xrc_file, with_target
 
 
 # noinspection PyPep8Naming
@@ -41,14 +41,7 @@ class MainFrame(wx.Frame):
             xrc = join(dirname(__file__), "ltchiptool.xrc")
             icon = join(dirname(__file__), "ltchiptool.ico")
 
-        try:
-            with open(xrc, "r") as f:
-                xrc_str = f.read()
-                xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
-            res = wx.xrc.XmlResource()
-            res.LoadFromBuffer(xrc_str.encode())
-        except SystemError:
-            raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
+        res = load_xrc_file(xrc)
 
         try:
             # try to find LT directory or local data snapshot
@@ -58,7 +51,13 @@ class MainFrame(wx.Frame):
             wx.Exit()
             return
 
-        self.config_file = join(get_app_dir("ltchiptool"), "config.json")
+        old_config = join(get_app_dir("ltchiptool"), "config.json")
+        self.config_file = join(get_app_dir("ltchiptool"), "gui.json")
+        if isfile(old_config):
+            # migrate old config to new filename
+            if isfile(self.config_file):
+                unlink(self.config_file)
+            rename(old_config, self.config_file)
         self.loaded = False
         self.panels = {}
         self.init_params = {}
@@ -91,6 +90,7 @@ class MainFrame(wx.Frame):
             self.loaded = True
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
+            self.OnClose()
 
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -103,16 +103,11 @@ class MainFrame(wx.Frame):
 
     @property
     def _settings(self) -> dict:
-        if not isfile(self.config_file):
-            return dict()
-        with open(self.config_file, "r") as f:
-            return json.load(f)
+        return readjson(self.config_file) or {}
 
     @_settings.setter
     def _settings(self, value: dict):
-        makedirs(dirname(self.config_file), exist_ok=True)
-        with open(self.config_file, "w") as f:
-            json.dump(value, f, indent="\t")
+        writejson(self.config_file, value)
 
     # noinspection PyPropertyAccess
     def GetSettings(self) -> dict:
