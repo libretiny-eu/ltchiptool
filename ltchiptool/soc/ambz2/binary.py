@@ -1,11 +1,12 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-21.
 
 from abc import ABC
-from os.path import basename, isfile
-from typing import Dict, Optional
+from os.path import isfile
+from typing import Dict, List, Optional
 
 from ltchiptool import SocInterface
 from ltchiptool.util.fileio import chname, isnewer, readbin
+from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.intbin import pad_data
 from ltchiptool.util.logging import graph
 
@@ -56,7 +57,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         toolchain = self.board.toolchain
 
         # build output name
-        output = chname(input, f"image.{section.name}.bin")
+        output = chname(input, f"raw.{section.name}.bin")
         # find entrypoint address
         entrypoint = nmap[section.entry]
         # objcopy sections to a binary file
@@ -81,11 +82,7 @@ class AmebaZ2Binary(SocInterface, ABC):
             data=data,
         )
 
-    def elf2bin(
-        self,
-        input: str,
-        ota_idx: int,
-    ) -> Dict[str, Optional[int]]:
+    def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         result: Dict[str, Optional[int]] = {}
         # read AmbZ2 image config
         config = ImageConfig(**self.board["image"])
@@ -98,23 +95,32 @@ class AmebaZ2Binary(SocInterface, ABC):
         if not isfile(input_boot):
             raise FileNotFoundError("Bootloader image not found")
         # build output name
-        output = chname(input, f"image_flash_is.0x{0:06X}.bin")
-        out_ota1 = chname(input, f"image_firmware_is.0x{ota1_offset:06X}.bin")
-        out_boot = chname(input, f"image_bootloader.0x{boot_offset:06X}.bin")
+        output = FirmwareBinary(
+            location=input,
+            name="flash_is",
+            offset=0,
+            title="Flash Image",
+        )
+        out_ota1 = FirmwareBinary(
+            location=input,
+            name="firmware_is",
+            offset=ota1_offset,
+            title="Application Image",
+            description="Firmware partition image for direct flashing",
+            public=True,
+        )
+        out_boot = FirmwareBinary(
+            location=input,
+            name="bootloader",
+            offset=boot_offset,
+            title="Bootloader Image",
+        )
         # print graph element
-        graph(1, basename(output))
-        # add to outputs
-        result[output] = 0
-        result[out_boot] = boot_offset
-        result[out_ota1] = ota1_offset
+        output.graph(1)
 
         # return if images are up-to-date
-        if (
-            not isnewer(input, output)
-            and not isnewer(input, out_ota1)
-            and not isnewer(input_boot, out_boot)
-        ):
-            return result
+        if all(binary.isnewer(than=input) for binary in output.group_get()):
+            return output.group()
 
         # read addresses from input ELF
         nmap_boot = self.board.toolchain.nm(input_boot)
@@ -187,13 +193,13 @@ class AmebaZ2Binary(SocInterface, ABC):
 
         # write all parts to files
         data = flash.pack(hash_key=config.keys.hash_keys["part_table"])
-        with open(output, "wb") as f:
+        with output.write() as f:
             f.write(data)
-        with open(out_boot, "wb") as f:
+        with out_boot.write() as f:
             boot = data[boot_offset:boot_end].rstrip(b"\xFF")
             boot = pad_data(boot, 0x20, 0xFF)
             f.write(boot)
-        with open(out_ota1, "wb") as f:
+        with out_ota1.write() as f:
             ota1 = data[ota1_offset:ota1_end]
             f.write(ota1)
-        return result
+        return output.group()

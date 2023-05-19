@@ -24,7 +24,7 @@ bk7231tools = "^1.3.6"
 xmodem = "^0.4.6"
 wxPython = {version = "^4.2.0", optional = true}
 pywin32 = {version = "^305", optional = true, markers = "sys_platform == 'win32'"}
-py-datastruct = "^0.3.0"
+py-datastruct = "^0.4.0"
 semantic-version = "^2.10.0"
 upk2esphome = "^1.0.2"
 

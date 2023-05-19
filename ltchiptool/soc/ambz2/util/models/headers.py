@@ -87,7 +87,7 @@ class FST(DataStruct):
     enc_algo: EncAlgo = field("H", default=EncAlgo.AES_CBC)
     hash_algo: HashAlgo = field("H", default=HashAlgo.SHA256)
     part_size: int = field("I", default=0)
-    valid_pattern: int = field("8s", default=bytes(range(8)))
+    valid_pattern: bytes = field("8s", default=bytes(range(8)))
     _1: ... = padding(4)
     flags: Flags = field("B", default=Flags.HASH_EN)
     cipher_key_iv_valid: bool = adapter(BitFlag())(
