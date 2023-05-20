@@ -11,8 +11,8 @@ from ltchiptool.util.lpm import LPM
 def get_commands() -> Dict[str, Command]:
     lpm = LPM.get()
     commands = {}
-    for plugin in lpm.plugins.values():
-        if not plugin or not plugin.has_cli:
+    for plugin in lpm.plugins:
+        if not plugin.has_cli:
             continue
         commands.update(plugin.build_cli())
     return commands

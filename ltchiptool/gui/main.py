@@ -81,11 +81,11 @@ class MainFrame(wx.Frame):
 
         # load all panels from plugins
         lpm = LPM.get()
-        for name, plugin in lpm.plugins.items():
-            if not plugin or not plugin.has_gui:
+        for plugin in sorted(lpm.plugins, key=lambda p: p.title):
+            if not plugin.has_gui:
                 continue
             for gui_name, cls in plugin.build_gui().items():
-                windows.append((f"plugin.{name}.{gui_name}", cls))
+                windows.append((f"plugin.{plugin.namespace}.{gui_name}", cls))
 
         # dummy name for exception messages
         name = "UI"

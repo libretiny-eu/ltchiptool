@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-19.
 
 from logging import info, warning
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import click
 from prettytable import PrettyTable
@@ -27,36 +27,35 @@ def _format_type(plugin: PluginBase) -> str:
     )
 
 
-def _find_plugin(query: str) -> Tuple[str, Optional[PluginBase]]:
+def _find_plugin(query: str) -> Optional[PluginBase]:
     lpm = LPM.get()
     query = query.lower()
     found = None
     found_partial = None
-    for name, plugin in lpm.plugins.items():
+    for plugin in lpm.plugins:
         if found:
             continue
         keys = [
-            name,
-            plugin and plugin.title,
-            plugin and plugin.distribution and plugin.distribution.name,
-            plugin and plugin.namespace,
+            plugin.title,
+            plugin.distribution.name,
+            plugin.namespace,
         ]
         for key in keys:
             if not key:
                 continue
             if query == key.lower():
-                found = name, plugin
+                found = plugin
                 break
             if query in key.lower():
-                found_partial = name, plugin
-    return found or found_partial or (None, None)
+                found_partial = plugin
+    return found or found_partial
 
 
 @cli.command(name="list", help="List installed plugins")
 def list_():
     lpm = LPM.get()
     if not lpm.plugins:
-        print("No plugins are installed")
+        info("No plugins are installed")
         return
     table = PrettyTable(align="l")
     table.field_names = [
@@ -67,11 +66,7 @@ def list_():
         "Type",
     ]
 
-    for name in sorted(lpm.plugins.keys()):
-        plugin = lpm.plugins[name]
-        if not plugin:
-            table.add_row([name, "-", "No", "-", "-"])
-            continue
+    for plugin in sorted(lpm.plugins, key=lambda p: p.title):
         table.add_row(
             [
                 plugin.title,
@@ -81,6 +76,8 @@ def list_():
                 _format_type(plugin),
             ]
         )
+    for name in sorted(lpm.disabled):
+        table.add_row([name, "-", "No", "-", "-"])
     click.echo_via_pager(table.get_string())
 
 
@@ -98,13 +95,10 @@ def info_(query: List[str]):
       QUERY      Plugin name to search for
     """
     for q in query:
-        name, plugin = _find_plugin(q)
+        plugin = _find_plugin(q)
 
-        if not name:
-            warning(f"No plugin found by query: {q}")
-            return
         if not plugin:
-            info(f"Plugin {name} is not enabled")
+            warning(f"Plugin is not installed or not enabled: {q}")
             return
 
         table = PrettyTable(align="l", header=False)
@@ -114,9 +108,7 @@ def info_(query: List[str]):
         table.add_row(["Author", plugin.author or "-"])
         table.add_row(["License", plugin.license or "-"])
         table.add_row(["Type", _format_type(plugin)])
-        table.add_row(
-            ["Distribution", plugin.distribution and plugin.distribution.name or "?"]
-        )
+        table.add_row(["Distribution", plugin.distribution.name])
         table.add_row(["Namespace", plugin.namespace])
         table.add_row(["Module", plugin.module])
         print(table.get_string())

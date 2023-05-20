@@ -4,7 +4,7 @@ from importlib import import_module
 from logging import debug, error, warning
 from os.path import join
 from pkgutil import iter_modules
-from typing import Dict, Optional, Set
+from typing import List, Set
 
 from click import get_app_dir
 
@@ -16,7 +16,7 @@ from ltctplugin.base import PluginBase
 
 class LPM:
     INSTANCE: "LPM" = None
-    plugins: Dict[str, Optional[PluginBase]]
+    plugins: List[PluginBase]
     disabled: Set[str]
 
     @staticmethod
@@ -28,7 +28,7 @@ class LPM:
 
     def __init__(self) -> None:
         super().__init__()
-        self.plugins = {}
+        self.plugins = list()
         self.disabled = set()
         self.config_file = join(get_app_dir("ltchiptool"), "plugins.json")
         self.config_load()
@@ -46,17 +46,24 @@ class LPM:
         writejson(self.config_file, config)
 
     def rescan(self) -> None:
-        loaded = set(self.plugins.keys())
+        loaded = set(p.namespace for p in self.plugins)
         found = set(
-            name
-            for _, name, _ in iter_modules(ltctplugin.__path__)
-            if name not in self.disabled and name != "base"
+            name for _, name, _ in iter_modules(ltctplugin.__path__) if name != "base"
         )
+        if self.disabled - found:
+            # remove non-existent disabled plugins
+            self.disabled = found.intersection(self.disabled)
+            self.config_save()
+        # filter out disabled plugins
+        found = set(name for name in found if name not in self.disabled)
         for namespace in loaded - found:
             # unload plugins
-            plugin = self.plugins.pop(namespace)
-            plugin.unload()
-            del plugin
+            for i, plugin in enumerate(self.plugins):
+                if namespace == plugin.namespace:
+                    self.plugins.pop(i)
+                    plugin.unload()
+                    del plugin
+                    break
             debug(f"Unloaded '{namespace}'")
         for namespace in found - loaded:
             # load newly found plugins
@@ -66,7 +73,7 @@ class LPM:
                 warning(f"Plugin '{namespace}' has no entrypoint!")
             try:
                 plugin = entrypoint()
-                self.plugins[namespace] = plugin
+                self.plugins.append(plugin)
                 debug(f"Loaded plugin '{namespace}'")
             except Exception as e:
                 error(f"Couldn't load plugin '{namespace}', disabling!")

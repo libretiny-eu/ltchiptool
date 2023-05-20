@@ -34,7 +34,7 @@ class PluginBase(ABC):
 
     @property
     @lru_cache
-    def distribution(self) -> Optional[Distribution]:
+    def distribution(self) -> Distribution:
         if self.is_site:
             file = self.entry_file.replace("\\", "/")
             file = file.partition("site-packages/")[2]
@@ -54,7 +54,7 @@ class PluginBase(ABC):
                     if entry.is_relative_to(pth):
                         name = basename(file).rpartition(".")[0]
                         return Distribution.from_name(name)
-        return None
+        raise ValueError(f"Distribution of plugin {self.namespace} not found")
 
     @property
     @lru_cache
