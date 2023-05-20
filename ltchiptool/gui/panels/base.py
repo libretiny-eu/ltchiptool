@@ -1,5 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
+import sys
+from os.path import dirname, isfile, join
 from typing import Callable
 
 import wx
@@ -88,10 +90,17 @@ class BasePanel(wx.Panel):
         pass
 
     def LoadXRCFile(self, *path: str):
-        self.Xrc = load_xrc_file(*path)
+        xrc = join(*path)
+        if isfile(xrc):
+            self.Xrc = load_xrc_file(xrc)
+        else:
+            root = dirname(sys.modules[self.__module__].__file__)
+            self.Xrc = load_xrc_file(root, *path)
 
     def LoadXRC(self, name: str):
         panel = self.Xrc.LoadPanel(self, name)
+        if not panel:
+            raise ValueError(f"Panel not found: {name}")
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
         self.SetSizer(sizer)

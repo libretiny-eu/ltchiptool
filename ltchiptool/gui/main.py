@@ -73,11 +73,9 @@ class MainFrame(wx.Frame):
         # list all built-in panels
         from .panels.about import AboutPanel
         from .panels.flash import FlashPanel
-        from .panels.upk import UpkPanel
 
         windows = [
             ("flash", FlashPanel),
-            ("upk", UpkPanel),
             ("about", AboutPanel),
         ]
 
