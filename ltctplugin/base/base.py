@@ -18,6 +18,13 @@ class PluginBase(ABC):
         return sys.modules[self.__module__].__file__
 
     @property
+    def namespace(self) -> str:
+        path = self.entry_file.replace("\\", "/")
+        path = path.partition("ltctplugin/")[2]
+        path = path.split("/")
+        return path[0]
+
+    @property
     def is_site(self) -> bool:
         return "site-packages" in self.entry_file
 
@@ -46,7 +53,7 @@ class PluginBase(ABC):
                     ("license", "license"),
                 ]
                 for src, dst in keys:
-                    value = re.search(rf"{src}\s?=\s?\"(.+?)\"", text)
+                    value = re.search(rf"{src}\s?=\s?\[?\"(.+?)\"\]?", text)
                     if value:
                         meta[dst] = value.group(1)
                     else:
