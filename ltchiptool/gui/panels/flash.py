@@ -37,7 +37,7 @@ class FlashPanel(BasePanel):
         self.ports = []
 
         self.Port = self.BindComboBox("combo_port")
-        self.Rescan = self.BindButton("button_rescan", self.on_rescan_click)
+        self.Rescan = self.BindButton("button_rescan", self.OnRescanClick)
         self.Write = self.BindRadioButton("radio_write")
         self.Read = self.BindRadioButton("radio_read")
         self.ReadROM = self.BindRadioButton("radio_read_rom")
@@ -45,12 +45,12 @@ class FlashPanel(BasePanel):
         self.FileText = self.FindStaticText("text_file")
         self.File = self.BindTextCtrl("input_file")
         self.Family = self.BindComboBox("combo_family")
-        self.BindButton("button_browse", self.on_browse_click)
+        self.BindButton("button_browse", self.OnBrowseClick)
         self.Start: wx.adv.CommandLinkButton = self.BindButton(
-            "button_start", self.on_start_click
+            "button_start", self.OnStartClick
         )
         self.Cancel: wx.adv.CommandLinkButton = self.BindButton(
-            "button_cancel", self.on_cancel_click
+            "button_cancel", self.OnCancelClick
         )
 
         self.Baudrate = {
@@ -133,7 +133,7 @@ class FlashPanel(BasePanel):
 
     def OnShow(self):
         super().OnShow()
-        self.start_work(PortWatcher(self.on_ports_updated))
+        self.StartWork(PortWatcher(self.OnPortsUpdated))
 
     def OnUpdate(self, target: wx.Window = None):
         writing = self.operation == FlashOp.WRITE
@@ -420,7 +420,7 @@ class FlashPanel(BasePanel):
         verbose(f"Generated dump filename: {self.auto_file}")
         return self.auto_file
 
-    def on_ports_updated(self, ports: list[tuple[str, bool, str]]):
+    def OnPortsUpdated(self, ports: list[tuple[str, bool, str]]):
         self.Port.Enable(not not ports)
         if not ports:
             self.ports = []
@@ -440,11 +440,11 @@ class FlashPanel(BasePanel):
         self.delayed_port = None
 
     @on_event
-    def on_rescan_click(self):
-        self.on_ports_updated(list_serial_ports())
+    def OnRescanClick(self):
+        self.OnPortsUpdated(list_serial_ports())
 
     @on_event
-    def on_browse_click(self):
+    def OnBrowseClick(self):
         if self.operation == FlashOp.WRITE:
             title = "Open file"
             flags = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
@@ -462,7 +462,7 @@ class FlashPanel(BasePanel):
                 self.prev_file = None
 
     @on_event
-    def on_start_click(self):
+    def OnStartClick(self):
         if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
             soc = self.detection.soc or SocInterface.get(self.family)
         else:
@@ -493,10 +493,10 @@ class FlashPanel(BasePanel):
             ctx=self.detection and self.detection.get_uf2_ctx(),
             on_chip_info=self.Start.SetNote,
         )
-        self.start_work(work, freeze_ui=True)
+        self.StartWork(work, freeze_ui=True)
         self.Start.SetNote("")
         self.Cancel.Enable()
 
     @on_event
-    def on_cancel_click(self):
-        self.stop_work(FlashThread)
+    def OnCancelClick(self):
+        self.StopWork(FlashThread)

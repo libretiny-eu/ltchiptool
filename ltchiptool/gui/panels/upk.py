@@ -39,9 +39,9 @@ class UpkPanel(BasePanel):
 
         self.Notebook: wx.Notebook = self.FindWindowByName("notebook_upk")
 
-        self.BindButton("button_kickstart", self.on_do_kickstart_click)
-        self.BindButton("button_cloudcutter", self.on_do_cloudcutter_click)
-        self.BindButton("button_dump", self.on_do_dump_click)
+        self.BindButton("button_kickstart", self.OnDoKickstartClick)
+        self.BindButton("button_cloudcutter", self.OnDoCloudcutterClick)
+        self.BindButton("button_dump", self.OnDoDumpClick)
 
         self.Opts: dict[str, wx.CheckBox | wx.TextCtrl] = {
             "esphome_block": self.BindCheckBox("opts_esphome_block"),
@@ -56,8 +56,8 @@ class UpkPanel(BasePanel):
             "ota_password": self.BindTextCtrl("opts_ota_password"),
             "api_password": self.BindTextCtrl("opts_api_password"),
         }
-        self.BindButton("button_generate", self.on_generate_click)
-        self.BindButton("button_esphome_copy", self.on_esphome_copy_click)
+        self.BindButton("button_generate", self.OnGenerateClick)
+        self.BindButton("button_esphome_copy", self.OnEsphomeCopyClick)
 
         self.TextEsphome = self.BindTextCtrl("input_esphome")
         self.TextUpk = self.BindTextCtrl("input_upk")
@@ -152,11 +152,11 @@ class UpkPanel(BasePanel):
             for line in yr.logs:
                 info(f"UPK: {line}")
 
-    def on_storage_data(self, storage: dict):
+    def OnStorageData(self, storage: dict):
         self.storage = storage
         self.DoUpdate()
 
-    def on_storage_error(self, error_text: str):
+    def OnStorageError(self, error_text: str):
         self.storage = None
         self.DoUpdate()
         wx.MessageBox(
@@ -174,13 +174,13 @@ class UpkPanel(BasePanel):
         self.last_dir = dirname(file)
         work = UpkThread(
             file=file,
-            on_storage=self.on_storage_data,
-            on_error=self.on_storage_error,
+            on_storage=self.OnStorageData,
+            on_error=self.OnStorageError,
         )
-        self.start_work(work, freeze_ui=True)
+        self.StartWork(work, freeze_ui=True)
 
     @on_event
-    def on_do_kickstart_click(self):
+    def OnDoKickstartClick(self):
         dialog = wx.TextEntryDialog(
             self,
             message="Enter URL (or IP address) of Kickstart dashboard:",
@@ -199,13 +199,13 @@ class UpkPanel(BasePanel):
         self.last_url = url
         work = UpkThread(
             url=url,
-            on_storage=self.on_storage_data,
-            on_error=self.on_storage_error,
+            on_storage=self.OnStorageData,
+            on_error=self.OnStorageError,
         )
-        self.start_work(work, freeze_ui=True)
+        self.StartWork(work, freeze_ui=True)
 
     @on_event
-    def on_do_cloudcutter_click(self):
+    def OnDoCloudcutterClick(self):
         self.DisableAll()
         try:
             url = "https://tuya-cloudcutter.github.io/api/devices.json"
@@ -276,7 +276,7 @@ class UpkPanel(BasePanel):
         self.upk = device.get("device_configuration", {})
 
     @on_event
-    def on_do_dump_click(self):
+    def OnDoDumpClick(self):
         title = "Open file"
         flags = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
         init_dir = self.last_dir or os.getcwd()
@@ -288,17 +288,17 @@ class UpkPanel(BasePanel):
             self.last_dir = dirname(file)
             work = UpkThread(
                 file=file,
-                on_storage=self.on_storage_data,
-                on_error=self.on_storage_error,
+                on_storage=self.OnStorageData,
+                on_error=self.OnStorageError,
             )
-            self.start_work(work, freeze_ui=True)
+            self.StartWork(work, freeze_ui=True)
 
     @on_event
-    def on_generate_click(self):
+    def OnGenerateClick(self):
         self.Notebook.SetSelection(2)
 
     @on_event
-    def on_esphome_copy_click(self):
+    def OnEsphomeCopyClick(self):
         text = self.TextEsphome.GetValue()
         clip = wx.TextDataObject()
         clip.SetText(text)

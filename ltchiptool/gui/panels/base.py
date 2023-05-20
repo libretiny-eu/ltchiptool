@@ -20,11 +20,11 @@ class BasePanel(wx.Panel):
         self._components = []
         self._threads = []
 
-    def start_work(self, thread: BaseThread, freeze_ui: bool = False):
+    def StartWork(self, thread: BaseThread, freeze_ui: bool = False):
         self._threads.append(thread)
 
         def on_stop(t: BaseThread):
-            self.on_work_stopped(t)
+            self.OnWorkStopped(t)
             if freeze_ui:
                 self.EnableAll()
 
@@ -33,12 +33,12 @@ class BasePanel(wx.Panel):
             self.DisableAll()
         thread.start()
 
-    def stop_work(self, cls: type[BaseThread]):
+    def StopWork(self, cls: type[BaseThread]):
         for t in list(self._threads):
             if isinstance(t, cls):
                 t.stop()
 
-    def on_work_stopped(self, t: BaseThread):
+    def OnWorkStopped(self, t: BaseThread):
         self._threads.remove(t)
 
     def SetInitParams(self, **kwargs):
