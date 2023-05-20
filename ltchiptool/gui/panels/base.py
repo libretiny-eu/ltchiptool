@@ -100,44 +100,44 @@ class BasePanel(wx.Panel):
         self.Frame.Notebook.AddPage(self, title)
 
     def BindByName(self, event: int, name: str, handler: Callable[[wx.Event], None]):
-        self.FindWindowByName(name).Bind(event, handler)
+        self.FindWindowByName(name, self).Bind(event, handler)
 
     def BindComboBox(self, name: str):
-        window: wx.ComboBox = self.FindWindowByName(name)
+        window: wx.ComboBox = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
         return window
 
     def BindRadioButton(self, name: str):
-        window: wx.RadioButton = self.FindWindowByName(name)
+        window: wx.RadioButton = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_RADIOBUTTON, self._OnUpdate)
         return window
 
     def BindCheckBox(self, name: str):
-        window: wx.CheckBox = self.FindWindowByName(name)
+        window: wx.CheckBox = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_CHECKBOX, self._OnUpdate)
         return window
 
     def BindTextCtrl(self, name: str):
-        window: wx.TextCtrl = self.FindWindowByName(name)
+        window: wx.TextCtrl = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_TEXT, self._OnUpdate)
         return window
 
     def BindButton(self, name: str, func: Callable[[wx.Event], None]):
-        window: wx.Button = self.FindWindowByName(name)
+        window: wx.Button = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_BUTTON, func)
         return window
 
     def FindStaticText(self, name: str):
-        window: wx.StaticText = self.FindWindowByName(name)
+        window: wx.StaticText = self.FindWindowByName(name, self)
         return window
 
     def FindStaticBitmap(self, name: str):
-        window: wx.StaticBitmap = self.FindWindowByName(name)
+        window: wx.StaticBitmap = self.FindWindowByName(name, self)
         return window
 
     def EnableAll(self):

@@ -38,7 +38,7 @@ class UpkPanel(BasePanel):
         self.LoadXRC("UpkPanel")
         self.AddToNotebook("UPK2ESPHome")
 
-        self.Notebook: wx.Notebook = self.FindWindowByName("notebook_upk")
+        self.Notebook: wx.Notebook = self.FindWindowByName("notebook_upk", self)
 
         self.BindButton("button_kickstart", self.OnDoKickstartClick)
         self.BindButton("button_cloudcutter", self.OnDoCloudcutterClick)

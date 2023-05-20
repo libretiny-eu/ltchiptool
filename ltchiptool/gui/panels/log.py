@@ -112,16 +112,16 @@ class LogPanel(BasePanel):
 
         self.delayed_lines = []
 
-        self.Log: wx.TextCtrl = self.FindWindowByName("text_log")
+        self.Log: wx.TextCtrl = self.FindWindowByName("text_log", self)
         LoggingHandler.get().add_emitter(self.emit_raw)
 
         GUIProgressBar.parent = self
-        GUIProgressBar.elapsed = self.FindWindowByName("text_elapsed")
-        GUIProgressBar.progress = self.FindWindowByName("text_progress")
-        GUIProgressBar.left = self.FindWindowByName("text_left")
-        GUIProgressBar.time_elapsed = self.FindWindowByName("text_time_elapsed")
-        GUIProgressBar.time_left = self.FindWindowByName("text_time_left")
-        GUIProgressBar.bar = self.FindWindowByName("progress_bar")
+        GUIProgressBar.elapsed = self.FindWindowByName("text_elapsed", self)
+        GUIProgressBar.progress = self.FindWindowByName("text_progress", self)
+        GUIProgressBar.left = self.FindWindowByName("text_left", self)
+        GUIProgressBar.time_elapsed = self.FindWindowByName("text_time_elapsed", self)
+        GUIProgressBar.time_left = self.FindWindowByName("text_time_left", self)
+        GUIProgressBar.bar = self.FindWindowByName("progress_bar", self)
         GUIProgressBar.log = self.Log
         # noinspection PyTypeChecker
         GUIProgressBar.render_finish(GUIProgressBar)
