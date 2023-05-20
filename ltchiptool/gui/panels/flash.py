@@ -10,6 +10,7 @@ import wx.adv
 import wx.xrc
 
 from ltchiptool import Family, SocInterface
+from ltchiptool.gui.main import MainFrame
 from ltchiptool.gui.utils import int_or_zero, on_event, only_target, with_target
 from ltchiptool.gui.work.flash import FlashThread
 from ltchiptool.gui.work.ports import PortWatcher
@@ -30,9 +31,10 @@ class FlashPanel(BasePanel):
     auto_file: str | None = None
     delayed_port: str | None = None
 
-    def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
-        super().__init__(*args, **kw)
-        self.LoadXRC(res, "FlashPanel")
+    def __init__(self, parent: wx.Window, frame):
+        super().__init__(parent, frame)
+        self.LoadXRC("FlashPanel")
+        self.AddToNotebook("Flashing")
 
         self.ports = []
 

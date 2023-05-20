@@ -5,6 +5,7 @@ from typing import Callable
 import wx
 import wx.xrc
 
+from ltchiptool.gui.utils import load_xrc_file
 from ltchiptool.gui.work.base import BaseThread
 
 
@@ -15,8 +16,10 @@ class BasePanel(wx.Panel):
     _in_update: bool = False
     is_closing: bool = False
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    def __init__(self, parent: wx.Window, frame):
+        super().__init__(parent)
+        self.Frame = frame
+        self.Xrc: wx.xrc.XmlResource = frame.Xrc
         self._components = []
         self._threads = []
 
@@ -84,11 +87,17 @@ class BasePanel(wx.Panel):
     def OnUpdate(self, target: wx.Window = None):
         pass
 
-    def LoadXRC(self, res: wx.xrc.XmlResource, name: str):
-        panel = res.LoadPanel(self, name)
+    def LoadXRCFile(self, *path: str):
+        self.Xrc = load_xrc_file(*path)
+
+    def LoadXRC(self, name: str):
+        panel = self.Xrc.LoadPanel(self, name)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
         self.SetSizer(sizer)
+
+    def AddToNotebook(self, title: str):
+        self.Frame.Notebook.AddPage(self, title)
 
     def BindByName(self, event: int, name: str, handler: Callable[[wx.Event], None]):
         self.FindWindowByName(name).Bind(event, handler)

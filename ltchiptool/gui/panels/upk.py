@@ -33,9 +33,10 @@ class UpkPanel(BasePanel):
     logs_shown: bool = False
     disclaimer_shown: bool = False
 
-    def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
-        super().__init__(*args, **kw)
-        self.LoadXRC(res, "UpkPanel")
+    def __init__(self, parent: wx.Window, frame):
+        super().__init__(parent, frame)
+        self.LoadXRC("UpkPanel")
+        self.AddToNotebook("UPK2ESPHome")
 
         self.Notebook: wx.Notebook = self.FindWindowByName("notebook_upk")
 

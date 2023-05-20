@@ -16,17 +16,14 @@ from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
-from .panels.about import AboutPanel
 from .panels.base import BasePanel
-from .panels.flash import FlashPanel
 from .panels.log import LogPanel
-from .panels.upk import UpkPanel
 from .utils import load_xrc_file, with_target
 
 
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
-    panels: dict[str, BasePanel]
+    Panels: dict[str, BasePanel]
     init_params: dict
 
     def __init__(self, *args, **kw):
@@ -42,7 +39,7 @@ class MainFrame(wx.Frame):
             xrc = join(dirname(__file__), "ltchiptool.xrc")
             icon = join(dirname(__file__), "ltchiptool.ico")
 
-        res = load_xrc_file(xrc)
+        self.Xrc = load_xrc_file(xrc)
 
         try:
             # try to find LT directory or local data snapshot
@@ -60,12 +57,12 @@ class MainFrame(wx.Frame):
                 unlink(self.config_file)
             rename(old_config, self.config_file)
         self.loaded = False
-        self.panels = {}
+        self.Panels = {}
         self.init_params = {}
 
         # initialize logging
-        self.Log = LogPanel(res, self)
-        self.panels["log"] = self.Log
+        self.Log = LogPanel(parent=self, frame=self)
+        self.Panels["log"] = self.Log
         # main window layout
         self.Notebook = wx.Notebook(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -73,39 +70,45 @@ class MainFrame(wx.Frame):
         sizer.Add(self.Log, proportion=1, flag=wx.EXPAND)
         self.SetSizer(sizer)
 
+        # list all built-in panels
+        from .panels.about import AboutPanel
+        from .panels.flash import FlashPanel
+        from .panels.upk import UpkPanel
+
+        windows = [
+            ("flash", FlashPanel),
+            ("upk", UpkPanel),
+            ("about", AboutPanel),
+        ]
+
+        # load all panels from plugins
+        lpm = LPM.get()
+        for name, plugin in lpm.plugins.items():
+            if not plugin or not plugin.has_gui:
+                continue
+            for gui_name, cls in plugin.build_gui().items():
+                windows.append((f"plugin.{name}.{gui_name}", cls))
+
+        # dummy name for exception messages
+        name = "UI"
         try:
-            self.SetMenuBar(res.LoadMenuBar("MainMenuBar"))
+            self.SetMenuBar(self.Xrc.LoadMenuBar("MainMenuBar"))
 
-            self.Flash = FlashPanel(res, self.Notebook)
-            self.panels["flash"] = self.Flash
-            self.Notebook.AddPage(self.Flash, "Flashing")
-
-            self.Upk = UpkPanel(res, self.Notebook)
-            self.panels["upk"] = self.Upk
-            self.Notebook.AddPage(self.Upk, "UPK2ESPHome")
-
-            self.About = AboutPanel(res, self.Notebook)
-            self.panels["about"] = self.About
-            self.Notebook.AddPage(self.About, "About")
+            for name, cls in windows:
+                if name.startswith("plugin."):
+                    # mark as loaded after trying to build any plugin
+                    self.loaded = True
+                if issubclass(cls, BasePanel):
+                    panel = cls(parent=self.Notebook, frame=self)
+                    self.Panels[name] = panel
+                else:
+                    warning(f"Unknown GUI element: {cls}")
 
             self.loaded = True
         except Exception as e:
-            LoggingHandler.get().emit_exception(e)
-            self.OnClose()
-
-        try:
-            lpm = LPM.get()
-            for name, plugin in lpm.plugins.items():
-                if not plugin or not plugin.has_gui:
-                    continue
-                for gui_name, cls in plugin.build_gui().items():
-                    if issubclass(cls, BasePanel):
-                        panel = cls(notebook=self.Notebook, menu_bar=self.GetMenuBar())
-                        self.panels[f"plugin.{name}.{gui_name}"] = panel
-                    else:
-                        warning(f"Unknown GUI element: {cls}")
-        except Exception as e:
-            LoggingHandler.get().emit_exception(e)
+            LoggingHandler.get().emit_exception(e, msg=f"Couldn't build {name}")
+            if not self.loaded:
+                self.OnClose()
 
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -128,11 +131,7 @@ class MainFrame(wx.Frame):
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
         size: wx.Size = self.GetSize()
-        page: str | None = None
-        for name, panel in self.panels.items():
-            if panel == self.Notebook.GetCurrentPage():
-                page = name
-                break
+        page: str = self.NotebookPageName
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
@@ -150,12 +149,31 @@ class MainFrame(wx.Frame):
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
-        if isinstance(page, str):
-            panel = self.panels.get(page, None)
-            for i in range(self.Notebook.GetPageCount()):
-                if panel == self.Notebook.GetPage(i):
-                    self.Notebook.SetSelection(i)
-                    break
+        if page is not None:
+            self.NotebookPageName = page
+
+    @property
+    def NotebookPagePanel(self) -> wx.Panel:
+        return self.Notebook.GetCurrentPage()
+
+    @NotebookPagePanel.setter
+    def NotebookPagePanel(self, panel: wx.Panel):
+        for i in range(self.Notebook.GetPageCount()):
+            if panel == self.Notebook.GetPage(i):
+                self.Notebook.SetSelection(i)
+                return
+
+    @property
+    def NotebookPageName(self) -> str:
+        for name, panel in self.Panels.items():
+            if panel == self.Notebook.GetCurrentPage():
+                return name
+
+    @NotebookPageName.setter
+    def NotebookPageName(self, name: str):
+        panel = self.Panels.get(name, None)
+        if panel:
+            self.NotebookPagePanel = panel
 
     @staticmethod
     def OnException(*args):
@@ -165,9 +183,10 @@ class MainFrame(wx.Frame):
             LoggingHandler.get().emit_exception(args[0].exc_value)
 
     @staticmethod
-    def ShowExceptionMessage(e):
+    def ShowExceptionMessage(e, msg):
+        text = f"{type(e).__name__}: {e}"
         wx.MessageBox(
-            message=str(e),
+            message=f"{msg}\n\n{text}" if msg else text,
             caption="Error",
             style=wx.ICON_ERROR,
         )
@@ -175,12 +194,12 @@ class MainFrame(wx.Frame):
     def OnShow(self, *_):
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
-        for name, panel in self.panels.items():
+        for name, panel in self.Panels.items():
             panel.SetSettings(**settings.get(name, {}))
             panel.SetInitParams(**self.init_params)
         if settings:
             info(f"Loaded settings from {self.config_file}")
-        for name, panel in self.panels.items():
+        for name, panel in self.Panels.items():
             panel.OnShow()
 
     def OnClose(self, *_):
@@ -190,7 +209,7 @@ class MainFrame(wx.Frame):
             return
         settings = self._settings
         settings["main"] = self.GetSettings()
-        for name, panel in self.panels.items():
+        for name, panel in self.Panels.items():
             panel.OnClose()
             settings[name] = panel.GetSettings() or {}
         self._settings = settings
@@ -215,9 +234,9 @@ class MainFrame(wx.Frame):
 
             case ("Debug", "Print settings"):
                 debug(f"Main settings: {self.GetSettings()}")
-                for name, panel in self.panels.items():
+                for name, panel in self.Panels.items():
                     debug(f"Panel '{name}' settings: {panel.GetSettings()}")
 
             case _:
-                for panel in self.panels.values():
+                for panel in self.Panels.values():
                     panel.OnMenu(title, label, checked)
