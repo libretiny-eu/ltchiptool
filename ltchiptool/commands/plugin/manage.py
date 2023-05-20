@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-19.
 
 from logging import info, warning
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import click
 from prettytable import PrettyTable
@@ -35,7 +35,12 @@ def _find_plugin(query: str) -> Tuple[str, Optional[PluginBase]]:
     for name, plugin in lpm.plugins.items():
         if found:
             continue
-        keys = [name, plugin and plugin.title, plugin and plugin.namespace]
+        keys = [
+            name,
+            plugin and plugin.title,
+            plugin and plugin.distribution and plugin.distribution.name,
+            plugin and plugin.namespace,
+        ]
         for key in keys:
             if not key:
                 continue
@@ -53,7 +58,7 @@ def list_():
     if not lpm.plugins:
         print("No plugins are installed")
         return
-    table = PrettyTable()
+    table = PrettyTable(align="l")
     table.field_names = [
         "Title",
         "Version",
@@ -61,7 +66,6 @@ def list_():
         "Description",
         "Type",
     ]
-    table.align = "l"
 
     for name in sorted(lpm.plugins.keys()):
         plugin = lpm.plugins[name]
@@ -81,38 +85,41 @@ def list_():
 
 
 @cli.command(name="info", short_help="Show info about installed plugins")
-@click.argument("QUERY")
-def info_(query: str):
+@click.argument("QUERY", nargs=-1, required=True)
+def info_(query: List[str]):
     """
     Show info about an installed plugin.
 
-    Searches by plugin name and its package name.
-    If not found, also by parts of the names.
+    Searches by plugin name, its distribution and namespace.
+    If not found, also by parts of these names.
 
     \b
     Arguments:
       QUERY      Plugin name to search for
     """
-    name, plugin = _find_plugin(query)
+    for q in query:
+        name, plugin = _find_plugin(q)
 
-    if not name:
-        warning(f"No plugin found by query: {query}")
-        return
-    if not plugin:
-        info(f"Plugin {name} is not enabled")
-        return
+        if not name:
+            warning(f"No plugin found by query: {q}")
+            return
+        if not plugin:
+            info(f"Plugin {name} is not enabled")
+            return
 
-    table = PrettyTable(header=False)
-    table.align = "l"
-    table.add_row(["Title", plugin.title])
-    table.add_row(["Version", plugin.version])
-    table.add_row(["Description", plugin.description or "-"])
-    table.add_row(["Type", _format_type(plugin)])
-    table.add_row(["Author", plugin.author or "-"])
-    table.add_row(["License", plugin.license or "-"])
-    table.add_row(["Namespace", plugin.namespace])
-    table.add_row(["Module", type(plugin).__module__ + "." + type(plugin).__name__])
-    print(table.get_string())
+        table = PrettyTable(align="l", header=False)
+        table.add_row(["Title", plugin.title])
+        table.add_row(["Version", plugin.version])
+        table.add_row(["Description", plugin.description or "-"])
+        table.add_row(["Author", plugin.author or "-"])
+        table.add_row(["License", plugin.license or "-"])
+        table.add_row(["Type", _format_type(plugin)])
+        table.add_row(
+            ["Distribution", plugin.distribution and plugin.distribution.name or "?"]
+        )
+        table.add_row(["Namespace", plugin.namespace])
+        table.add_row(["Module", plugin.module])
+        print(table.get_string())
 
 
 if __name__ == "__main__":

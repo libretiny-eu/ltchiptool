@@ -52,37 +52,37 @@ class LPM:
             for _, name, _ in iter_modules(ltctplugin.__path__)
             if name not in self.disabled and name != "base"
         )
-        for name in loaded - found:
+        for namespace in loaded - found:
             # unload plugins
-            plugin = self.plugins.pop(name)
+            plugin = self.plugins.pop(namespace)
             plugin.unload()
             del plugin
-            debug(f"Unloaded '{name}'")
-        for name in found - loaded:
+            debug(f"Unloaded '{namespace}'")
+        for namespace in found - loaded:
             # load newly found plugins
-            module = import_module(f"ltctplugin.{name}")
+            module = import_module(f"ltctplugin.{namespace}")
             entrypoint = getattr(module, "entrypoint", None)
             if not entrypoint:
-                warning(f"Plugin '{name}' has no entrypoint!")
+                warning(f"Plugin '{namespace}' has no entrypoint!")
             try:
                 plugin = entrypoint()
-                self.plugins[name] = plugin
-                debug(f"Loaded plugin '{name}'")
+                self.plugins[namespace] = plugin
+                debug(f"Loaded plugin '{namespace}'")
             except Exception as e:
-                error(f"Couldn't load plugin '{name}', disabling!")
+                error(f"Couldn't load plugin '{namespace}', disabling!")
                 LoggingHandler.get().emit_exception(e)
-                self.disable(name, rescan=False)
+                self.disable(namespace, rescan=False)
 
-    def enable(self, name: str, rescan: bool = True) -> None:
-        if name in self.disabled:
-            self.disabled.remove(name)
+    def enable(self, namespace: str, rescan: bool = True) -> None:
+        if namespace in self.disabled:
+            self.disabled.remove(namespace)
             self.config_save()
             if rescan:
                 self.rescan()
 
-    def disable(self, name: str, rescan: bool = True) -> None:
-        if name not in self.disabled:
-            self.disabled.add(name)
+    def disable(self, namespace: str, rescan: bool = True) -> None:
+        if namespace not in self.disabled:
+            self.disabled.add(namespace)
             self.config_save()
             if rescan:
                 self.rescan()

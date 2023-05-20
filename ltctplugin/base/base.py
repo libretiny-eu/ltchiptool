@@ -1,13 +1,16 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-19.
 
 import re
+import site
 import sys
 from abc import ABC
 from functools import lru_cache
-from os.path import isfile, join
+from glob import glob
+from os.path import basename, isdir, isfile, join
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-from importlib_metadata import Distribution, PackagePath, distributions, metadata
+from importlib_metadata import Distribution, PackagePath, distributions
 
 from ltchiptool.util.logging import LoggingHandler
 
@@ -19,17 +22,19 @@ class PluginBase(ABC):
 
     @property
     def namespace(self) -> str:
-        path = self.entry_file.replace("\\", "/")
-        path = path.partition("ltctplugin/")[2]
-        path = path.split("/")
-        return path[0]
+        return type(self).__module__.split(".")[1]
+
+    @property
+    def module(self) -> str:
+        return type(self).__module__ + "." + type(self).__name__
 
     @property
     def is_site(self) -> bool:
         return "site-packages" in self.entry_file
 
+    @property
     @lru_cache
-    def get_distribution_meta(self) -> Optional[dict]:
+    def distribution(self) -> Optional[Distribution]:
         if self.is_site:
             file = self.entry_file.replace("\\", "/")
             file = file.partition("site-packages/")[2]
@@ -37,7 +42,25 @@ class PluginBase(ABC):
             for d in distributions():
                 d: Distribution
                 if path in d.files:
-                    return d.metadata.json
+                    return d
+        else:
+            entry = Path(self.entry_file)
+            for path in site.getsitepackages() + [site.getusersitepackages()]:
+                for file in glob(join(path, "*.pth")):
+                    with open(file, "r", encoding="utf-8") as f:
+                        pth = f.read().strip()
+                    if not isdir(pth):
+                        continue
+                    if entry.is_relative_to(pth):
+                        name = basename(file).rpartition(".")[0]
+                        return Distribution.from_name(name)
+        return None
+
+    @property
+    @lru_cache
+    def _distribution_meta(self) -> Optional[dict]:
+        if self.is_site:
+            return self.distribution.metadata.json
         else:
             file = self.entry_file.partition("ltctplugin")[0]
             file = join(file, "pyproject.toml")
@@ -65,12 +88,12 @@ class PluginBase(ABC):
     @lru_cache
     def plugin_meta(self) -> dict:
         try:
-            meta = self.get_distribution_meta()
+            meta = self._distribution_meta
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
             meta = dict()
         return dict(
-            title=meta.get("name", None) or type(self).__name__,
+            title=meta.get("name", None) or self.namespace,
             description=meta.get("summary", None),
             version=meta.get("version", None) or "0.0.0",
             author=meta.get("author", None),
