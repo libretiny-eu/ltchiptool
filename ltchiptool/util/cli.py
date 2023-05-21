@@ -1,9 +1,11 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-10-5.
 
 import shlex
-from logging import WARNING, warning
+from logging import WARNING, error, info, warning
 from os.path import basename, dirname, join
-from typing import Dict, Iterable, List, Optional
+from subprocess import PIPE, Popen
+from threading import Thread
+from typing import IO, Callable, Dict, Iterable, List, Optional
 
 import click
 from click import Command, Context, MultiCommand
@@ -63,6 +65,29 @@ def find_serial_port() -> Optional[str]:
             if not is_usb:
                 graph(2, "This is not a USB COM port", loglevel=WARNING)
     return ports[0][0]
+
+
+def run_subprocess(*args) -> int:
+    def stream(io: IO[bytes], func: Callable[[str], None]):
+        for line in iter(io.readline, b""):
+            func(line.decode("utf-8").rstrip())
+        io.close()
+
+    p = Popen(
+        args=args,
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    threads = [
+        Thread(target=stream, args=(p.stdout, info)),
+        Thread(target=stream, args=(p.stderr, error)),
+        Thread(target=p.wait),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return p.returncode
 
 
 class AutoIntParamType(click.ParamType):

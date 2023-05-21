@@ -1,23 +1,37 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-19.
 
+import re
+import sys
+from dataclasses import dataclass
 from importlib import import_module
-from logging import debug, error, warning
+from logging import debug, error, info, warning
 from os.path import join
 from pkgutil import iter_modules
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from click import get_app_dir
 
 import ltctplugin
+from ltchiptool.util.cli import run_subprocess
 from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler
 from ltctplugin.base import PluginBase
+
+PYPI_URL = "https://pypi.org/search/"
 
 
 class LPM:
     INSTANCE: "LPM" = None
     plugins: List[PluginBase]
     disabled: Set[str]
+
+    @dataclass
+    class SearchResult:
+        distribution: str
+        description: str
+        latest: str
+        installed: str = None
+        plugin: PluginBase = None
 
     @staticmethod
     def get() -> "LPM":
@@ -45,7 +59,8 @@ class LPM:
         )
         writejson(self.config_file, config)
 
-    def rescan(self) -> None:
+    def rescan(self) -> Tuple[Set[str], Set[str]]:
+        prev = self.disabled.union(p.namespace for p in self.plugins)
         loaded = set(p.namespace for p in self.plugins)
         found = set(
             name for _, name, _ in iter_modules(ltctplugin.__path__) if name != "base"
@@ -79,6 +94,8 @@ class LPM:
                 error(f"Couldn't load plugin '{namespace}', disabling!")
                 LoggingHandler.get().emit_exception(e)
                 self.disable(namespace, rescan=False)
+        curr = self.disabled.union(p.namespace for p in self.plugins)
+        return prev, curr
 
     def enable(self, namespace: str, rescan: bool = True) -> None:
         if namespace in self.disabled:
@@ -93,3 +110,76 @@ class LPM:
             self.config_save()
             if rescan:
                 self.rescan()
+
+    def search(self, query: str = None) -> List[SearchResult]:
+        try:
+            import requests
+        except (ModuleNotFoundError, ImportError):
+            error("Module 'requests' not found - install it using pip install requests")
+            return []
+
+        out = []
+        pkg_regex = r'<a class="package-snippet" .+?</a>'
+        meta_regex = r'__(\w+?)">([^\s].+?)<'
+
+        # fetch the search page
+        query = query or "ltchiptool"
+        info(f"Searching '{query}' on PyPI...")
+        with requests.get(PYPI_URL, params=dict(q=query)) as r:
+            html = r.text
+            # go through all found packages
+            for pkg in re.finditer(pkg_regex, html, re.DOTALL):
+                meta = {}
+                # parse metadata into the dict
+                for match in re.finditer(meta_regex, pkg.group(0)):
+                    meta[match.group(1)] = match.group(2)
+                # check if all required keys were found
+                if {"name", "description", "version"} - set(meta.keys()):
+                    warning("Missing metadata")
+                    warning(pkg.group(0))
+                    continue
+                # build the search result
+                result = LPM.SearchResult(
+                    distribution=meta["name"],
+                    description=meta["description"],
+                    latest=meta["version"],
+                )
+                # check if the package is a plugin
+                if (
+                    result.distribution.startswith("ltchiptool-")
+                    or result.distribution.startswith("ltchiptool_")
+                    or "ltchiptool plugin" in result.description
+                ):
+                    out.append(result)
+
+        # check if any plugins are installed
+        for result in out:
+            for plugin in self.plugins:
+                # try all loaded plugins
+                if result.distribution == plugin.distribution.name:
+                    result.installed = plugin.version
+                    result.plugin = plugin
+                    break
+            # try installed packages as well
+            if not result.installed:
+                pass
+
+        return out
+
+    def install(self, distribution: str) -> bool:
+        code = run_subprocess(
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            distribution,
+        )
+        if code != 0:
+            return False
+        prev, curr = self.rescan()
+        added = curr - prev
+        if not added:
+            warning("No new plugins were added!")
+        else:
+            info(f"Installed plugin {' '.join(added)}")
+        return True

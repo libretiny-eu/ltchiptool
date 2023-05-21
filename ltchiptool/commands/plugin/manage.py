@@ -114,5 +114,40 @@ def info_(query: List[str]):
         print(table.get_string())
 
 
+@cli.command(short_help="Search for installable plugins")
+@click.argument("QUERY", required=False)
+def search(query: str):
+    lpm = LPM.get()
+    results = lpm.search(query)
+    if not results:
+        warning(f"No plugins found by query: {query}")
+        return
+
+    table = PrettyTable(align="l")
+    table.field_names = [
+        "Distribution",
+        "Installed",
+        "Latest",
+        "Description",
+    ]
+    for result in sorted(results, key=lambda r: r.distribution):
+        table.add_row(
+            [
+                result.distribution,
+                result.installed or "-",
+                result.latest,
+                result.description,
+            ]
+        )
+    click.echo_via_pager(table.get_string())
+
+
+@cli.command(short_help="Install a plugin")
+@click.argument("NAME")
+def install(name: str):
+    lpm = LPM.get()
+    lpm.install(name)
+
+
 if __name__ == "__main__":
     cli()
