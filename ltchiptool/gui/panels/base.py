@@ -1,10 +1,14 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
-from typing import Callable
+import sys
+from os.path import dirname, isfile, join
+from typing import Any, Callable, Tuple
 
 import wx
 import wx.xrc
 
+from ltchiptool.gui.colors import ColorPalette
+from ltchiptool.gui.utils import load_xrc_file
 from ltchiptool.gui.work.base import BaseThread
 
 
@@ -15,16 +19,18 @@ class BasePanel(wx.Panel):
     _in_update: bool = False
     is_closing: bool = False
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    def __init__(self, parent: wx.Window, frame):
+        super().__init__(parent)
+        self.Frame = frame
+        self.Xrc: wx.xrc.XmlResource = frame.Xrc
         self._components = []
         self._threads = []
 
-    def start_work(self, thread: BaseThread, freeze_ui: bool = False):
+    def StartWork(self, thread: BaseThread, freeze_ui: bool = True):
         self._threads.append(thread)
 
         def on_stop(t: BaseThread):
-            self.on_work_stopped(t)
+            self.OnWorkStopped(t)
             if freeze_ui:
                 self.EnableAll()
 
@@ -33,12 +39,12 @@ class BasePanel(wx.Panel):
             self.DisableAll()
         thread.start()
 
-    def stop_work(self, cls: type[BaseThread]):
+    def StopWork(self, cls: type[BaseThread]):
         for t in list(self._threads):
             if isinstance(t, cls):
                 t.stop()
 
-    def on_work_stopped(self, t: BaseThread):
+    def OnWorkStopped(self, t: BaseThread):
         self._threads.remove(t)
 
     def SetInitParams(self, **kwargs):
@@ -59,10 +65,19 @@ class BasePanel(wx.Panel):
             t.stop()
             t.join()
 
+    def OnActivate(self):
+        pass
+
+    def OnDeactivate(self):
+        pass
+
     def OnMenu(self, title: str, label: str, checked: bool):
         pass
 
     def OnFileDrop(self, *files):
+        pass
+
+    def OnPaletteChanged(self, old: ColorPalette, new: ColorPalette):
         pass
 
     def _OnUpdate(self, event: wx.Event | None):
@@ -84,51 +99,71 @@ class BasePanel(wx.Panel):
     def OnUpdate(self, target: wx.Window = None):
         pass
 
-    def LoadXRC(self, res: wx.xrc.XmlResource, name: str):
-        panel = res.LoadPanel(self, name)
+    def LoadXRCFile(self, *path: str):
+        xrc = join(*path)
+        if isfile(xrc):
+            self.Xrc = load_xrc_file(xrc)
+        else:
+            root = dirname(sys.modules[self.__module__].__file__)
+            self.Xrc = load_xrc_file(root, *path)
+
+    def LoadXRC(self, name: str):
+        panel = self.Xrc.LoadPanel(self, name)
+        if not panel:
+            raise ValueError(f"Panel not found: {name}")
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
+    def AddToNotebook(self, title: str):
+        self.Frame.Notebook.AddPage(self, title)
+
     def BindByName(self, event: int, name: str, handler: Callable[[wx.Event], None]):
-        self.FindWindowByName(name).Bind(event, handler)
+        self.FindWindowByName(name, self).Bind(event, handler)
 
     def BindComboBox(self, name: str):
-        window: wx.ComboBox = self.FindWindowByName(name)
+        window: wx.ComboBox = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
         return window
 
     def BindRadioButton(self, name: str):
-        window: wx.RadioButton = self.FindWindowByName(name)
+        window: wx.RadioButton = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_RADIOBUTTON, self._OnUpdate)
         return window
 
     def BindCheckBox(self, name: str):
-        window: wx.CheckBox = self.FindWindowByName(name)
+        window: wx.CheckBox = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_CHECKBOX, self._OnUpdate)
         return window
 
     def BindTextCtrl(self, name: str):
-        window: wx.TextCtrl = self.FindWindowByName(name)
+        window: wx.TextCtrl = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_TEXT, self._OnUpdate)
         return window
 
     def BindButton(self, name: str, func: Callable[[wx.Event], None]):
-        window: wx.Button = self.FindWindowByName(name)
+        window: wx.Button = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_BUTTON, func)
         return window
 
+    def BindWindow(self, name: str, *handlers: Tuple[Any, Callable[[wx.Event], None]]):
+        window = self.FindWindowByName(name, self)
+        self._components.append(window)
+        for event, func in handlers:
+            window.Bind(event, func)
+        return window
+
     def FindStaticText(self, name: str):
-        window: wx.StaticText = self.FindWindowByName(name)
+        window: wx.StaticText = self.FindWindowByName(name, self)
         return window
 
     def FindStaticBitmap(self, name: str):
-        window: wx.StaticBitmap = self.FindWindowByName(name)
+        window: wx.StaticBitmap = self.FindWindowByName(name, self)
         return window
 
     def EnableAll(self):

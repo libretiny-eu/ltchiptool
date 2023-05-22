@@ -1,12 +1,12 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import sys
-from logging import error
+from logging import INFO, NOTSET, error
 
 import click
 
 from ltchiptool import get_version
-from ltchiptool.util.logging import VERBOSE, LoggingHandler
+from ltchiptool.util.logging import LoggingHandler
 
 
 def gui_entrypoint(*args, **kwargs):
@@ -23,7 +23,8 @@ def gui_entrypoint(*args, **kwargs):
             raise RuntimeError("ltchiptool GUI requires Python 3.10 or newer")
         from .main import MainFrame
 
-        LoggingHandler.get().level = VERBOSE
+        if LoggingHandler.get().level == NOTSET:
+            LoggingHandler.get().level = INFO
         frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
         frm.init_params = kwargs
         frm.Show()
