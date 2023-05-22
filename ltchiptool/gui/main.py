@@ -12,13 +12,13 @@ import wx.xrc
 from click import get_app_dir
 
 from ltchiptool.util.fileio import readjson, writejson
-from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.logging import LoggingHandler, verbose
 from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
 from .panels.base import BasePanel
 from .panels.log import LogPanel
-from .utils import load_xrc_file, with_target
+from .utils import load_xrc_file, on_event, with_event, with_target
 
 
 # noinspection PyPep8Naming
@@ -73,9 +73,11 @@ class MainFrame(wx.Frame):
         # list all built-in panels
         from .panels.about import AboutPanel
         from .panels.flash import FlashPanel
+        from .panels.plugins import PluginsPanel
 
         windows = [
             ("flash", FlashPanel),
+            ("plugins", PluginsPanel),
             ("about", AboutPanel),
         ]
 
@@ -111,6 +113,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnMenu)
+        self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
+        self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
         self.SetSize((700, 800))
         self.SetMinSize((600, 700))
@@ -151,11 +155,11 @@ class MainFrame(wx.Frame):
             self.NotebookPageName = page
 
     @property
-    def NotebookPagePanel(self) -> wx.Panel:
+    def NotebookPagePanel(self) -> BasePanel:
         return self.Notebook.GetCurrentPage()
 
     @NotebookPagePanel.setter
-    def NotebookPagePanel(self, panel: wx.Panel):
+    def NotebookPagePanel(self, panel: BasePanel):
         for i in range(self.Notebook.GetPageCount()):
             if panel == self.Notebook.GetPage(i):
                 self.Notebook.SetSelection(i)
@@ -238,3 +242,20 @@ class MainFrame(wx.Frame):
             case _:
                 for panel in self.Panels.values():
                     panel.OnMenu(title, label, checked)
+
+    @with_event
+    def OnPageChanging(self, event: wx.BookCtrlEvent):
+        panel = self.NotebookPagePanel
+        if not panel:
+            return
+        verbose(f"Deactivating page: {type(panel)}")
+        if panel.OnDeactivate() is False:
+            event.Veto()
+
+    @on_event
+    def OnPageChanged(self):
+        panel = self.NotebookPagePanel
+        if not panel:
+            return
+        verbose(f"Activating page: {type(panel)}")
+        panel.OnActivate()

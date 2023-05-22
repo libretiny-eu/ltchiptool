@@ -554,5 +554,60 @@
         </node>
       </node>
     </node>
+    <node
+      class="PanelForm"
+      class_name="PluginsPanel"
+      mockup_size="500,400">
+      <node
+        class="wxBoxSizer"
+        orientation="wxVERTICAL"
+        var_name="sizer_main_plugins"
+        flags="wxEXPAND">
+        <node
+          class="wxDataViewCtrl"
+          style="wxDV_HORIZ_RULES"
+          var_name="plugins_tree"
+          flags="wxEXPAND"
+          proportion="1" />
+        <node
+          class="wxBoxSizer"
+          var_name="sizer_download"
+          border_size="0"
+          flags="wxEXPAND">
+          <node
+            class="wxButton"
+            label="Download plugins..."
+            var_name="button_download"
+            flags="wxEXPAND" />
+          <node
+            class="wxBoxSizer"
+            orientation="wxVERTICAL"
+            var_name="sizer_install"
+            border_size="0"
+            flags="wxEXPAND"
+            proportion="1">
+            <node
+              class="wxStaticText"
+              label="Install/update a plugin"
+              var_name="text_install"
+              borders="wxLEFT" />
+            <node
+              class="wxBoxSizer"
+              var_name="sizer_distribution"
+              border_size="0"
+              flags="wxEXPAND">
+              <node
+                class="wxTextCtrl"
+                var_name="input_install"
+                proportion="1" />
+              <node
+                class="wxButton"
+                label="Install"
+                var_name="button_install" />
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
   </node>
 </wxUiEditorData>

@@ -121,6 +121,18 @@ class PluginBase(ABC):
         return self.plugin_meta["license"]
 
     @property
+    def type_text(self) -> str:
+        return (
+            "CLI + GUI"
+            if self.has_cli and self.has_gui
+            else "CLI"
+            if self.has_cli
+            else "GUI"
+            if self.has_gui
+            else "?"
+        )
+
+    @property
     def has_cli(self) -> bool:
         return False
 

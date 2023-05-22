@@ -15,18 +15,6 @@ def cli():
     pass
 
 
-def _format_type(plugin: PluginBase) -> str:
-    return (
-        "CLI + GUI"
-        if plugin.has_cli and plugin.has_gui
-        else "CLI"
-        if plugin.has_cli
-        else "GUI"
-        if plugin.has_gui
-        else "?"
-    )
-
-
 def _find_plugin(query: str) -> Optional[PluginBase]:
     lpm = LPM.get()
     query = query.lower()
@@ -66,14 +54,14 @@ def list_():
         "Type",
     ]
 
-    for plugin in sorted(lpm.plugins, key=lambda p: p.title):
+    for plugin in sorted(lpm.plugins, key=lambda p: p.title.lower()):
         table.add_row(
             [
                 plugin.title,
                 plugin.version,
                 "Yes",
                 plugin.description or "-",
-                _format_type(plugin),
+                plugin.type_text,
             ]
         )
     for name in sorted(lpm.disabled):
@@ -107,7 +95,7 @@ def info_(query: List[str]):
         table.add_row(["Description", plugin.description or "-"])
         table.add_row(["Author", plugin.author or "-"])
         table.add_row(["License", plugin.license or "-"])
-        table.add_row(["Type", _format_type(plugin)])
+        table.add_row(["Type", plugin.type_text])
         table.add_row(["Distribution", plugin.distribution.name])
         table.add_row(["Namespace", plugin.namespace])
         table.add_row(["Module", plugin.module])
@@ -131,11 +119,12 @@ def search(query: str):
         "Description",
     ]
     for result in sorted(results, key=lambda r: r.distribution):
+        update = " *" if result.installed and result.installed != result.latest else ""
         table.add_row(
             [
                 result.distribution,
                 result.installed or "-",
-                result.latest,
+                (result.latest or "") + update,
                 result.description,
             ]
         )

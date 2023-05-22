@@ -663,4 +663,68 @@
 			</object>
 		</object>
 	</object>
+	<object class="wxPanel" name="PluginsPanel">
+		<style>wxTAB_TRAVERSAL</style>
+		<object class="wxBoxSizer" name="sizer_main_plugins">
+			<orient>wxVERTICAL</orient>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<option>1</option>
+				<object class="wxDataViewCtrl" name="plugins_tree">
+					<style>wxDV_HORIZ_RULES</style>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>0</border>
+				<object class="wxBoxSizer" name="sizer_download">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_download">
+							<label>Download plugins...</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>0</border>
+						<option>1</option>
+						<object class="wxBoxSizer" name="sizer_install">
+							<orient>wxVERTICAL</orient>
+							<object class="sizeritem">
+								<flag>wxLEFT</flag>
+								<border>5</border>
+								<object class="wxStaticText" name="text_install">
+									<label>Install/update a plugin</label>
+									<wrap>-1</wrap>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxALL|wxEXPAND</flag>
+								<border>0</border>
+								<object class="wxBoxSizer" name="sizer_distribution">
+									<orient>wxHORIZONTAL</orient>
+									<object class="sizeritem">
+										<flag>wxALL</flag>
+										<border>5</border>
+										<option>1</option>
+										<object class="wxTextCtrl" name="input_install" />
+									</object>
+									<object class="sizeritem">
+										<flag>wxALL</flag>
+										<border>5</border>
+										<object class="wxButton" name="button_install">
+											<label>Install</label>
+										</object>
+									</object>
+								</object>
+							</object>
+						</object>
+					</object>
+				</object>
+			</object>
+		</object>
+	</object>
 </resource>

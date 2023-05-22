@@ -31,7 +31,6 @@ class LPM:
         description: str
         latest: str
         installed: str = None
-        plugin: PluginBase = None
 
     @staticmethod
     def get() -> "LPM":
@@ -158,7 +157,6 @@ class LPM:
                 # try all loaded plugins
                 if result.distribution == plugin.distribution.name:
                     result.installed = plugin.version
-                    result.plugin = plugin
                     break
             # try installed packages as well
             if not result.installed:
@@ -172,6 +170,7 @@ class LPM:
             "-m",
             "pip",
             "install",
+            "--upgrade",
             distribution,
         )
         if code != 0:

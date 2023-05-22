@@ -135,7 +135,7 @@ class FlashPanel(BasePanel):
 
     def OnShow(self):
         super().OnShow()
-        self.StartWork(PortWatcher(self.OnPortsUpdated))
+        self.StartWork(PortWatcher(self.OnPortsUpdated), freeze_ui=False)
 
     def OnUpdate(self, target: wx.Window = None):
         writing = self.operation == FlashOp.WRITE
@@ -495,7 +495,7 @@ class FlashPanel(BasePanel):
             ctx=self.detection and self.detection.get_uf2_ctx(),
             on_chip_info=self.Start.SetNote,
         )
-        self.StartWork(work, freeze_ui=True)
+        self.StartWork(work)
         self.Start.SetNote("")
         self.Cancel.Enable()
 

@@ -2,7 +2,7 @@
 
 import sys
 from os.path import dirname, isfile, join
-from typing import Callable
+from typing import Any, Callable, Tuple
 
 import wx
 import wx.xrc
@@ -25,7 +25,7 @@ class BasePanel(wx.Panel):
         self._components = []
         self._threads = []
 
-    def StartWork(self, thread: BaseThread, freeze_ui: bool = False):
+    def StartWork(self, thread: BaseThread, freeze_ui: bool = True):
         self._threads.append(thread)
 
         def on_stop(t: BaseThread):
@@ -63,6 +63,12 @@ class BasePanel(wx.Panel):
         for t in list(self._threads):
             t.stop()
             t.join()
+
+    def OnActivate(self):
+        pass
+
+    def OnDeactivate(self):
+        pass
 
     def OnMenu(self, title: str, label: str, checked: bool):
         pass
@@ -139,6 +145,13 @@ class BasePanel(wx.Panel):
         window: wx.Button = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_BUTTON, func)
+        return window
+
+    def BindWindow(self, name: str, *handlers: Tuple[Any, Callable[[wx.Event], None]]):
+        window = self.FindWindowByName(name, self)
+        self._components.append(window)
+        for event, func in handlers:
+            window.Bind(event, func)
         return window
 
     def FindStaticText(self, name: str):
