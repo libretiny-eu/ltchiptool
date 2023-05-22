@@ -171,7 +171,8 @@
         <node
           class="wxStaticText"
           label="Device port"
-          var_name="text_port" />
+          var_name="text_port"
+          alignment="wxALIGN_CENTER_VERTICAL" />
         <node
           class="wxComboBox"
           style="wxCB_READONLY"
@@ -188,6 +189,7 @@
           class="wxStaticText"
           label="Baud rate"
           var_name="text_baudrate"
+          alignment="wxALIGN_CENTER_VERTICAL"
           row="1" />
         <node
           class="wxBoxSizer"
@@ -243,6 +245,7 @@
           class="wxStaticText"
           label="Input file"
           var_name="text_file"
+          alignment="wxALIGN_CENTER_VERTICAL"
           row="3" />
         <node
           class="wxTextCtrl"

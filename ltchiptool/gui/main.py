@@ -60,15 +60,20 @@ class MainFrame(wx.Frame):
         self.Panels = {}
         self.init_params = {}
 
-        # initialize logging
-        self.Log = LogPanel(parent=self, frame=self)
-        self.Panels["log"] = self.Log
         # main window layout
-        self.Notebook = wx.Notebook(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.Notebook, flag=wx.EXPAND)
-        sizer.Add(self.Log, proportion=1, flag=wx.EXPAND)
-        self.SetSizer(sizer)
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Splitter = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
+        # build splitter panes
+        self.Notebook = wx.Notebook(parent=self.Splitter)
+        self.Notebook.SetMinSize((-1, 400))
+        self.Log = LogPanel(parent=self.Splitter, frame=self)
+        # initialize the splitter
+        self.Splitter.SetMinimumPaneSize(150)
+        self.Splitter.SetSashGravity(0.7)
+        self.Splitter.SplitHorizontally(self.Notebook, self.Log, sashPosition=-300)
+        self.Sizer.Add(self.Splitter, proportion=1, flag=wx.EXPAND)
+        self.SetSizer(self.Sizer)
+        self.Panels["log"] = self.Log
 
         # list all built-in panels
         from .panels.about import AboutPanel
@@ -133,10 +138,12 @@ class MainFrame(wx.Frame):
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
         size: wx.Size = self.GetSize()
+        split: int = self.Splitter.GetSashPosition()
         page: str = self.NotebookPageName
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
+            split=split,
             page=page,
         )
 
@@ -144,6 +151,7 @@ class MainFrame(wx.Frame):
         self,
         pos: tuple[int, int] = None,
         size: tuple[int, int] = None,
+        split: int = None,
         page: str = None,
         **_,
     ):
@@ -151,6 +159,8 @@ class MainFrame(wx.Frame):
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
+        if split:
+            self.Splitter.SetSashPosition(split)
         if page is not None:
             self.NotebookPageName = page
 

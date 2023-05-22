@@ -155,7 +155,7 @@
 			<object class="sizeritem">
 				<cellpos>0,0</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL</flag>
+				<flag>wxALL|wxALIGN_CENTER_VERTICAL</flag>
 				<border>5</border>
 				<object class="wxStaticText" name="text_port">
 					<label>Device port</label>
@@ -183,7 +183,7 @@
 			<object class="sizeritem">
 				<cellpos>1,0</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL</flag>
+				<flag>wxALL|wxALIGN_CENTER_VERTICAL</flag>
 				<border>5</border>
 				<object class="wxStaticText" name="text_baudrate">
 					<label>Baud rate</label>
@@ -271,7 +271,7 @@
 			<object class="sizeritem">
 				<cellpos>3,0</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL</flag>
+				<flag>wxALL|wxALIGN_CENTER_VERTICAL</flag>
 				<border>5</border>
 				<object class="wxStaticText" name="text_file">
 					<label>Input file</label>
