@@ -11,6 +11,7 @@ from click import _termui_impl
 from click._termui_impl import ProgressBar
 from serial import Serial
 
+from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import LoggingStreamHook
@@ -87,43 +88,24 @@ class GUIProgressBar(ProgressBar):
 
 
 class LogPanel(BasePanel):
-    COLOR_MAP = {
-        "black": wx.Colour(12, 12, 12),
-        "red": wx.Colour(197, 15, 31),
-        "green": wx.Colour(19, 161, 14),
-        "yellow": wx.Colour(193, 156, 0),
-        "blue": wx.Colour(0, 55, 218),
-        "magenta": wx.Colour(136, 23, 152),
-        "cyan": wx.Colour(58, 150, 221),
-        "white": wx.Colour(204, 204, 204),
-        "bright_black": wx.Colour(118, 118, 118),
-        "bright_red": wx.Colour(231, 72, 86),
-        "bright_green": wx.Colour(22, 198, 12),
-        "bright_yellow": wx.Colour(249, 241, 165),
-        "bright_blue": wx.Colour(59, 120, 255),
-        "bright_magenta": wx.Colour(180, 0, 158),
-        "bright_cyan": wx.Colour(97, 214, 214),
-        "bright_white": wx.Colour(242, 242, 242),
-    }
-
     delayed_lines: list[tuple[str, str, str]] | None
 
-    def __init__(self, res: wx.xrc.XmlResource, *args, **kw):
-        super().__init__(*args, **kw)
-        self.LoadXRC(res, "LogPanel")
+    def __init__(self, parent: wx.Window, frame):
+        super().__init__(parent, frame)
+        self.LoadXRC("LogPanel")
 
         self.delayed_lines = []
 
-        self.Log: wx.TextCtrl = self.FindWindowByName("text_log")
+        self.Log: wx.TextCtrl = self.FindWindowByName("text_log", self)
         LoggingHandler.get().add_emitter(self.emit_raw)
 
         GUIProgressBar.parent = self
-        GUIProgressBar.elapsed = self.FindWindowByName("text_elapsed")
-        GUIProgressBar.progress = self.FindWindowByName("text_progress")
-        GUIProgressBar.left = self.FindWindowByName("text_left")
-        GUIProgressBar.time_elapsed = self.FindWindowByName("text_time_elapsed")
-        GUIProgressBar.time_left = self.FindWindowByName("text_time_left")
-        GUIProgressBar.bar = self.FindWindowByName("progress_bar")
+        GUIProgressBar.elapsed = self.FindWindowByName("text_elapsed", self)
+        GUIProgressBar.progress = self.FindWindowByName("text_progress", self)
+        GUIProgressBar.left = self.FindWindowByName("text_left", self)
+        GUIProgressBar.time_elapsed = self.FindWindowByName("text_time_elapsed", self)
+        GUIProgressBar.time_left = self.FindWindowByName("text_time_left", self)
+        GUIProgressBar.bar = self.FindWindowByName("progress_bar", self)
         GUIProgressBar.log = self.Log
         # noinspection PyTypeChecker
         GUIProgressBar.render_finish(GUIProgressBar)
@@ -138,7 +120,7 @@ class LogPanel(BasePanel):
         if self.is_closing:
             return
 
-        wx_color = self.COLOR_MAP[color]
+        wx_color = ColorPalette.get()[color]
         if LoggingHandler.get().raw:
             self.Log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
         else:
@@ -219,3 +201,6 @@ class LogPanel(BasePanel):
                 level = logging.getLevelName(l.upper())
                 LoggingHandler.get().level = level
                 log(level, "Log level changed")
+
+    def OnPaletteChanged(self, old: ColorPalette, new: ColorPalette):
+        new.apply(self.Log, old)

@@ -14,14 +14,19 @@ from ltchiptool.util.streams import LoggingStreamHook
 from .version import get_version
 
 COMMANDS = {
-    "dump": "ltchiptool/commands/dumptool.py",
-    "elf2bin": "ltchiptool/commands/elf2bin.py",
+    # compile commands
+    "elf2bin": "ltchiptool/commands/compile/elf2bin.py",
+    "link2bin": "ltchiptool/commands/compile/link2bin.py",
+    "uf2": "uf2tool/cli.py",
+    # flash commands
     "flash": "ltchiptool/commands/flash/__main__.py",
+    # plugin commands
+    "plugin": "ltchiptool/commands/plugin/run.py",
+    "plugins": "ltchiptool/commands/plugin/manage.py",
+    # other commands
     "gui": "ltchiptool/gui/__main__.py",
-    "link2bin": "ltchiptool/commands/link2bin.py",
     "list": "ltchiptool/commands/list.py",
     "soc": "ltchiptool/commands/soc.py",
-    "uf2": "uf2tool/cli.py",
 }
 
 VERBOSITY_LEVEL = {

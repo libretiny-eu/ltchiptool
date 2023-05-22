@@ -1,10 +1,9 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
-import json
 import sys
 import threading
-from logging import debug, info
-from os import makedirs
+from logging import debug, info, warning
+from os import rename, unlink
 from os.path import dirname, isfile, join
 
 import wx
@@ -12,20 +11,22 @@ import wx.adv
 import wx.xrc
 from click import get_app_dir
 
-from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.fileio import readjson, writejson
+from ltchiptool.util.logging import LoggingHandler, verbose
+from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
-from .panels.about import AboutPanel
+from .colors import ColorPalette
 from .panels.base import BasePanel
-from .panels.flash import FlashPanel
 from .panels.log import LogPanel
-from .panels.upk import UpkPanel
-from .utils import with_target
+from .utils import load_xrc_file, on_event, with_event, with_target
 
 
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
-    panels: dict[str, BasePanel]
+    Panels: dict[str, BasePanel]
+    Menus: dict[str, wx.Menu]
+    MenuItems: dict[str, dict[str, wx.MenuItem]]
     init_params: dict
 
     def __init__(self, *args, **kw):
@@ -41,14 +42,7 @@ class MainFrame(wx.Frame):
             xrc = join(dirname(__file__), "ltchiptool.xrc")
             icon = join(dirname(__file__), "ltchiptool.ico")
 
-        try:
-            with open(xrc, "r") as f:
-                xrc_str = f.read()
-                xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
-            res = wx.xrc.XmlResource()
-            res.LoadFromBuffer(xrc_str.encode())
-        except SystemError:
-            raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
+        self.Xrc = load_xrc_file(xrc)
 
         try:
             # try to find LT directory or local data snapshot
@@ -58,43 +52,82 @@ class MainFrame(wx.Frame):
             wx.Exit()
             return
 
-        self.config_file = join(get_app_dir("ltchiptool"), "config.json")
+        old_config = join(get_app_dir("ltchiptool"), "config.json")
+        self.config_file = join(get_app_dir("ltchiptool"), "gui.json")
+        if isfile(old_config):
+            # migrate old config to new filename
+            if isfile(self.config_file):
+                unlink(self.config_file)
+            rename(old_config, self.config_file)
         self.loaded = False
-        self.panels = {}
+        self.Panels = {}
         self.init_params = {}
 
-        # initialize logging
-        self.Log = LogPanel(res, self)
-        self.panels["log"] = self.Log
         # main window layout
-        self.Notebook = wx.Notebook(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.Notebook, flag=wx.EXPAND)
-        sizer.Add(self.Log, proportion=1, flag=wx.EXPAND)
-        self.SetSizer(sizer)
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Splitter = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
+        # build splitter panes
+        self.Notebook = wx.Notebook(parent=self.Splitter)
+        self.Notebook.SetMinSize((-1, 400))
+        self.Log = LogPanel(parent=self.Splitter, frame=self)
+        # initialize the splitter
+        self.Splitter.SetMinimumPaneSize(150)
+        self.Splitter.SetSashGravity(0.7)
+        self.Splitter.SplitHorizontally(self.Notebook, self.Log, sashPosition=-300)
+        self.Sizer.Add(self.Splitter, proportion=1, flag=wx.EXPAND)
+        self.SetSizer(self.Sizer)
+        self.Panels["log"] = self.Log
 
+        # list all built-in panels
+        from .panels.about import AboutPanel
+        from .panels.flash import FlashPanel
+        from .panels.plugins import PluginsPanel
+
+        windows = [
+            ("flash", FlashPanel),
+            ("plugins", PluginsPanel),
+            ("about", AboutPanel),
+        ]
+
+        # load all panels from plugins
+        lpm = LPM.get()
+        for plugin in sorted(lpm.plugins, key=lambda p: p.title):
+            if not plugin.has_gui:
+                continue
+            for gui_name, cls in plugin.build_gui().items():
+                windows.append((f"plugin.{plugin.namespace}.{gui_name}", cls))
+
+        # dummy name for exception messages
+        name = "UI"
         try:
-            self.SetMenuBar(res.LoadMenuBar("MainMenuBar"))
+            self.SetMenuBar(self.Xrc.LoadMenuBar("MainMenuBar"))
 
-            self.Flash = FlashPanel(res, self.Notebook)
-            self.panels["flash"] = self.Flash
-            self.Notebook.AddPage(self.Flash, "Flashing")
-
-            self.Upk = UpkPanel(res, self.Notebook)
-            self.panels["upk"] = self.Upk
-            self.Notebook.AddPage(self.Upk, "UPK2ESPHome")
-
-            self.About = AboutPanel(res, self.Notebook)
-            self.panels["about"] = self.About
-            self.Notebook.AddPage(self.About, "About")
+            for name, cls in windows:
+                if name.startswith("plugin."):
+                    # mark as loaded after trying to build any plugin
+                    self.loaded = True
+                if issubclass(cls, BasePanel):
+                    panel = cls(parent=self.Notebook, frame=self)
+                    self.Panels[name] = panel
+                else:
+                    warning(f"Unknown GUI element: {cls}")
 
             self.loaded = True
         except Exception as e:
-            LoggingHandler.get().emit_exception(e)
+            LoggingHandler.get().emit_exception(e, msg=f"Couldn't build {name}")
+            if not self.loaded:
+                self.OnClose()
+
+        self.UpdateMenus()
+        for title in sorted(ColorPalette.get_titles(), key=lambda t: t.lower()):
+            self.Menus["Colors"].AppendRadioItem(wx.ID_ANY, title)
+        self.UpdateMenus()
 
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnMenu)
+        self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
+        self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
         self.SetSize((700, 800))
         self.SetMinSize((600, 700))
@@ -103,41 +136,81 @@ class MainFrame(wx.Frame):
 
     @property
     def _settings(self) -> dict:
-        if not isfile(self.config_file):
-            return dict()
-        with open(self.config_file, "r") as f:
-            return json.load(f)
+        return readjson(self.config_file) or {}
 
     @_settings.setter
     def _settings(self, value: dict):
-        makedirs(dirname(self.config_file), exist_ok=True)
-        with open(self.config_file, "w") as f:
-            json.dump(value, f, indent="\t")
+        writejson(self.config_file, value)
 
     # noinspection PyPropertyAccess
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
         size: wx.Size = self.GetSize()
-        page: int = self.Notebook.GetSelection()
+        split: int = self.Splitter.GetSashPosition()
+        page: str = self.NotebookPageName
+        palette: str = self.palette
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
+            split=split,
             page=page,
+            palette=palette,
         )
 
     def SetSettings(
         self,
         pos: tuple[int, int] = None,
         size: tuple[int, int] = None,
-        page: int = None,
+        split: int = None,
+        page: str = None,
+        palette: str = None,
         **_,
     ):
         if pos:
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
+        if split:
+            self.Splitter.SetSashPosition(split)
         if page is not None:
-            self.Notebook.SetSelection(page)
+            self.NotebookPageName = page
+        if palette is not None:
+            self.palette = palette
+
+    @property
+    def NotebookPagePanel(self) -> BasePanel:
+        return self.Notebook.GetCurrentPage()
+
+    @NotebookPagePanel.setter
+    def NotebookPagePanel(self, panel: BasePanel):
+        for i in range(self.Notebook.GetPageCount()):
+            if panel == self.Notebook.GetPage(i):
+                self.Notebook.SetSelection(i)
+                return
+
+    @property
+    def NotebookPageName(self) -> str:
+        for name, panel in self.Panels.items():
+            if panel == self.Notebook.GetCurrentPage():
+                return name
+
+    @NotebookPageName.setter
+    def NotebookPageName(self, name: str):
+        panel = self.Panels.get(name, None)
+        if panel:
+            self.NotebookPagePanel = panel
+
+    def UpdateMenus(self) -> None:
+        self.MenuBar: wx.MenuBar = self.GetMenuBar()
+        self.Menus = {}
+        self.MenuItems = {}
+        for menu, label in self.MenuBar.GetMenus():
+            menu: wx.Menu
+            self.Menus[label] = menu
+            self.MenuItems[label] = {}
+            for item in menu.GetMenuItems():
+                item: wx.MenuItem
+                self.MenuItems[label][item.GetItemLabel()] = item
 
     @staticmethod
     def OnException(*args):
@@ -147,9 +220,10 @@ class MainFrame(wx.Frame):
             LoggingHandler.get().emit_exception(args[0].exc_value)
 
     @staticmethod
-    def ShowExceptionMessage(e):
+    def ShowExceptionMessage(e, msg):
+        text = f"{type(e).__name__}: {e}"
         wx.MessageBox(
-            message=str(e),
+            message=f"{msg}\n\n{text}" if msg else text,
             caption="Error",
             style=wx.ICON_ERROR,
         )
@@ -157,12 +231,12 @@ class MainFrame(wx.Frame):
     def OnShow(self, *_):
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
-        for name, panel in self.panels.items():
+        for name, panel in self.Panels.items():
             panel.SetSettings(**settings.get(name, {}))
             panel.SetInitParams(**self.init_params)
         if settings:
             info(f"Loaded settings from {self.config_file}")
-        for name, panel in self.panels.items():
+        for name, panel in self.Panels.items():
             panel.OnShow()
 
     def OnClose(self, *_):
@@ -170,10 +244,9 @@ class MainFrame(wx.Frame):
             # avoid writing partial settings in case of loading failure
             self.Destroy()
             return
-        settings = dict(
-            main=self.GetSettings(),
-        )
-        for name, panel in self.panels.items():
+        settings = self._settings
+        settings["main"] = self.GetSettings()
+        for name, panel in self.Panels.items():
             panel.OnClose()
             settings[name] = panel.GetSettings() or {}
         self._settings = settings
@@ -196,11 +269,44 @@ class MainFrame(wx.Frame):
             case ("File", "Quit"):
                 self.Close(True)
 
+            case ("Colors", _):
+                self.palette = label
+
             case ("Debug", "Print settings"):
                 debug(f"Main settings: {self.GetSettings()}")
-                for name, panel in self.panels.items():
+                for name, panel in self.Panels.items():
                     debug(f"Panel '{name}' settings: {panel.GetSettings()}")
 
             case _:
-                for panel in self.panels.values():
+                for panel in self.Panels.values():
                     panel.OnMenu(title, label, checked)
+
+    @with_event
+    def OnPageChanging(self, event: wx.BookCtrlEvent):
+        panel = self.NotebookPagePanel
+        if not panel:
+            return
+        verbose(f"Deactivating page: {type(panel)}")
+        if panel.OnDeactivate() is False:
+            event.Veto()
+
+    @on_event
+    def OnPageChanged(self):
+        panel = self.NotebookPagePanel
+        if not panel:
+            return
+        verbose(f"Activating page: {type(panel)}")
+        panel.OnActivate()
+
+    @property
+    def palette(self) -> str:
+        return ColorPalette.get().name
+
+    @palette.setter
+    def palette(self, value: str) -> None:
+        old = ColorPalette.get()
+        new = ColorPalette.set(ColorPalette(value))
+        item = self.MenuItems["Colors"][new.title]
+        item.Check(True)
+        for panel in self.Panels.values():
+            panel.OnPaletteChanged(old, new)

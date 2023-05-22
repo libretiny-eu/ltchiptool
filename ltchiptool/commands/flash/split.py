@@ -13,12 +13,7 @@ from ltchiptool.models import BoardParamType
 from ltchiptool.util.crc16 import CRC16
 
 
-@click.group(help="Capture or process device dumps")
-def cli():
-    pass
-
-
-@cli.command()
+@click.command()
 @click.argument("board", type=BoardParamType())
 @click.argument("input", type=click.File("rb"))
 @click.option(
@@ -40,7 +35,7 @@ def cli():
     default=True,
     help="Append checksum to file names (default)",
 )
-def split(board: Board, input: IO[bytes], output: str, trim: bool, checksum: bool):
+def cli(board: Board, input: IO[bytes], output: str, trim: bool, checksum: bool):
     """
     Split raw dump file based on board partitions.
 

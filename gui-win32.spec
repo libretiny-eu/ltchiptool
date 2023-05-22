@@ -1,5 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pkgutil import iter_modules
+
+from PyInstaller.utils.hooks import collect_data_files
+
+import ltctplugin
+
+hiddenimports = [
+    name
+    for _, name, _ in iter_modules(ltctplugin.__path__, ltctplugin.__name__ + ".")
+    if name != "ltctplugin.base"
+]
+
+datas = []
+
+for module in hiddenimports:
+    datas += collect_data_files(module)
+
 a = Analysis(
     ["gui.py"],
     datas=[
@@ -11,7 +28,9 @@ a = Analysis(
         ("ltchiptool/gui/ltchiptool.ico", "."),
         ("ltchiptool/gui/ltchiptool.xrc", "."),
         ("pyproject.toml", "."),
-    ],
+    ]
+    + datas,
+    hiddenimports=hiddenimports,
 )
 
 pyz = PYZ(a.pure, a.zipped_data)

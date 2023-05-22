@@ -14,7 +14,7 @@ from logging import (
     log,
 )
 from time import time
-from typing import Callable
+from typing import Callable, Optional
 
 import click
 
@@ -33,7 +33,7 @@ class LoggingHandler(StreamHandler):
         "C": "bright_magenta",
         "S": "bright_magenta",
     }
-    exception_hook: Callable[[Exception], None] = None
+    exception_hook: Callable[[Exception, Optional[str]], None] = None
 
     @staticmethod
     def get() -> "LoggingHandler":
@@ -133,11 +133,13 @@ class LoggingHandler(StreamHandler):
         line = tb.tb_lineno
         graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
 
-    def emit_exception(self, e: Exception, no_hook: bool = False):
+    def emit_exception(self, e: Exception, no_hook: bool = False, msg: str = None):
+        if msg:
+            error(msg)
         error(f"{type(e).__name__}: {e}")
         tb = e.__traceback__
         if self.exception_hook and not no_hook:
-            self.exception_hook(e)
+            self.exception_hook(e, msg)
         if not tb:
             return
         while tb.tb_next:

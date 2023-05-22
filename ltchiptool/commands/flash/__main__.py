@@ -7,6 +7,7 @@ from ltchiptool.util.cli import get_multi_command_class
 COMMANDS = {
     "file": "ltchiptool/commands/flash/file.py",
     "read": "ltchiptool/commands/flash/read.py",
+    "split": "ltchiptool/commands/flash/split.py",
     "write": "ltchiptool/commands/flash/write.py",
 }
 

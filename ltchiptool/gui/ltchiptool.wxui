@@ -82,6 +82,10 @@
       </node>
       <node
         class="wxMenu"
+        label="Colors"
+        var_name="m_menu_4" />
+      <node
+        class="wxMenu"
         label="Debug"
         var_name="m_menu_3">
         <node
@@ -175,7 +179,8 @@
         <node
           class="wxStaticText"
           label="Device port"
-          var_name="text_port" />
+          var_name="text_port"
+          alignment="wxALIGN_CENTER_VERTICAL" />
         <node
           class="wxComboBox"
           style="wxCB_READONLY"
@@ -192,6 +197,7 @@
           class="wxStaticText"
           label="Baud rate"
           var_name="text_baudrate"
+          alignment="wxALIGN_CENTER_VERTICAL"
           row="1" />
         <node
           class="wxBoxSizer"
@@ -247,6 +253,7 @@
           class="wxStaticText"
           label="Input file"
           var_name="text_file"
+          alignment="wxALIGN_CENTER_VERTICAL"
           row="3" />
         <node
           class="wxTextCtrl"
@@ -560,288 +567,54 @@
     </node>
     <node
       class="PanelForm"
-      class_name="UpkPanel">
+      class_name="PluginsPanel"
+      mockup_size="500,400">
       <node
         class="wxBoxSizer"
-        var_name="sizer_upk_main">
+        orientation="wxVERTICAL"
+        var_name="sizer_main_plugins"
+        flags="wxEXPAND">
         <node
-          class="wxNotebook"
-          var_name="notebook_upk"
+          class="wxDataViewCtrl"
+          style="wxDV_HORIZ_RULES"
+          var_name="plugins_tree"
           flags="wxEXPAND"
-          proportion="1">
+          proportion="1" />
+        <node
+          class="wxBoxSizer"
+          var_name="sizer_download"
+          border_size="0"
+          flags="wxEXPAND">
           <node
-            class="BookPage"
-            class_access="protected:"
-            label="Start page"
-            var_name="page_start"
-            background_colour="wxSYS_COLOUR_BTNFACE"
-            window_style="wxTAB_TRAVERSAL">
+            class="wxButton"
+            label="Download plugins..."
+            var_name="button_download"
+            flags="wxEXPAND" />
+          <node
+            class="wxBoxSizer"
+            orientation="wxVERTICAL"
+            var_name="sizer_install"
+            border_size="0"
+            flags="wxEXPAND"
+            proportion="1">
+            <node
+              class="wxStaticText"
+              label="Install/update a plugin"
+              var_name="text_install"
+              borders="wxLEFT" />
             <node
               class="wxBoxSizer"
-              orientation="wxVERTICAL"
-              var_name="sizer_start">
-              <node
-                class="wxStaticText"
-                label="This tool allows to easily generate ESPHome YAML configuration, having either:&#10;- ESPHome-Kickstart running&#10;- Cloudcutter device profile&#10;- full firmware dump&#10;&#10;Choose a mode of operation to begin:"
-                var_name="text_start"
-                flags="wxEXPAND" />
-              <node
-                class="wxCommandLinkButton"
-                main_label="Grab from ESPHome-Kickstart"
-                note="If you have flashed Kickstart to a device"
-                var_name="button_kickstart"
-                flags="wxEXPAND"
-                row="1" />
-              <node
-                class="wxCommandLinkButton"
-                main_label="Build from Cloudcutter device profile"
-                note="If your device has a matching manufacturer/model profile"
-                var_name="button_cloudcutter"
-                flags="wxEXPAND"
-                row="2" />
-              <node
-                class="wxCommandLinkButton"
-                main_label="Analyze firmware dump"
-                note="If you read a firmware .BIN with ltchiptool or bk7231tools"
-                var_name="button_dump"
-                flags="wxEXPAND"
-                row="3" />
-            </node>
-          </node>
-          <node
-            class="BookPage"
-            label="Options"
-            var_name="page_opts"
-            background_colour="wxSYS_COLOUR_BTNFACE"
-            window_style="wxTAB_TRAVERSAL"
-            flags="wxEXPAND">
-            <node
-              class="wxBoxSizer"
-              orientation="wxVERTICAL"
-              var_name="sizer_opts_main"
+              var_name="sizer_distribution"
+              border_size="0"
               flags="wxEXPAND">
               <node
-                class="wxStaticText"
-                label="You can set various options related to the generated YAML.&#10;The default choices are usually fine in most cases."
-                var_name="text_opts"
-                colspan="2"
-                flags="wxEXPAND" />
-              <node
-                class="wxBoxSizer"
-                var_name="sizer_opts_horz"
-                flags="wxEXPAND">
-                <node
-                  class="wxBoxSizer"
-                  orientation="wxVERTICAL"
-                  var_name="sizer_opts_vert1"
-                  flags="wxEXPAND"
-                  proportion="1"
-                  row="1">
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Include esphome: block"
-                    var_name="opts_esphome_block"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add MAC to device name"
-                    var_name="opts_name_mac"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add common components"
-                    var_name="opts_common"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add Web Server &amp;&amp; Captive Portal"
-                    var_name="opts_web_server"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add restart button &amp;&amp; sensor"
-                    var_name="opts_restart"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add uptime sensor"
-                    var_name="opts_uptime"
-                    flags="wxEXPAND"
-                    row="2" />
-                  <node
-                    class="wxCheckBox"
-                    checked="1"
-                    label="Add LT version sensor"
-                    var_name="opts_lt_version"
-                    flags="wxEXPAND"
-                    row="2" />
-                </node>
-                <node
-                  class="wxBoxSizer"
-                  orientation="wxVERTICAL"
-                  var_name="sizer_opts_vert2"
-                  column="1"
-                  flags="wxEXPAND"
-                  proportion="1"
-                  row="1">
-                  <node
-                    class="wxStaticText"
-                    label="Wi-Fi SSID"
-                    var_name="text_wifi_ssid"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxTextCtrl"
-                    value="!secret wifi__ssid"
-                    var_name="opts_wifi_ssid"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxStaticText"
-                    label="Wi-Fi password"
-                    var_name="text_wifi_password"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxTextCtrl"
-                    value="!secret wifi__password"
-                    var_name="opts_wifi_password"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxStaticText"
-                    label="OTA password"
-                    var_name="text_ota_password"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxTextCtrl"
-                    value="!secret ota__password"
-                    var_name="opts_ota_password"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxStaticText"
-                    label="API password"
-                    var_name="text_api_password"
-                    flags="wxEXPAND" />
-                  <node
-                    class="wxTextCtrl"
-                    value="!secret api__password"
-                    var_name="opts_api_password"
-                    flags="wxEXPAND" />
-                </node>
-              </node>
+                class="wxTextCtrl"
+                var_name="input_install"
+                proportion="1" />
               <node
                 class="wxButton"
-                label="Generate"
-                var_name="button_generate"
-                alignment="wxALIGN_CENTER_HORIZONTAL"
-                column="1" />
-            </node>
-          </node>
-          <node
-            class="BookPage"
-            label="ESPHome YAML"
-            var_name="page_esphome"
-            background_colour="wxSYS_COLOUR_BTNFACE"
-            window_style="wxTAB_TRAVERSAL"
-            flags="wxEXPAND">
-            <node
-              class="wxGridBagSizer"
-              var_name="sizer_esphome"
-              growablecols="0"
-              growablerows="2">
-              <node
-                class="wxStaticText"
-                label="This page shows a suggested YAML config for your device."
-                markup="1"
-                var_name="text_esphome_1"
-                wrap="500"
-                flags="wxEXPAND" />
-              <node
-                class="wxButton"
-                label="Copy"
-                var_name="button_esphome_copy"
-                column="1"
-                rowspan="2" />
-              <node
-                class="wxStaticText"
-                label="We do not take responsibility for using this tool and the generated configs."
-                var_name="text_esphome_2"
-                wrap="500"
-                font="normal size,,bold"
-                row="1" />
-              <node
-                class="wxTextCtrl"
-                style="wxTE_MULTILINE|wxTE_READONLY"
-                var_name="input_esphome"
-                font="Consolas,11"
-                colspan="2"
-                flags="wxEXPAND"
-                proportion="1"
-                row="2" />
-            </node>
-          </node>
-          <node
-            class="BookPage"
-            label="Device configuration"
-            var_name="page_upk"
-            background_colour="wxSYS_COLOUR_BTNFACE"
-            window_style="wxTAB_TRAVERSAL">
-            <node
-              class="wxBoxSizer"
-              orientation="wxVERTICAL"
-              var_name="sizer_upk">
-              <node
-                class="wxStaticText"
-                label="This page shows the raw user__param__key (UPK) structure.&#10;&#10;Based on this, ESPHome config is generated."
-                markup="1"
-                var_name="text_upk"
-                wrap="500"
-                flags="wxEXPAND" />
-              <node
-                class="wxTextCtrl"
-                style="wxTE_MULTILINE|wxTE_READONLY"
-                var_name="input_upk"
-                font="Consolas,11"
-                flags="wxEXPAND"
-                proportion="1" />
-            </node>
-          </node>
-          <node
-            class="BookPage"
-            label="Storage data"
-            var_name="page_storage"
-            background_colour="wxSYS_COLOUR_BTNFACE"
-            window_style="wxTAB_TRAVERSAL">
-            <node
-              class="wxBoxSizer"
-              orientation="wxVERTICAL"
-              var_name="sizer_storage">
-              <node
-                class="wxStaticText"
-                label="This page shows the extracted Storage Area JSON. It contains a device schema and some other information that are useful for building Cloudcutter profiles.&#10;&#10;If Cloudcutter doesn't support your device yet, consider submitting the JSON to the issues page:"
-                markup="1"
-                var_name="text_storage_1"
-                wrap="500"
-                flags="wxEXPAND" />
-              <node
-                class="wxHyperlinkCtrl"
-                label="https://github.com/tuya-cloudcutter/tuya-cloudcutter/issues"
-                var_name="link_storage" />
-              <node
-                class="wxTextCtrl"
-                style="wxTE_MULTILINE|wxTE_READONLY"
-                var_name="input_storage"
-                font="Consolas,11"
-                flags="wxEXPAND"
-                proportion="1" />
+                label="Install"
+                var_name="button_install" />
             </node>
           </node>
         </node>

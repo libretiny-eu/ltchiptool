@@ -26,6 +26,8 @@ class Board(RecursiveDict):
         if not isinstance(board, dict):
             if isfile(board):
                 board = readjson(board)
+                if not board:
+                    raise FileNotFoundError(f"Board not found: {board}")
             else:
                 source = board
                 board = LVM.get().load_json(f"boards/{board}.json")
