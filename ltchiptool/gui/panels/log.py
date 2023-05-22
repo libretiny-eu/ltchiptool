@@ -10,6 +10,7 @@ import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
 
+from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 
@@ -85,25 +86,6 @@ class GUIProgressBar(ProgressBar):
 
 
 class LogPanel(BasePanel):
-    COLOR_MAP = {
-        "black": wx.Colour(12, 12, 12),
-        "red": wx.Colour(197, 15, 31),
-        "green": wx.Colour(19, 161, 14),
-        "yellow": wx.Colour(193, 156, 0),
-        "blue": wx.Colour(0, 55, 218),
-        "magenta": wx.Colour(136, 23, 152),
-        "cyan": wx.Colour(58, 150, 221),
-        "white": wx.Colour(204, 204, 204),
-        "bright_black": wx.Colour(118, 118, 118),
-        "bright_red": wx.Colour(231, 72, 86),
-        "bright_green": wx.Colour(22, 198, 12),
-        "bright_yellow": wx.Colour(249, 241, 165),
-        "bright_blue": wx.Colour(59, 120, 255),
-        "bright_magenta": wx.Colour(180, 0, 158),
-        "bright_cyan": wx.Colour(97, 214, 214),
-        "bright_white": wx.Colour(242, 242, 242),
-    }
-
     delayed_lines: list[tuple[str, str, str]] | None
 
     def __init__(self, parent: wx.Window, frame):
@@ -136,7 +118,7 @@ class LogPanel(BasePanel):
         if self.is_closing:
             return
 
-        wx_color = self.COLOR_MAP[color]
+        wx_color = ColorPalette.get()[color]
         if LoggingHandler.get().raw:
             self.Log.SetDefaultStyle(wx.TextAttr(wx.WHITE))
         else:
@@ -209,3 +191,6 @@ class LogPanel(BasePanel):
                 level = logging.getLevelName(l.upper())
                 LoggingHandler.get().level = level
                 log(level, "Log level changed")
+
+    def OnPaletteChanged(self, old: ColorPalette, new: ColorPalette):
+        new.apply(self.Log, old)

@@ -7,6 +7,7 @@ from typing import Any, Callable, Tuple
 import wx
 import wx.xrc
 
+from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.gui.utils import load_xrc_file
 from ltchiptool.gui.work.base import BaseThread
 
@@ -74,6 +75,9 @@ class BasePanel(wx.Panel):
         pass
 
     def OnFileDrop(self, *files):
+        pass
+
+    def OnPaletteChanged(self, old: ColorPalette, new: ColorPalette):
         pass
 
     def _OnUpdate(self, event: wx.Event | None):

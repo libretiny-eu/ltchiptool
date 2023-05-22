@@ -16,6 +16,7 @@ from ltchiptool.util.logging import LoggingHandler, verbose
 from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
+from .colors import ColorPalette
 from .panels.base import BasePanel
 from .panels.log import LogPanel
 from .utils import load_xrc_file, on_event, with_event, with_target
@@ -24,6 +25,8 @@ from .utils import load_xrc_file, on_event, with_event, with_target
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
     Panels: dict[str, BasePanel]
+    Menus: dict[str, wx.Menu]
+    MenuItems: dict[str, dict[str, wx.MenuItem]]
     init_params: dict
 
     def __init__(self, *args, **kw):
@@ -115,6 +118,11 @@ class MainFrame(wx.Frame):
             if not self.loaded:
                 self.OnClose()
 
+        self.UpdateMenus()
+        for title in sorted(ColorPalette.get_titles(), key=lambda t: t.lower()):
+            self.Menus["Colors"].AppendRadioItem(wx.ID_ANY, title)
+        self.UpdateMenus()
+
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnMenu)
@@ -140,11 +148,13 @@ class MainFrame(wx.Frame):
         size: wx.Size = self.GetSize()
         split: int = self.Splitter.GetSashPosition()
         page: str = self.NotebookPageName
+        palette: str = self.palette
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
             split=split,
             page=page,
+            palette=palette,
         )
 
     def SetSettings(
@@ -153,6 +163,7 @@ class MainFrame(wx.Frame):
         size: tuple[int, int] = None,
         split: int = None,
         page: str = None,
+        palette: str = None,
         **_,
     ):
         if pos:
@@ -163,6 +174,8 @@ class MainFrame(wx.Frame):
             self.Splitter.SetSashPosition(split)
         if page is not None:
             self.NotebookPageName = page
+        if palette is not None:
+            self.palette = palette
 
     @property
     def NotebookPagePanel(self) -> BasePanel:
@@ -186,6 +199,18 @@ class MainFrame(wx.Frame):
         panel = self.Panels.get(name, None)
         if panel:
             self.NotebookPagePanel = panel
+
+    def UpdateMenus(self) -> None:
+        self.MenuBar: wx.MenuBar = self.GetMenuBar()
+        self.Menus = {}
+        self.MenuItems = {}
+        for menu, label in self.MenuBar.GetMenus():
+            menu: wx.Menu
+            self.Menus[label] = menu
+            self.MenuItems[label] = {}
+            for item in menu.GetMenuItems():
+                item: wx.MenuItem
+                self.MenuItems[label][item.GetItemLabel()] = item
 
     @staticmethod
     def OnException(*args):
@@ -244,6 +269,9 @@ class MainFrame(wx.Frame):
             case ("File", "Quit"):
                 self.Close(True)
 
+            case ("Colors", _):
+                self.palette = label
+
             case ("Debug", "Print settings"):
                 debug(f"Main settings: {self.GetSettings()}")
                 for name, panel in self.Panels.items():
@@ -269,3 +297,16 @@ class MainFrame(wx.Frame):
             return
         verbose(f"Activating page: {type(panel)}")
         panel.OnActivate()
+
+    @property
+    def palette(self) -> str:
+        return ColorPalette.get().name
+
+    @palette.setter
+    def palette(self, value: str) -> None:
+        old = ColorPalette.get()
+        new = ColorPalette.set(ColorPalette(value))
+        item = self.MenuItems["Colors"][new.title]
+        item.Check(True)
+        for panel in self.Panels.values():
+            panel.OnPaletteChanged(old, new)

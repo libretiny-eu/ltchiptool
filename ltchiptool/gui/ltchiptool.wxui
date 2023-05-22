@@ -78,6 +78,10 @@
       </node>
       <node
         class="wxMenu"
+        label="Colors"
+        var_name="m_menu_4" />
+      <node
+        class="wxMenu"
         label="Debug"
         var_name="m_menu_3">
         <node

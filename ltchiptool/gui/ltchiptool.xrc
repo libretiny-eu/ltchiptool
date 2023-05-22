@@ -52,6 +52,9 @@
 				<radio>1</radio>
 			</object>
 		</object>
+		<object class="wxMenu" name="m_menu_4">
+			<label>Colors</label>
+		</object>
 		<object class="wxMenu" name="m_menu_3">
 			<label>Debug</label>
 			<object class="wxMenuItem" name="menu_item_14">
