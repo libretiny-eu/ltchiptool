@@ -6,6 +6,10 @@ from typing import List, Optional
 
 from prettytable import PrettyTable
 
+# compatibility
+# noinspection PyUnresolvedReferences
+from .streams import ClickProgressCallback
+
 
 class FlashOp(Enum):
     WRITE = "write"

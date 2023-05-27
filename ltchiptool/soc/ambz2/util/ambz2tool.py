@@ -55,6 +55,7 @@ class AmbZ2Tool:
         self.xm = XMODEM(
             getc=lambda size, timeout=1: self.read(size) or None,
             putc=lambda data, timeout=1: self.write(data),
+            mode="xmodem1k",
         )
 
     @property
