@@ -2,13 +2,13 @@
 
 from abc import ABC
 from os.path import isfile
-from typing import Dict, List, Optional
+from typing import IO, Dict, List, Optional
 
 from ltchiptool import SocInterface
-from ltchiptool.util.fileio import chname, isnewer, readbin
+from ltchiptool.util.detection import Detection
+from ltchiptool.util.fileio import chname, peek, readbin
 from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.intbin import pad_data
-from ltchiptool.util.logging import graph
 
 from .util.models.config import ImageConfig
 from .util.models.enums import ImageType, SectionType
@@ -19,7 +19,7 @@ from .util.models.headers import (
     KeyblockOTA,
     SectionHeader,
 )
-from .util.models.images import Flash, Image
+from .util.models.images import FLASH_CALIBRATION, Flash, Image
 from .util.models.partitions import (
     Bootloader,
     Firmware,
@@ -203,3 +203,31 @@ class AmebaZ2Binary(SocInterface, ABC):
             ota1 = data[ota1_offset:ota1_end]
             f.write(ota1)
         return output.group()
+
+    def detect_file_type(
+        self,
+        file: IO[bytes],
+        length: int,
+    ) -> Optional[Detection]:
+        data = peek(file, size=0x1B0)
+        if not data:
+            return None
+
+        if data.startswith(FLASH_CALIBRATION):
+            return Detection.make("Realtek AmebaZ2 Flash Image", offset=0)
+
+        if (
+            data[0x40:0x44] != b"\xFF\xFF\xFF\xFF"
+            and data[0x48] == ImageType.BOOT.value
+        ):
+            return Detection.make("Realtek AmebaZ2 Bootloader", offset=0x4000)
+
+        if (
+            data[0xE0:0xE8].strip(b"\xFF")
+            and data[0xE8] == ImageType.FWHS_S.value
+            and data[0x1A0:0x1A8].strip(b"\xFF")
+            and data[0x1A8] == SectionType.SRAM.value
+        ):
+            return Detection.make("Realtek AmebaZ2 Firmware", offset=None)
+
+        return None
