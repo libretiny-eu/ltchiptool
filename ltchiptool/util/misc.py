@@ -2,7 +2,7 @@
 
 from functools import update_wrapper
 from logging import error
-from typing import Callable, Generator, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Generator, List, Optional, Tuple, TypeVar
 
 from click import get_current_context
 
@@ -54,7 +54,7 @@ T = TypeVar("T")
 def retry_catching(
     retries: int,
     doc: str,
-    func: Callable[[...], T],
+    func: Callable[[Any], T],
     onerror: Optional[Callable[[], None]],
     *args,
     **kwargs,
@@ -77,7 +77,7 @@ def retry_catching(
 def retry_generator(
     retries: int,
     doc: str,
-    func: Callable[[...], Generator[T, None, None]],
+    func: Callable[[Any], Generator[T, None, None]],
     onerror: Optional[Callable[[], None]],
     *args,
     **kwargs,
