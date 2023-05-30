@@ -25,13 +25,13 @@ def ldargs_parse(
     elf1 = elf2 = None
     for i, arg in enumerate(args):
         if ".elf" in arg:
-            if not ld_ota1:
+            if ld_ota1 is None:
                 # single-OTA chip, return the output name
                 return [(arg, args)]
             # append OTA index in filename
             args1[i] = elf1 = chext(arg, "ota1.elf")
             args2[i] = elf2 = chext(arg, "ota2.elf")
-        if arg.endswith(".ld") and ld_ota1:
+        if arg.endswith(".ld") and ld_ota1 is not None:
             # use OTA2 linker script
             args2[i] = arg.replace(ld_ota1, ld_ota2)
     if not elf1 or not elf2:
