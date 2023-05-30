@@ -6,6 +6,7 @@ authors = ["Kuba Szczodrzyński <kuba@szczodrzynski.pl>"]
 license = "MIT"
 packages = [
     { include = "ltchiptool" },
+    { include = "ltctplugin/base" },
     { include = "uf2tool" },
 ]
 include = [
