@@ -126,8 +126,9 @@ jobs:
       - name: Install ltchiptool plugins
         shell: cmd
         run: |
-          pip install ltchiptool-terminal
-          pip install upk2esphome
+          set PATH=%cd%\python;%PATH%
+          python -m pip install ltchiptool-terminal || exit /b
+          python -m pip install upk2esphome || exit /b
 
       - name: Build GUI with PyInstaller
         shell: cmd
