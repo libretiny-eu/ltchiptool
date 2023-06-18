@@ -123,6 +123,12 @@ jobs:
           copy libretiny\boards\*.json ltchiptool\boards\
           xcopy /S libretiny\boards\_base ltchiptool\boards\
 
+      - name: Install ltchiptool plugins
+        shell: cmd
+        run: |
+          pip install ltchiptool-terminal
+          pip install upk2esphome
+
       - name: Build GUI with PyInstaller
         shell: cmd
         run: |

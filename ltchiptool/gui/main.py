@@ -35,7 +35,8 @@ class MainFrame(wx.Frame):
         threading.excepthook = self.OnException
         LoggingHandler.get().exception_hook = self.ShowExceptionMessage
 
-        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        is_bundled = getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+        if is_bundled:
             xrc = join(sys._MEIPASS, "ltchiptool.xrc")
             icon = join(sys._MEIPASS, "ltchiptool.ico")
         else:
@@ -85,7 +86,7 @@ class MainFrame(wx.Frame):
 
         windows = [
             ("flash", FlashPanel),
-            ("plugins", PluginsPanel),
+            ("plugins", (not is_bundled) and PluginsPanel),
             ("about", AboutPanel),
         ]
 
@@ -103,6 +104,8 @@ class MainFrame(wx.Frame):
             self.SetMenuBar(self.Xrc.LoadMenuBar("MainMenuBar"))
 
             for name, cls in windows:
+                if not cls:
+                    continue
                 if name.startswith("plugin."):
                     # mark as loaded after trying to build any plugin
                     self.loaded = True

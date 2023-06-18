@@ -27,6 +27,7 @@ a = Analysis(
         ("ltchiptool/gui/ltchiptool-192x192.png", "."),
         ("ltchiptool/gui/ltchiptool.ico", "."),
         ("ltchiptool/gui/ltchiptool.xrc", "."),
+        ("ltchiptool/gui/colors.json", "."),
         ("pyproject.toml", "."),
     ]
     + datas,
