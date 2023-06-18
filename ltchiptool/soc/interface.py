@@ -5,8 +5,9 @@ from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
-from ltchiptool.util.flash import FlashConnection, ProgressCallback
+from ltchiptool.util.flash import FlashConnection
 from ltchiptool.util.fwbinary import FirmwareBinary
+from ltchiptool.util.streams import ProgressCallback
 from uf2tool import UploadContext
 
 

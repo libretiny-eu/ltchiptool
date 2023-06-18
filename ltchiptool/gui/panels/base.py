@@ -127,6 +127,12 @@ class BasePanel(wx.Panel):
         window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
         return window
 
+    def BindListBox(self, name: str):
+        window: wx.ListBox = self.FindWindowByName(name, self)
+        self._components.append(window)
+        window.Bind(wx.EVT_LISTBOX, self._OnUpdate)
+        return window
+
     def BindRadioButton(self, name: str):
         window: wx.RadioButton = self.FindWindowByName(name, self)
         self._components.append(window)

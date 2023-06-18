@@ -1,9 +1,12 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-02.
 
 from functools import update_wrapper
-from typing import List, Tuple
+from logging import error
+from typing import Any, Callable, Generator, List, Optional, Tuple, TypeVar
 
 from click import get_current_context
+
+from .logging import LoggingHandler
 
 
 # https://stackoverflow.com/a/1094933/9438331
@@ -43,3 +46,53 @@ def list_serial_ports() -> List[Tuple[str, bool, str]]:
         ports.append((port.device, is_usb, description))
 
     return sorted(ports, key=lambda x: (not x[1], x[2]))
+
+
+T = TypeVar("T")
+
+
+def retry_catching(
+    retries: int,
+    doc: str,
+    func: Callable[[Any], T],
+    onerror: Optional[Callable[[], None]],
+    *args,
+    **kwargs,
+) -> T:
+    while True:
+        retries -= 1
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if retries <= 0:
+                raise e
+            error(f"{doc}. Trying {retries} more times: {e}")
+            if onerror:
+                try:
+                    onerror()
+                except Exception as e:
+                    pass
+
+
+def retry_generator(
+    retries: int,
+    doc: str,
+    func: Callable[[Any], Generator[T, None, None]],
+    onerror: Optional[Callable[[], None]],
+    *args,
+    **kwargs,
+) -> Generator[T, None, None]:
+    while True:
+        retries -= 1
+        try:
+            yield from func(*args, **kwargs)
+            return
+        except Exception as e:
+            if retries <= 0:
+                raise e
+            error(f"{doc}. Trying {retries} more times: {e}")
+            if onerror:
+                try:
+                    onerror()
+                except Exception as e:
+                    pass

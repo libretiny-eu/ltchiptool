@@ -9,10 +9,12 @@ import wx
 import wx.xrc
 from click import _termui_impl
 from click._termui_impl import ProgressBar
+from serial import Serial
 
 from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
+from ltchiptool.util.streams import LoggingStreamHook
 
 from .base import BasePanel
 
@@ -132,6 +134,7 @@ class LogPanel(BasePanel):
             timed=handler.timed,
             raw=handler.raw,
             full_traceback=handler.full_traceback,
+            dump_serial=LoggingStreamHook.is_registered(Serial),
         )
 
     def SetSettings(
@@ -140,6 +143,7 @@ class LogPanel(BasePanel):
         timed: bool = False,
         raw: bool = False,
         full_traceback: bool = True,
+        dump_serial: bool = False,
         **_,
     ):
         handler = LoggingHandler.get()
@@ -147,6 +151,8 @@ class LogPanel(BasePanel):
         handler.timed = timed
         handler.raw = raw
         handler.full_traceback = full_traceback
+        LoggingStreamHook.set_registered(Serial, registered=dump_serial)
+
         menu_bar: wx.MenuBar = self.TopLevelParent.MenuBar
         menu: wx.Menu = menu_bar.GetMenu(menu_bar.FindMenu("Logging"))
         if not menu:
@@ -160,6 +166,8 @@ class LogPanel(BasePanel):
                     item.Check(timed)
                 case "Colors":
                     item.Check(not raw)
+                case "Dump serial data":
+                    item.Check(dump_serial)
                 case _ if item.GetItemLabel() == level_name:
                     item.Check()
 
@@ -187,6 +195,8 @@ class LogPanel(BasePanel):
             case "Colors":
                 LoggingHandler.get().raw = not checked
                 info("Logging options changed")
+            case "Dump serial data":
+                LoggingStreamHook.set_registered(Serial, registered=checked)
             case ("Verbose" | "Debug" | "Info" | "Warning" | "Error") as l:
                 level = logging.getLevelName(l.upper())
                 LoggingHandler.get().level = level

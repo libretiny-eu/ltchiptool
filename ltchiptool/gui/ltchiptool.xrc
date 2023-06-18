@@ -26,6 +26,10 @@
 				<checked>1</checked>
 				<checkable>1</checkable>
 			</object>
+			<object class="wxMenuItem" name="menu_item">
+				<label>Dump serial data</label>
+				<checkable>1</checkable>
+			</object>
 			<object class="separator" name="separator_3" />
 			<object class="wxMenuItem" name="menu_item_10">
 				<label>Log level</label>

@@ -43,6 +43,10 @@
           label="Colors"
           var_name="menu_item_13" />
         <node
+          class="wxMenuItem"
+          kind="wxITEM_CHECK"
+          label="Dump serial data" />
+        <node
           class="separator"
           var_name="separator_3" />
         <node

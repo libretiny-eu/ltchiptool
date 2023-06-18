@@ -8,10 +8,12 @@ from ltchiptool import Family
 from ltchiptool.models import OTAType
 from ltchiptool.soc import SocInterfaceCommon
 
+from .binary import AmebaZ2Binary
 from .flash import AmebaZ2Flash
 
 
 class AmebaZ2Main(
+    AmebaZ2Binary,
     AmebaZ2Flash,
     SocInterfaceCommon,
     ABC,

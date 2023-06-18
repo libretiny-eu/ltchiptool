@@ -6,7 +6,7 @@ from hashlib import sha256
 from logging import debug, warning
 from math import ceil
 from time import time
-from typing import IO, Generator, List, Optional
+from typing import IO, Callable, Generator, List, Optional
 
 import click
 from serial import Serial
@@ -14,6 +14,9 @@ from xmodem import XMODEM
 
 from ltchiptool.util.intbin import align_down
 from ltchiptool.util.logging import LoggingHandler, verbose
+from ltchiptool.util.misc import retry_catching, retry_generator
+
+_T_XmodemCB = Optional[Callable[[int, int, int], None]]
 
 
 class AmbZ2FlashMode(IntEnum):
@@ -42,17 +45,20 @@ class AmbZ2Tool:
         port: str,
         baudrate: int,
         link_timeout: float = 10.0,
-        read_timeout: float = 0.3,
+        read_timeout: float = 0.6,
+        retry_count: int = 10,
     ):
         self.prev_timeout_list = []
         self.link_timeout = link_timeout
         self.read_timeout = read_timeout
+        self.retry_count = retry_count
 
         LoggingHandler.get().attach(logging.getLogger("xmodem.XMODEM"))
         self.s = Serial(port, baudrate)
         self.xm = XMODEM(
             getc=lambda size, timeout=1: self.read(size) or None,
             putc=lambda data, timeout=1: self.write(data),
+            mode="xmodem1k",
         )
 
     @property
@@ -68,12 +74,10 @@ class AmbZ2Tool:
         self.s = None
 
     def write(self, data: bytes) -> None:
-        verbose(f"<- TX: {data}")
         self.s.write(data)
 
     def command(self, cmd: str) -> None:
         self.flush()
-        verbose(f"<- TX: {cmd}")
         self.s.write(cmd.encode() + b"\n")
 
     def read(self, count: int = None) -> bytes:
@@ -92,7 +96,6 @@ class AmbZ2Tool:
 
         if not response:
             raise TimeoutError(f"Timeout in read({count}) - no data received")
-        verbose(f"-> RX: {response}")
         if not count:
             return response
         response = response[:count]
@@ -114,7 +117,6 @@ class AmbZ2Tool:
                 line = (response + line).decode().strip()
                 if not line:
                     continue
-                verbose(f"-> RX: {line}")
                 yield line
                 response = b""
             response += read
@@ -133,13 +135,29 @@ class AmbZ2Tool:
         verbose("pop_timeout()")
         self.read_timeout = self.prev_timeout_list.pop(-1)
 
+    def error_flush(self) -> None:
+        # try to clean up the serial buffer
+        # no data for 0.8 s means that the chip stopped sending bytes
+        self.push_timeout(0.8)
+        while True:
+            if not self.s.read(128):
+                break
+        self.pop_timeout()
+        # pop timeout of the failing function
+        self.pop_timeout()
+
     #########################################
     # Basic commands - public low-level API #
     #########################################
 
     def ping(self) -> None:
         self.command("ping")
-        assert self.read(4) == b"ping"
+        resp = self.read(4)
+        if resp != b"ping":
+            raise RuntimeError(f"incorrect ping response: {resp!r}")
+
+    def disconnect(self) -> None:
+        self.command("disc")
 
     def link(self) -> None:
         end = time() + self.link_timeout
@@ -147,7 +165,7 @@ class AmbZ2Tool:
             try:
                 self.ping()
                 return
-            except (AssertionError, TimeoutError):
+            except (RuntimeError, TimeoutError):
                 pass
         raise TimeoutError("Timeout while linking")
 
@@ -161,7 +179,10 @@ class AmbZ2Tool:
         self.s.baudrate = baudrate
         # wait up to 1 second for OK response
         self.push_timeout(1.0)
-        assert self.read() == b"OK"
+        resp = self.read()
+        if resp != b"OK":
+            raise RuntimeError(f"baud rate change not OK: {resp!r}")
+
         self.pop_timeout()
         # link again to make sure it still works
         self.link()
@@ -216,6 +237,8 @@ class AmbZ2Tool:
                 raise ValueError("Got invalid read address")
 
             chunk = bytearray()
+            if len(line) < 17:
+                raise ValueError(f"Not enough data in line {line}")
             for i, value in enumerate(line[1 : 1 + 16]):
                 value = int(value, 16)
                 chunk.append(value)
@@ -263,7 +286,14 @@ class AmbZ2Tool:
 
         # configure start offset of "hashq"
         if self.flash_hash_offset != offset:
-            self.flash_transmit(stream=None, offset=offset)
+            retry_catching(
+                retries=self.retry_count,
+                doc="Hash offset set error",
+                func=self.flash_transmit,
+                onerror=self.error_flush,
+                stream=None,
+                offset=offset,
+            )
 
         timeout = self.read_timeout
         timeout_minimum = ceil(length / self.crc_speed_bps * 10.0) / 10.0
@@ -280,22 +310,28 @@ class AmbZ2Tool:
             timeout = timeout_minimum
 
         # read SHA256 hash
-        self.command(f"hashq {length} {self.flash_cfg}")
+        cmd = f"hashq {length} {self.flash_cfg}"
+        self.command(cmd)
         # wait for response
         self.push_timeout(timeout)
         response = self.read(count=6 + 32)
         self.pop_timeout()
 
         if not response.startswith(b"hashs "):
-            raise RuntimeError(f"Unexpected response: {response}")
+            raise RuntimeError(f"Unexpected response to '{cmd}': {response}")
         return response[6 : 6 + 32]
 
-    def flash_transmit(self, stream: Optional[IO[bytes]], offset: int) -> None:
+    def flash_transmit(
+        self,
+        stream: Optional[IO[bytes]],
+        offset: int,
+        callback: _T_XmodemCB = None,
+    ) -> None:
         # set the flash_mode
         self.flash_init(configure=False)
 
         # increase timeout to read XMODEM bytes (RTL processes requests every ~1.0s)
-        self.push_timeout(2.0)
+        self.push_timeout(3.0)
 
         self.command(f"fwd {self.flash_cfg} {offset:x}")
         self.flash_hash_offset = offset
@@ -303,14 +339,39 @@ class AmbZ2Tool:
         if not stream:
             debug("XMODEM: starting empty transmission")
             # wait for NAK
-            assert self.read(1) == b"\x15"
+            resp = self.read(1)
+            if resp != b"\x15":
+                raise RuntimeError(f"expected NAK, got {resp!r}")
+
             # abort using CAN
             self.xm.abort()
             self.flush()
             # wait for CAN response
-            assert self.read(3) == b"\x18ER"
+            resp = self.read(3)
+            if resp != b"\x18ER":
+                raise RuntimeError(f"expected CAN, got {resp!r}")
         else:
             debug(f"XMODEM: transmitting to 0x{offset:X}")
+            if not self.xm.send(stream, callback=callback):
+                raise RuntimeError("XMODEM transmission failed")
+
+        self.pop_timeout()
+        self.link()
+
+    def ram_transmit(
+        self,
+        stream: IO[bytes],
+        offset: int,
+        callback: _T_XmodemCB = None,
+    ) -> None:
+        # increase timeout to read XMODEM bytes (RTL processes requests every ~1.0s)
+        self.push_timeout(2.0)
+
+        self.command(f"fwdram {offset:x}")
+
+        debug(f"XMODEM: transmitting to 0x{offset:X}")
+        if not self.xm.send(stream, callback=callback):
+            raise RuntimeError("XMODEM transmission failed")
 
         self.pop_timeout()
         self.link()
@@ -350,16 +411,29 @@ class AmbZ2Tool:
                 start |= 0x9800_0000
             debug(f"Dumping bytes: start=0x{start:X}, count=0x{count:X}")
 
-            for data in self.dump_bytes(start, count):
-                chunk += data
-                read_count += len(data)
-                if hash_check:
-                    sha.update(data)
-                    sha_size += len(data)
-                # yield the block every 'yield_size' bytes
-                if len(chunk) >= yield_size or read_count >= length:
-                    yield chunk
-                    chunk = b""
+            def dump():
+                nonlocal chunk, read_count, sha_size, read_count, start, count
+                verbose(f"dump_bytes(0x{start:X}, {count})")
+                for data in self.dump_bytes(start, count):
+                    chunk += data
+                    read_count += len(data)
+                    if hash_check:
+                        sha.update(data)
+                        sha_size += len(data)
+                    # increment offset and length for subsequent error retries
+                    start += len(data)
+                    count -= len(data)
+                    # yield the block every 'yield_size' bytes
+                    if len(chunk) >= yield_size or read_count >= length:
+                        yield chunk
+                        chunk = b""
+
+            yield from retry_generator(
+                retries=self.retry_count,
+                doc="Data read error",
+                func=dump,
+                onerror=self.error_flush,
+            )
 
             # check SHA256 incrementally every 'hash_check_size' bytes
             check_block_hash = hash_incremental and sha_size >= hash_check_size
@@ -371,7 +445,14 @@ class AmbZ2Tool:
                     f"count=0x{read_count:X}",
                 )
                 hash_final = sha.digest()
-                hash_expected = self.flash_read_hash(offset, read_count)
+                hash_expected = retry_catching(
+                    retries=self.retry_count,
+                    doc="Hash check error",
+                    func=self.flash_read_hash,
+                    onerror=self.error_flush,
+                    offset=offset,
+                    length=read_count,
+                )
                 if hash_final != hash_expected:
                     raise ValueError(
                         f"Chip SHA256 value does not match calculated "
@@ -379,6 +460,44 @@ class AmbZ2Tool:
                         f"{hash_expected.hex()}, calculated: {hash_final.hex()}"
                     )
                 sha_size = 0
+
+    def memory_write(
+        self,
+        offset: int,
+        stream: IO[bytes],
+        use_flash: bool,
+        hash_check: bool = True,
+        chunk_size: int = 32 * 1024,
+        callback: _T_XmodemCB = None,
+    ) -> None:
+        if not use_flash:
+            # can only check SHA of flash
+            hash_check = False
+
+        base = stream.tell()
+
+        if use_flash:
+            self.flash_transmit(stream, offset, callback=callback)
+        else:
+            self.ram_transmit(stream, offset, callback=callback)
+
+        if hash_check:
+            length = stream.tell() - base
+            # rewind stream
+            stream.seek(base)
+            # on py >= 3.11 use:
+            # sha = hashlib.file_digest(stream, sha256)
+            sha = sha256(stream.read(length))
+            hash_expected = sha.digest()
+
+            debug(f"hash check: start={offset:#X}, count={length:#X}")
+            hash_final = self.flash_read_hash(offset, length)
+            if hash_final != hash_expected:
+                raise ValueError(
+                    f"Chip SHA256 value does not match calculated "
+                    f"value (at 0x{offset:X}). Expected: "
+                    f"{hash_expected.hex()}, calculated: {hash_final.hex()}"
+                )
 
 
 @click.command(

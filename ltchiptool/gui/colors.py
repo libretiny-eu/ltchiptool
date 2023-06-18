@@ -90,7 +90,9 @@ class ColorPalette:
         except ValueError:
             return None
 
-    def __getitem__(self, item: str) -> wx.Colour:
+    def __getitem__(self, item: str | int) -> wx.Colour:
+        if isinstance(item, int):
+            return self.colors[item]
         if item in ColorPalette.COLORS_NAME:
             return self.colors[ColorPalette.COLORS_NAME.index(item)]
         return wx.WHITE
