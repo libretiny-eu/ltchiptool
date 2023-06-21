@@ -16,14 +16,17 @@ from ltchiptool.util.logging import LoggingHandler, verbose
 from ltchiptool.util.lpm import LPM
 from ltchiptool.util.lvm import LVM
 
+from .base.frame import BaseFrame
+from .base.panel import BasePanel
+from .base.window import BaseWindow
 from .colors import ColorPalette
-from .panels.base import BasePanel
 from .panels.log import LogPanel
 from .utils import load_xrc_file, on_event, with_event, with_target
 
 
 # noinspection PyPep8Naming
 class MainFrame(wx.Frame):
+    Windows: dict[str, BaseWindow]
     Panels: dict[str, BasePanel]
     Menus: dict[str, wx.Menu]
     MenuItems: dict[str, dict[str, wx.MenuItem]]
@@ -61,7 +64,7 @@ class MainFrame(wx.Frame):
                 unlink(self.config_file)
             rename(old_config, self.config_file)
         self.loaded = False
-        self.Panels = {}
+        self.Windows = self.Panels = {}
         self.init_params = {}
 
         # main window layout
@@ -77,7 +80,7 @@ class MainFrame(wx.Frame):
         self.Splitter.SplitHorizontally(self.Notebook, self.Log, sashPosition=-300)
         self.Sizer.Add(self.Splitter, proportion=1, flag=wx.EXPAND)
         self.SetSizer(self.Sizer)
-        self.Panels["log"] = self.Log
+        self.Windows["log"] = self.Log
 
         # list all built-in panels
         from .panels.about import AboutPanel
@@ -111,7 +114,10 @@ class MainFrame(wx.Frame):
                     self.loaded = True
                 if issubclass(cls, BasePanel):
                     panel = cls(parent=self.Notebook, frame=self)
-                    self.Panels[name] = panel
+                    self.Windows[name] = panel
+                elif issubclass(cls, BaseFrame):
+                    frame = cls(parent=self, frame=self)
+                    self.Windows[name] = frame
                 else:
                     warning(f"Unknown GUI element: {cls}")
 
@@ -193,14 +199,14 @@ class MainFrame(wx.Frame):
 
     @property
     def NotebookPageName(self) -> str:
-        for name, panel in self.Panels.items():
+        for name, panel in self.Windows.items():
             if panel == self.Notebook.GetCurrentPage():
                 return name
 
     @NotebookPageName.setter
     def NotebookPageName(self, name: str):
-        panel = self.Panels.get(name, None)
-        if panel:
+        panel = self.Windows.get(name, None)
+        if isinstance(panel, BasePanel):
             self.NotebookPagePanel = panel
 
     def UpdateMenus(self) -> None:
@@ -234,13 +240,13 @@ class MainFrame(wx.Frame):
     def OnShow(self, *_):
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
-        for name, panel in self.Panels.items():
-            panel.SetSettings(**settings.get(name, {}))
-            panel.SetInitParams(**self.init_params)
+        for name, window in self.Windows.items():
+            window.SetSettings(**settings.get(name, {}))
+            window.SetInitParams(**self.init_params)
         if settings:
             info(f"Loaded settings from {self.config_file}")
-        for name, panel in self.Panels.items():
-            panel.OnShow()
+        for name, window in self.Windows.items():
+            window.OnShow()
 
     def OnClose(self, *_):
         if not self.loaded:
@@ -249,9 +255,11 @@ class MainFrame(wx.Frame):
             return
         settings = self._settings
         settings["main"] = self.GetSettings()
-        for name, panel in self.Panels.items():
-            panel.OnClose()
-            settings[name] = panel.GetSettings() or {}
+        for name, window in self.Windows.items():
+            window.OnClose()
+            window_settings = window.GetSettings() or {}
+            if window_settings:
+                settings[name] = window_settings
         self._settings = settings
         info(f"Saved settings to {self.config_file}")
         self.Destroy()
@@ -277,12 +285,13 @@ class MainFrame(wx.Frame):
 
             case ("Debug", "Print settings"):
                 debug(f"Main settings: {self.GetSettings()}")
-                for name, panel in self.Panels.items():
-                    debug(f"Panel '{name}' settings: {panel.GetSettings()}")
+                for name, window in self.Windows.items():
+                    debug(f"Window '{name}' settings: {window.GetSettings()}")
 
             case _:
-                for panel in self.Panels.values():
-                    panel.OnMenu(title, label, checked)
+                for panel in self.Windows.values():
+                    if isinstance(panel, BasePanel):
+                        panel.OnMenu(title, label, checked)
 
     @with_event
     def OnPageChanging(self, event: wx.BookCtrlEvent):
@@ -311,5 +320,5 @@ class MainFrame(wx.Frame):
         new = ColorPalette.set(ColorPalette(value))
         item = self.MenuItems["Colors"][new.title]
         item.Check(True)
-        for panel in self.Panels.values():
-            panel.OnPaletteChanged(old, new)
+        for window in self.Windows.values():
+            window.OnPaletteChanged(old, new)
