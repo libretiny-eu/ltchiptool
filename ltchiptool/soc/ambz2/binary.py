@@ -87,6 +87,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         # read AmbZ2 image config
         config = ImageConfig(**self.board["image"])
         # find partition offsets
+        ptab_offset, _, ptab_end = self.board.region("part_table")
         boot_offset, _, boot_end = self.board.region("boot")
         ota1_offset, _, ota1_end = self.board.region("ota1")
 
@@ -108,6 +109,12 @@ class AmebaZ2Binary(SocInterface, ABC):
             title="Application Image",
             description="Firmware partition image for direct flashing",
             public=True,
+        )
+        out_ptab = FirmwareBinary(
+            location=input,
+            name="part_table",
+            offset=ptab_offset,
+            title="Partition Table",
         )
         out_boot = FirmwareBinary(
             location=input,
@@ -195,6 +202,10 @@ class AmebaZ2Binary(SocInterface, ABC):
         data = flash.pack(hash_key=config.keys.hash_keys["part_table"])
         with output.write() as f:
             f.write(data)
+        with out_ptab.write() as f:
+            ptab = data[ptab_offset:ptab_end].rstrip(b"\xFF")
+            ptab = pad_data(ptab, 0x20, 0xFF)
+            f.write(ptab)
         with out_boot.write() as f:
             boot = data[boot_offset:boot_end].rstrip(b"\xFF")
             boot = pad_data(boot, 0x20, 0xFF)
