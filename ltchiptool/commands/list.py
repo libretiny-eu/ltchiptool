@@ -5,7 +5,7 @@ from typing import List
 import click
 from prettytable import PrettyTable
 
-from ltchiptool import Board, Family, SocInterface
+from ltchiptool import Board, Family
 from ltchiptool.util.misc import sizeof
 
 

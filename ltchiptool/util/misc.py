@@ -6,8 +6,6 @@ from typing import Any, Callable, Generator, List, Optional, Tuple, TypeVar
 
 from click import get_current_context
 
-from .logging import LoggingHandler
-
 
 # https://stackoverflow.com/a/1094933/9438331
 def sizeof(num: int, suffix="B", base=1024.0) -> str:

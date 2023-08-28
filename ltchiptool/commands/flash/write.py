@@ -16,7 +16,6 @@ from ltchiptool.util.flash import FlashConnection
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ClickProgressCallback
-from uf2tool import UploadContext
 
 from ._utils import flash_link_interactive
 

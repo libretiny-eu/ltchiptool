@@ -10,6 +10,8 @@ from prettytable import PrettyTable
 # noinspection PyUnresolvedReferences
 from .streams import ClickProgressCallback
 
+__compat__ = ClickProgressCallback
+
 
 class FlashOp(Enum):
     WRITE = "write"

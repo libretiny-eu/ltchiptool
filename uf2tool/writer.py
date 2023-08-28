@@ -6,7 +6,6 @@ from typing import IO, Tuple
 
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
-from ltchiptool.util.intbin import inttole32
 
 from .binpatch import diff32_write
 from .models import UF2, Block, Image, Tag
