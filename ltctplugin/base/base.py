@@ -92,9 +92,12 @@ class PluginBase(ABC):
         except Exception as e:
             LoggingHandler.get().emit_exception(e)
             meta = dict()
+        description: str = meta.get("summary", None)
+        if description:
+            description = description.replace("(ltchiptool plugin)", "").strip()
         return dict(
             title=meta.get("name", None) or self.namespace,
-            description=meta.get("summary", None),
+            description=description,
             version=meta.get("version", None) or "0.0.0",
             author=meta.get("author", None),
             license=meta.get("license", None),

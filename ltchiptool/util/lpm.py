@@ -1,5 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-19.
 
+import inspect
 import re
 import sys
 from dataclasses import dataclass
@@ -7,7 +8,7 @@ from importlib import import_module
 from logging import debug, error, info, warning
 from os.path import join
 from pkgutil import iter_modules
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from click import get_app_dir
 
@@ -182,3 +183,21 @@ class LPM:
         else:
             info(f"Installed plugin {' '.join(added)}")
         return True
+
+    def find_self(self) -> Optional[PluginBase]:
+        self_namespace = None
+        try:
+            raise Exception
+        except Exception:
+            _, _, traceback = sys.exc_info()
+            module = inspect.getmodule(traceback.tb_frame.f_back)
+            self_namespace = module.__name__
+            del traceback
+            del module
+        if not self_namespace or not self_namespace.startswith("ltctplugin."):
+            return None
+
+        for plugin in self.plugins:
+            if self_namespace.startswith(f"ltctplugin.{plugin.namespace}"):
+                return plugin
+        return None

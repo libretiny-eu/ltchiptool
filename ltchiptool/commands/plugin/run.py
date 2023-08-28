@@ -10,11 +10,25 @@ from ltchiptool.util.lpm import LPM
 
 def get_commands() -> Dict[str, Command]:
     lpm = LPM.get()
-    commands = {}
+    commands: Dict[str, Command] = {}
     for plugin in lpm.plugins:
         if not plugin.has_cli:
             continue
-        commands.update(plugin.build_cli())
+        plugin_commands = plugin.build_cli()
+        for name, command in plugin_commands.items():
+            command.short_help = command.short_help and command.short_help.replace(
+                "${DESCRIPTION}",
+                plugin.description,
+            )
+            command.help = (
+                command.help
+                and command.help.replace(
+                    "${DESCRIPTION}",
+                    plugin.description,
+                )
+                or plugin.description
+            )
+        commands.update(plugin_commands)
     return commands
 
 
