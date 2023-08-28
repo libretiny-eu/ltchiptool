@@ -1,6 +1,7 @@
-name: Push, Pull Request
+name: Push (dev), Pull Request
 on:
   push:
+    branches: ["**"]
   pull_request:
 jobs:
   lint-python:
