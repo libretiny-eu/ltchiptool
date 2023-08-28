@@ -68,7 +68,7 @@ def retry_catching(
             if onerror:
                 try:
                     onerror()
-                except Exception as e:
+                except Exception:
                     pass
 
 
@@ -92,5 +92,5 @@ def retry_generator(
             if onerror:
                 try:
                     onerror()
-                except Exception as e:
+                except Exception:
                     pass

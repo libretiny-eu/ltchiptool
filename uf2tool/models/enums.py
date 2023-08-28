@@ -58,7 +58,7 @@ class OTASchemeParamType(click.ParamType):
         }
         try:
             return scheme_map[value]
-        except KeyError as e:
+        except KeyError:
             self.fail(f"Scheme must be one of: {', '.join(scheme_map.keys())}")
 
 
