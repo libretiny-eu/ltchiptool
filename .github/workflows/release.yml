@@ -1,40 +1,17 @@
-name: Publish to PyPI
-
+name: Release
 on:
   push:
-    tags:
-      - "v*.*.*"
-
-permissions:
-  contents: write
-
+    tags: ["v*.*.*"]
 jobs:
-  lint:
-    name: Run black
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.10'
-      - name: Install test dependencies
-        uses: BSFishy/pip-action@v1
-        with:
-          packages: |
-            black
-            isort
-      - name: Check code with black
-        run: black --check .
-      - name: Check code with isort
-        run: isort --profile black . --check-only
+  lint-python:
+    name: Run Python lint
+    uses: kuba2k2/kuba2k2/.github/workflows/lint-python.yml@master
 
-  deploy:
-    name: Deploy to PyPI
+  publish-pypi:
+    name: Publish PyPI package
     runs-on: ubuntu-latest
     needs:
-      - lint
+      - lint-python
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -65,19 +42,13 @@ jobs:
     - name: Publish to PyPI
       run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
 
-    - name: Upload workflow artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: ltchiptool
-        path: |
-          dist/*.whl
-          dist/*.tar.gz
-
   gui-win32:
     name: Build Win32 GUI release
     runs-on: windows-latest
     needs:
-      - lint
+      - lint-python
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -141,5 +112,3 @@ jobs:
         with:
           files: |
             dist/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

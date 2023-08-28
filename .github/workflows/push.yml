@@ -1,0 +1,9 @@
+name: Push, Pull Request
+on:
+  push:
+    tags-ignore: ["v*.*.*"]
+  pull_request:
+jobs:
+  lint-python:
+    name: Run Python lint
+    uses: kuba2k2/kuba2k2/.github/workflows/lint-python.yml@master
