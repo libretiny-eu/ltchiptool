@@ -70,7 +70,7 @@ class BasePanel(wx.Panel, BaseWindow):
     def BindComboBox(self, name: str):
         window: wx.ComboBox = self.FindWindowByName(name, self)
         self._components.append(window)
-        window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
+        # EVT_COMBOBOX fires EVT_TEXT as well
         window.Bind(wx.EVT_TEXT, self._OnUpdate)
         return window
 
