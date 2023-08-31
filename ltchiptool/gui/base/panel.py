@@ -14,10 +14,10 @@ class BasePanel(wx.Panel, BaseWindow):
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent)
+        self.InitWindow(frame)
         self.Frame = frame
         self.Xrc: wx.xrc.XmlResource = frame.Xrc
         self._components = []
-        self._threads = []
 
     def OnShow(self):
         self.OnUpdate()

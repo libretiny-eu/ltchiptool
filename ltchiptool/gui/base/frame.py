@@ -14,9 +14,8 @@ class BaseFrame(wx.Frame, BaseWindow):
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent=parent)
-        self.Main = frame
+        self.InitWindow(frame)
         self.Windows = {}
-        self._threads = []
         self.Bind(wx.EVT_CLOSE, self.OnCloseButton)
 
     def SetInitParams(self, **kwargs):

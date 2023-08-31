@@ -12,10 +12,15 @@ from ltchiptool.gui.work.base import BaseThread
 
 # noinspection PyPep8Naming
 class BaseWindow:
+    Main: wx.Frame
     Xrc: wx.xrc.XmlResource = None
     is_closing: bool = False
     _in_update: bool = False
     _threads: list[BaseThread]
+
+    def InitWindow(self, main) -> None:
+        self.Main = main
+        self._threads = []
 
     def StartWork(self, thread: BaseThread, freeze_ui: bool = True):
         self._threads.append(thread)

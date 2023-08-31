@@ -10,6 +10,7 @@ import wx
 import wx.adv
 import wx.xrc
 from click import get_app_dir
+from zeroconf import Zeroconf
 
 from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler, verbose
@@ -31,6 +32,7 @@ class MainFrame(wx.Frame):
     Menus: dict[str, wx.Menu]
     MenuItems: dict[str, dict[str, wx.MenuItem]]
     init_params: dict
+    Zeroconf: Zeroconf = None
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -128,6 +130,9 @@ class MainFrame(wx.Frame):
             LoggingHandler.get().emit_exception(e, msg=f"Couldn't build {name}")
             if not self.loaded:
                 self.OnClose()
+
+        # start zeroconf listener
+        self.Zeroconf = Zeroconf()
 
         self.UpdateMenus()
         for title in sorted(ColorPalette.get_titles(), key=lambda t: t.lower()):
