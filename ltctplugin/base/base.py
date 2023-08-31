@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from importlib_metadata import Distribution, PackagePath, distributions
+from semantic_version.base import BaseSpec, Version
 
+from ltchiptool import get_version
 from ltchiptool.util.logging import LoggingHandler
 
 
@@ -31,6 +33,15 @@ class PluginBase(ABC):
     @property
     def is_site(self) -> bool:
         return "site-packages" in self.entry_file
+
+    @property
+    @lru_cache
+    def is_compatible(self) -> bool:
+        required_version = self.ltchiptool_version
+        if required_version is None:
+            return True
+        ltchiptool_version = Version(get_version())
+        return ltchiptool_version in required_version
 
     @property
     @lru_cache
@@ -109,11 +120,17 @@ class PluginBase(ABC):
 
     @property
     def description(self) -> Optional[str]:
+        if not self.is_compatible:
+            return f"INCOMPATIBLE: requires ltchiptool {self.ltchiptool_version}"
         return self.plugin_meta["description"]
 
     @property
     def version(self) -> str:
         return self.plugin_meta["version"]
+
+    @property
+    def ltchiptool_version(self) -> BaseSpec | None:
+        return None
 
     @property
     def author(self) -> Optional[str]:

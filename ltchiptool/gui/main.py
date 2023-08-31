@@ -96,6 +96,8 @@ class MainFrame(wx.Frame):
         # load all panels from plugins
         lpm = LPM.get()
         for plugin in sorted(lpm.plugins, key=lambda p: p.title):
+            if not plugin.is_compatible:
+                continue
             if not plugin.has_gui:
                 continue
             for gui_name, cls in plugin.build_gui().items():

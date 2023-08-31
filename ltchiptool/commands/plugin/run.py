@@ -12,6 +12,8 @@ def get_commands() -> Dict[str, Command]:
     lpm = LPM.get()
     commands: Dict[str, Command] = {}
     for plugin in lpm.plugins:
+        if not plugin.is_compatible:
+            continue
         if not plugin.has_cli:
             continue
         plugin_commands = plugin.build_cli()

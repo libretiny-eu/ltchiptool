@@ -203,12 +203,13 @@ class PluginsDataModel(PyDataViewModel):
                 return text
             case str(text) if col == 0:
                 return text
-            case PluginModel(_, plugin, result):
+            case PluginModel(namespace, plugin, result):
                 cols = [
                     obj.title,
-                    plugin and plugin.version,
+                    (plugin and plugin.version)
+                    or (namespace and not result and "disabled"),
                     result and result.latest,
-                    result and result.description or plugin and plugin.description,
+                    plugin and plugin.description or result and result.description,
                 ]
         try:
             return cols[col]
@@ -329,7 +330,19 @@ class PluginsPanel(BasePanel):
                         result.description and f"Description: {result.description}",
                     ]
                 elif namespace:
-                    f"Plugin is disabled"
+                    lines += [
+                        "Plugin is now enabled.",
+                        "It might have been disabled previously, "
+                        "because of a loading error or manually.",
+                        "",
+                        "Relaunch the app to load the plugin.",
+                    ]
+                    self.lpm.enable(namespace, rescan=True)
+                    self.model.UpdateItems(
+                        disabled=self.lpm.disabled,
+                        plugins=self.lpm.plugins,
+                        results=self.results,
+                    )
 
                 message = "\n".join(line for line in lines if line is not None)
                 wx.MessageBox(message, caption=obj.title)

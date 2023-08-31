@@ -87,9 +87,14 @@ class LPM:
             if not entrypoint:
                 warning(f"Plugin '{namespace}' has no entrypoint!")
             try:
-                plugin = entrypoint()
+                plugin: PluginBase = entrypoint()
                 self.plugins.append(plugin)
                 debug(f"Loaded plugin '{namespace}'")
+                if not plugin.is_compatible:
+                    warning(
+                        f"Plugin '{plugin.title}' requires "
+                        f"ltchiptool {plugin.ltchiptool_version}"
+                    )
             except Exception as e:
                 error(f"Couldn't load plugin '{namespace}', disabling!")
                 LoggingHandler.get().emit_exception(e)
@@ -151,6 +156,10 @@ class LPM:
                     or "ltchiptool plugin" in result.description
                 ):
                     out.append(result)
+                # trim package description
+                result.description = result.description.replace(
+                    "(ltchiptool plugin)", ""
+                ).strip()
 
         # check if any plugins are installed
         for result in out:
