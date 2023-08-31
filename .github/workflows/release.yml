@@ -98,8 +98,8 @@ jobs:
         shell: cmd
         run: |
           set PATH=%cd%\python;%PATH%
-          python -m pip install ltchiptool-terminal || exit /b
-          python -m pip install "upk2esphome>=1.3.0" || exit /b
+          python -m pip install "ltchiptool-terminal>=1.2.1" || exit /b
+          python -m pip install "upk2esphome>=1.4.0" || exit /b
 
       - name: Build GUI with PyInstaller
         shell: cmd
