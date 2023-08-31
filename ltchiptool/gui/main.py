@@ -230,7 +230,10 @@ class MainFrame(wx.Frame):
 
     @staticmethod
     def ShowExceptionMessage(e, msg):
-        text = f"{type(e).__name__}: {e}"
+        if type(e) is RuntimeError:
+            text = str(e)
+        else:
+            text = f"{type(e).__name__}: {e}"
         wx.MessageBox(
             message=f"{msg}\n\n{text}" if msg else text,
             caption="Error",

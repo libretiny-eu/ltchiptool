@@ -53,17 +53,11 @@ class FlashThread(BaseThread):
         )
         self.callback = ClickProgressCallback()
         with self.callback:
-            try:
-                self._link()
-                if self.operation == FlashOp.WRITE:
-                    self._do_write()
-                else:
-                    self._do_read()
-            except Exception as e:
-                print(e)
-                if self.should_run():
-                    # show exceptions only if not cancelled
-                    LoggingHandler.get().emit_exception(e)
+            self._link()
+            if self.operation == FlashOp.WRITE:
+                self._do_write()
+            else:
+                self._do_read()
         self.soc.flash_disconnect()
 
     def stop(self):

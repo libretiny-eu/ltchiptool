@@ -25,7 +25,10 @@ class BaseThread(Thread):
         try:
             self.run_impl()
         except Exception as e:
-            LoggingHandler.get().emit_exception(e)
+            if self.should_run():
+                # show exceptions only if not cancelled
+                LoggingHandler.get().emit_exception(e)
+            self.stop()
 
         if self.on_stop:
             self.on_stop(self)

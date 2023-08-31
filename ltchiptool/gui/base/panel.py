@@ -71,6 +71,7 @@ class BasePanel(wx.Panel, BaseWindow):
         window: wx.ComboBox = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_COMBOBOX, self._OnUpdate)
+        window.Bind(wx.EVT_TEXT, self._OnUpdate)
         return window
 
     def BindListBox(self, name: str):
