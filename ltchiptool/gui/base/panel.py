@@ -1,5 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
+from logging import warning
 from typing import Any, Callable, Tuple
 
 import wx
@@ -63,6 +64,12 @@ class BasePanel(wx.Panel, BaseWindow):
 
     def AddToNotebook(self, title: str):
         self.Frame.Notebook.AddPage(self, title)
+
+    def FindWindowByName(self, name, parent=None):
+        if parent is None:
+            warning(f"Passing parent=None to FindWindowByName in {self}")
+            parent = self
+        return super().FindWindowByName(name, parent)
 
     def BindByName(self, event: int, name: str, handler: Callable[[wx.Event], None]):
         self.FindWindowByName(name, self).Bind(event, handler)
