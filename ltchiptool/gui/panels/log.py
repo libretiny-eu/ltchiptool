@@ -4,6 +4,8 @@ import logging
 import threading
 import time
 from logging import INFO, info, log, warning
+from multiprocessing import Queue
+from queue import Empty
 
 import wx
 import wx.xrc
@@ -16,6 +18,7 @@ from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import LoggingStreamHook
 
+from ..utils import on_event
 from .base import BasePanel
 
 
@@ -87,14 +90,17 @@ class GUIProgressBar(ProgressBar):
         self.parent.Layout()
 
 
+# noinspection PyPep8Naming
 class LogPanel(BasePanel):
-    delayed_lines: list[tuple[str, str, str]] | None
+    log_queue: Queue
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent, frame)
         self.LoadXRC("LogPanel")
 
-        self.delayed_lines = []
+        # process non-main thread messages when idle
+        self.log_queue = Queue()
+        self.Bind(wx.EVT_IDLE, self.OnIdle)
 
         self.Log: wx.TextCtrl = self.FindWindowByName("text_log", self)
         LoggingHandler.get().add_emitter(self.emit_raw)
@@ -112,10 +118,14 @@ class LogPanel(BasePanel):
         setattr(_termui_impl, "ProgressBar", GUIProgressBar)
 
     def emit_raw(self, log_prefix: str, message: str, color: str):
-        # delay non-main-thread logging until the app finishes initializing
-        is_main_thread = threading.current_thread() is threading.main_thread()
-        if not is_main_thread and self.delayed_lines is not None:
-            self.delayed_lines.append((log_prefix, message, color))
+        if threading.current_thread() is not threading.main_thread():
+            # NEVER block worker threads by waiting for main thread availability
+            # - this leads to race conditions taking the logging handler thread lock
+            #   and eventually freezes the app
+            # (if worker thread tries to log a message while main thread is busy,
+            #  and the main thread tries to log a message before processing GUI events)
+            # - a solution is to simply write all messages to GUI on the main thread
+            self.log_queue.put((log_prefix, message, color))
             return
         if self.is_closing:
             return
@@ -171,13 +181,13 @@ class LogPanel(BasePanel):
                 case _ if item.GetItemLabel() == level_name:
                     item.Check()
 
-    def OnShow(self):
-        super().OnShow()
-        if self.delayed_lines is None:
-            return
-        for log_prefix, message, color in self.delayed_lines:
-            self.emit_raw(log_prefix, message, color)
-        self.delayed_lines = None
+    @on_event
+    def OnIdle(self):
+        while True:
+            try:
+                self.emit_raw(*self.log_queue.get_nowait())
+            except Empty:
+                break
 
     def OnClose(self):
         super().OnClose()
