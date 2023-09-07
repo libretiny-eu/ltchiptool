@@ -9,6 +9,7 @@ from serial import Serial
 
 from ltchiptool.util.cli import get_multi_command_class
 from ltchiptool.util.logging import VERBOSE, LoggingHandler, log_setup_click_bars
+from ltchiptool.util.lvm import LVM
 from ltchiptool.util.streams import LoggingStreamHook
 
 from .version import get_version
@@ -78,6 +79,12 @@ VERBOSITY_LEVEL = {
     help="Dump transmitted Serial data",
     is_flag=True,
 )
+@click.option(
+    "-L",
+    "--libretiny-path",
+    help="Set LibreTiny platform path",
+    type=click.Path(exists=True, dir_okay=True),
+)
 @click.version_option(
     get_version(),
     "-V",
@@ -93,6 +100,7 @@ def cli_entrypoint(
     raw_log: bool,
     indent: int,
     dump_serial: bool,
+    libretiny_path: str,
 ):
     ctx.ensure_object(dict)
     if verbose == 0 and "LTCHIPTOOL_VERBOSE" in os.environ:
@@ -105,6 +113,8 @@ def cli_entrypoint(
     logger.full_traceback = traceback
     log_setup_click_bars()
     LoggingStreamHook.set_registered(Serial, dump_serial)
+    if libretiny_path:
+        LVM.add_path(libretiny_path)
 
 
 def cli():
