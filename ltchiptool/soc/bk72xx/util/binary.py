@@ -1,6 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-06-10.
 
 import gzip
+import sys
 from binascii import crc32
 from typing import IO, Union
 
@@ -161,7 +162,10 @@ class BekenBinary:
         rbl.update(data)
 
         if rbl.compression == OTACompression.GZIP:
-            data = gzip.compress(data, compresslevel=9, mtime=0)
+            if sys.version_info >= (3, 8):
+                data = gzip.compress(data, compresslevel=9, mtime=0)
+            else:
+                data = gzip.compress(data, compresslevel=9)
         elif rbl.compression != OTACompression.NONE:
             raise ValueError("Unsupported compression algorithm")
 

@@ -10,6 +10,10 @@ from ltchiptool.util.logging import LoggingHandler
 
 
 def gui_entrypoint(*args, **kwargs):
+    if sys.version_info < (3, 10, 0):
+        error("ltchiptool GUI requires Python 3.10 or newer")
+        exit(1)
+
     try:
         import wx
     except ImportError:
@@ -19,8 +23,6 @@ def gui_entrypoint(*args, **kwargs):
 
     app = wx.App()
     try:
-        if sys.version_info < (3, 10, 0):
-            raise RuntimeError("ltchiptool GUI requires Python 3.10 or newer")
         from .main import MainFrame
 
         if LoggingHandler.get().level == NOTSET:

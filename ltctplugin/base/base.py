@@ -35,7 +35,7 @@ class PluginBase(ABC):
         return "site-packages" in self.entry_file
 
     @property
-    @lru_cache
+    @lru_cache(None)
     def is_compatible(self) -> bool:
         required_version = self.ltchiptool_version
         if required_version is None:
@@ -44,7 +44,7 @@ class PluginBase(ABC):
         return ltchiptool_version in required_version
 
     @property
-    @lru_cache
+    @lru_cache(None)
     def distribution(self) -> Distribution:
         if self.is_site:
             file = self.entry_file.replace("\\", "/")
@@ -68,7 +68,7 @@ class PluginBase(ABC):
         raise ValueError(f"Distribution of plugin {self.namespace} not found")
 
     @property
-    @lru_cache
+    @lru_cache(None)
     def _distribution_meta(self) -> Optional[dict]:
         if self.is_site:
             return self.distribution.metadata.json
@@ -96,7 +96,7 @@ class PluginBase(ABC):
         return None
 
     @property
-    @lru_cache
+    @lru_cache(None)
     def plugin_meta(self) -> dict:
         try:
             meta = self._distribution_meta
@@ -129,7 +129,7 @@ class PluginBase(ABC):
         return self.plugin_meta["version"]
 
     @property
-    def ltchiptool_version(self) -> BaseSpec | None:
+    def ltchiptool_version(self) -> Optional[BaseSpec]:
         return None
 
     @property
