@@ -1,10 +1,8 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-9.
 
-from logging import debug
+from logging import debug, exception
 from threading import Event, Thread
 from typing import Callable
-
-from ltchiptool.util.logging import LoggingHandler
 
 
 class BaseThread(Thread):
@@ -27,7 +25,7 @@ class BaseThread(Thread):
         except Exception as e:
             if self.should_run():
                 # show exceptions only if not cancelled
-                LoggingHandler.get().emit_exception(e)
+                exception(None, exc_info=e)
             self.stop()
 
         if self.on_stop:

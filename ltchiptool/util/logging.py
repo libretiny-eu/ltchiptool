@@ -86,10 +86,15 @@ class LoggingHandler(StreamHandler):
         self.emitters.clear()
 
     def emit(self, record: LogRecord) -> None:
-        message = record.getMessage()
-        if not message:
-            return
-        self.emit_string(record.levelname[:1], message)
+        message = record.msg
+        if message:
+            if record.args:
+                message = message % record.args
+            self.emit_string(record.levelname[:1], message)
+        if record.exc_info:
+            _, e, _ = record.exc_info
+            if e:
+                self.emit_exception(e=e)
 
     def emit_string(self, log_prefix: str, message: str, color: str = None):
         now = time()

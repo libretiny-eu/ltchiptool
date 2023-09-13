@@ -2,7 +2,7 @@
 
 import sys
 import threading
-from logging import debug, info, warning
+from logging import debug, exception, info, warning
 from os import rename, unlink
 from os.path import dirname, isfile, join
 
@@ -127,7 +127,7 @@ class MainFrame(wx.Frame):
 
             self.loaded = True
         except Exception as e:
-            LoggingHandler.get().emit_exception(e, msg=f"Couldn't build {name}")
+            exception(f"Couldn't build {name}", exc_info=e)
             if not self.loaded:
                 self.OnClose()
 
@@ -231,9 +231,9 @@ class MainFrame(wx.Frame):
     @staticmethod
     def OnException(*args):
         if isinstance(args[0], type):
-            LoggingHandler.get().emit_exception(args[1])
+            exception(None, exc_info=args[1])
         else:
-            LoggingHandler.get().emit_exception(args[0].exc_value)
+            exception(None, exc_info=args[0].exc_value)
 
     @staticmethod
     def ShowExceptionMessage(e, msg):

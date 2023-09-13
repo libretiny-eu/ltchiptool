@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import sys
-from logging import INFO, NOTSET, error
+from logging import INFO, NOTSET, error, exception
 
 import click
 
@@ -33,7 +33,7 @@ def gui_entrypoint(*args, **kwargs):
         app.MainLoop()
     except Exception as e:
         LoggingHandler.get().exception_hook = None
-        LoggingHandler.get().emit_exception(e)
+        exception(None, exc_info=e)
         wx.MessageBox(
             message=f"Exception during app initialization\n\n{type(e).__name__}: {e}",
             caption="Error",
@@ -49,7 +49,7 @@ def cli(*args, **kwargs):
     try:
         gui_entrypoint(*args, **kwargs)
     except Exception as e:
-        LoggingHandler.get().emit_exception(e)
+        exception(None, exc_info=e)
         exit(1)
 
 

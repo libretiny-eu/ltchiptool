@@ -5,7 +5,7 @@ import re
 import sys
 from dataclasses import dataclass
 from importlib import import_module
-from logging import debug, error, info, warning
+from logging import debug, error, exception, info, warning
 from os.path import join
 from pkgutil import iter_modules
 from typing import List, Optional, Set, Tuple
@@ -15,7 +15,6 @@ from click import get_app_dir
 import ltctplugin
 from ltchiptool.util.cli import run_subprocess
 from ltchiptool.util.fileio import readjson, writejson
-from ltchiptool.util.logging import LoggingHandler
 from ltctplugin.base import PluginBase
 
 PYPI_URL = "https://pypi.org/search/"
@@ -96,8 +95,7 @@ class LPM:
                         f"ltchiptool {plugin.ltchiptool_version}"
                     )
             except Exception as e:
-                error(f"Couldn't load plugin '{namespace}', disabling!")
-                LoggingHandler.get().emit_exception(e)
+                exception(f"Couldn't load plugin '{namespace}', disabling!", exc_info=e)
                 self.disable(namespace, rescan=False)
         curr = self.disabled.union(p.namespace for p in self.plugins)
         return prev, curr

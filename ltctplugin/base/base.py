@@ -6,6 +6,7 @@ import sys
 from abc import ABC
 from functools import lru_cache
 from glob import glob
+from logging import exception
 from os.path import basename, isdir, isfile, join
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -14,7 +15,6 @@ from importlib_metadata import Distribution, PackagePath, distributions
 from semantic_version.base import BaseSpec, Version
 
 from ltchiptool import get_version
-from ltchiptool.util.logging import LoggingHandler
 
 
 class PluginBase(ABC):
@@ -101,7 +101,7 @@ class PluginBase(ABC):
         try:
             meta = self._distribution_meta
         except Exception as e:
-            LoggingHandler.get().emit_exception(e)
+            exception(None, exc_info=e)
             meta = dict()
         description: str = meta.get("summary", None)
         if description:

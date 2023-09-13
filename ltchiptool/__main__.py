@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import os
-from logging import DEBUG, INFO
+from logging import DEBUG, INFO, exception
 
 import click
 from click import Context
@@ -121,7 +121,7 @@ def cli():
     try:
         cli_entrypoint()
     except Exception as e:
-        LoggingHandler.get().emit_exception(e)
+        exception(None, exc_info=e)
         exit(1)
 
 
