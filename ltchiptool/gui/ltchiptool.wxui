@@ -166,6 +166,36 @@
           border_size="0"
           flags="wxEXPAND"
           proportion="1" />
+        <node
+          class="wxPanel"
+          var_name="panel_donate"
+          window_style="wxTAB_TRAVERSAL"
+          borders=""
+          flags="wxEXPAND">
+          <node
+            class="wxBoxSizer"
+            var_name="sizer_donate">
+            <node
+              class="wxStaticBitmap"
+              scale_mode="Fill"
+              var_name="bmp_donate"
+              size="48,32"
+              alignment="wxALIGN_CENTER"
+              borders="wxRIGHT|wxLEFT" />
+            <node
+              class="wxHyperlinkCtrl"
+              label="Support the LibreTiny project"
+              url="https://ko-fi.com/kuba2k2"
+              var_name="link_donate"
+              size="-1,-1d"
+              alignment="wxALIGN_CENTER"
+              borders="wxTOP|wxBOTTOM|wxRIGHT"
+              proportion="1" />
+            <node
+              class="CloseButton"
+              var_name="button_donate_close" />
+          </node>
+        </node>
       </node>
     </node>
     <node

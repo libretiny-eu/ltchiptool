@@ -149,6 +149,40 @@
 					<fg>#FFFFFF</fg>
 				</object>
 			</object>
+			<object class="sizeritem">
+				<flag>wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxPanel" name="panel_donate">
+					<style>wxTAB_TRAVERSAL</style>
+					<object class="wxBoxSizer" name="sizer_donate">
+						<orient>wxHORIZONTAL</orient>
+						<object class="sizeritem">
+							<flag>wxRIGHT|wxLEFT|wxALIGN_CENTER</flag>
+							<border>5</border>
+							<object class="wxStaticBitmap" name="bmp_donate">
+								<size>48,32</size>
+							</object>
+						</object>
+						<object class="sizeritem">
+							<flag>wxTOP|wxBOTTOM|wxRIGHT|wxALIGN_CENTER</flag>
+							<border>5</border>
+							<option>1</option>
+							<object class="wxHyperlinkCtrl" name="link_donate">
+								<label>Support the LibreTiny project</label>
+								<url>https://ko-fi.com/kuba2k2</url>
+								<style>wxHL_DEFAULT_STYLE</style>
+							</object>
+						</object>
+						<object class="sizeritem">
+							<flag>wxALL</flag>
+							<border>5</border>
+							<object class="wxBitmapButton" name="button_donate_close">
+								<close>1</close>
+							</object>
+						</object>
+					</object>
+				</object>
+			</object>
 		</object>
 	</object>
 	<object class="wxPanel" name="FlashPanel">

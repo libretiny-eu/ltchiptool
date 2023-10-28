@@ -1,10 +1,12 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-8.
 
 import logging
+import sys
 import threading
 import time
 from logging import INFO, info, log, warning
 from multiprocessing import Queue
+from os.path import dirname, join
 from queue import Empty
 
 import wx
@@ -93,6 +95,7 @@ class GUIProgressBar(ProgressBar):
 # noinspection PyPep8Naming
 class LogPanel(BasePanel):
     log_queue: Queue
+    donate_closed: bool = False
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent, frame)
@@ -116,6 +119,20 @@ class LogPanel(BasePanel):
         # noinspection PyTypeChecker
         GUIProgressBar.render_finish(GUIProgressBar)
         setattr(_termui_impl, "ProgressBar", GUIProgressBar)
+
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            donate = join(sys._MEIPASS, "ko-fi.png")
+        else:
+            donate = join(dirname(__file__), "..", "ko-fi.png")
+
+        bitmap = self.FindStaticBitmap("bmp_donate")
+        height = 28
+        image = wx.Image(donate)
+        ratio = image.GetWidth() / image.GetHeight()
+        image.Rescale(int(ratio * height), height, wx.IMAGE_QUALITY_BICUBIC)
+        bitmap.SetBitmap(image)
+
+        self.BindButton("button_donate_close", self.OnDonateClose)
 
     def emit_raw(self, log_prefix: str, message: str, color: str):
         if threading.current_thread() is not threading.main_thread():
@@ -145,6 +162,7 @@ class LogPanel(BasePanel):
             raw=handler.raw,
             full_traceback=handler.full_traceback,
             dump_serial=LoggingStreamHook.is_registered(Serial),
+            donate_closed=self.donate_closed,
         )
 
     def SetSettings(
@@ -154,6 +172,7 @@ class LogPanel(BasePanel):
         raw: bool = False,
         full_traceback: bool = True,
         dump_serial: bool = False,
+        donate_closed: bool = False,
         **_,
     ):
         handler = LoggingHandler.get()
@@ -181,6 +200,10 @@ class LogPanel(BasePanel):
                 case _ if item.GetItemLabel() == level_name:
                     item.Check()
 
+        if donate_closed:
+            # noinspection PyTypeChecker
+            self.OnDonateClose(None)
+
     @on_event
     def OnIdle(self):
         while True:
@@ -188,6 +211,14 @@ class LogPanel(BasePanel):
                 self.emit_raw(*self.log_queue.get_nowait())
             except Empty:
                 break
+
+    @on_event
+    def OnDonateClose(self):
+        self.donate_closed = True
+        panel: wx.Panel = self.FindWindowByName("panel_donate", self)
+        panel.Hide()
+        self.Layout()
+        self.Update()
 
     def OnClose(self):
         super().OnClose()
