@@ -13,7 +13,7 @@ from serial import Serial
 from xmodem import XMODEM
 
 from ltchiptool.util.intbin import align_down
-from ltchiptool.util.logging import LoggingHandler, verbose
+from ltchiptool.util.logging import LoggingHandler, stream, verbose
 from ltchiptool.util.misc import retry_catching, retry_generator
 
 _T_XmodemCB = Optional[Callable[[int, int, int], None]]
@@ -34,7 +34,7 @@ class AmbZ2FlashSpeed(IntEnum):
 
 
 class AmbZ2Tool:
-    crc_speed_bps: int = 2000000
+    crc_speed_bps: int = 1500000
     prev_timeout_list: List[float]
     flash_mode: AmbZ2FlashMode = None
     flash_speed: AmbZ2FlashSpeed = AmbZ2FlashSpeed.SINGLE
@@ -83,16 +83,16 @@ class AmbZ2Tool:
     def read(self, count: int = None) -> bytes:
         response = b""
         end = time() + self.read_timeout
-        end_nb = time() + 0.01  # not before
         while time() < end:
-            read = self.s.read_all()
+            if count:
+                read = self.s.read(count - len(response))
+            else:
+                read = self.s.read_all()
             response += read
             if count and len(response) >= count:
                 break
-            if not response or time() <= end_nb:
-                continue
-            if not read:
-                break
+            if read:
+                end = time() + self.read_timeout
 
         if not response:
             raise TimeoutError(f"Timeout in read({count}) - no data received")
@@ -100,7 +100,9 @@ class AmbZ2Tool:
             return response
         response = response[:count]
         if len(response) != count:
-            raise TimeoutError(f"Timeout in read({count}) - not enough data received")
+            raise TimeoutError(
+                f"Timeout in read({count}) - not enough data received ({len(response)})"
+            )
         return response
 
     def readlines(self) -> Generator[str, None, None]:
@@ -154,7 +156,7 @@ class AmbZ2Tool:
         self.command("ping")
         resp = self.read(4)
         if resp != b"ping":
-            raise RuntimeError(f"incorrect ping response: {resp!r}")
+            raise RuntimeError(f"Incorrect ping response: {resp!r}")
 
     def disconnect(self) -> None:
         self.command("disc")
@@ -175,13 +177,16 @@ class AmbZ2Tool:
         self.ping()
         self.command(f"ucfg {baudrate} 0 0")
         # change Serial port baudrate
-        debug("-- UART: Changing port baudrate")
+        stream("-- UART: Changing port baudrate")
         self.s.baudrate = baudrate
         # wait up to 1 second for OK response
         self.push_timeout(1.0)
-        resp = self.read()
+        try:
+            resp = self.read()
+        except TimeoutError:
+            raise RuntimeError("Timed out while changing baud rate")
         if resp != b"OK":
-            raise RuntimeError(f"baud rate change not OK: {resp!r}")
+            raise RuntimeError(f"Baud rate change not OK: {resp!r}")
 
         self.pop_timeout()
         # link again to make sure it still works

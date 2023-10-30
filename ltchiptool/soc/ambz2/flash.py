@@ -107,13 +107,17 @@ class AmebaZ2Flash(SocInterface, ABC):
         self.flash_connect()
         assert self.amb
         callback.attach(data, limit=length)
-        self.amb.memory_write(
-            offset=offset,
-            stream=data,
-            use_flash=True,
-            hash_check=verify,
-        )
-        callback.detach(data)
+        try:
+            self.amb.memory_write(
+                offset=offset,
+                stream=data,
+                use_flash=True,
+                hash_check=verify,
+            )
+            callback.detach(data)
+        except Exception as e:
+            callback.detach(data)
+            raise e
 
     def flash_write_uf2(
         self,

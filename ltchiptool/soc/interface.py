@@ -141,7 +141,7 @@ class SocInterface(ABC):
 
     def flash_get_guide(self) -> List[Union[str, list]]:
         """Get a short textual guide for putting the chip in download mode."""
-        raise NotImplementedError()
+        return []  # Optional; do not fail here
 
     def flash_get_size(self) -> int:
         """Retrieve the flash size, in bytes."""

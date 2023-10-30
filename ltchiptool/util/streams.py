@@ -110,7 +110,7 @@ class LoggingStreamHook(StreamHook):
         self.buf = {"-> RX": "", "<- TX": ""}
 
     def _print(self, data: bytes, msg: str):
-        if all(c in self.ASCII for c in data):
+        if data and all(c in self.ASCII for c in data):
             data = data.decode().replace("\r", "")
             while "\n" in data:
                 line, _, data = data.partition("\n")
@@ -118,12 +118,14 @@ class LoggingStreamHook(StreamHook):
                 self.buf[msg] = ""
                 if line:
                     stream(f"{msg}: '{line}'")
-            self.buf[msg] = data
+            self.buf[msg] += data
             return
 
         if self.buf[msg]:
             stream(f"{msg}: '{self.buf[msg]}'")
             self.buf[msg] = ""
+        if not data:
+            return
 
         if data.isascii():
             stream(f"{msg}: {data[0:128]}")
@@ -138,6 +140,7 @@ class LoggingStreamHook(StreamHook):
         return None
 
     def on_before_write(self, data: bytes) -> Optional[bytes]:
+        self._print(b"", "-> RX")  # print leftover bytes
         self._print(data, "<- TX")
         return None
 
