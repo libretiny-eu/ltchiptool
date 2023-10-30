@@ -112,7 +112,7 @@ class FlashPanel(BasePanel):
         file: str = None,
         offset: int = None,
         skip: int = None,
-        length: int = None,
+        length: int | None = None,
         prev_file: str = None,
         auto_file: str = None,
         **_,
@@ -190,7 +190,7 @@ class FlashPanel(BasePanel):
                     if not need_offset:
                         self.offset = self.detection.offset
                     self.skip = self.detection.skip
-                    self.length = self.detection.length
+                    self.length = None if is_uf2 else self.detection.length
 
                 match self.detection.type:
                     case Detection.Type.UNRECOGNIZED if auto:
@@ -211,6 +211,20 @@ class FlashPanel(BasePanel):
 
                 if manual:
                     warnings.append("Warning: using custom options")
+                    if self.skip >= self.detection.length:
+                        errors.append(
+                            f"Skip offset (0x{self.skip:X}) "
+                            f"not within input file bounds "
+                            f"(0x{self.detection.length:X})"
+                        )
+                    elif self.skip + (self.length or 0) > self.detection.length:
+                        errors.append(
+                            f"Writing length (0x{self.skip:X} + 0x{self.length:X}) "
+                            f"not within input file bounds "
+                            f"(0x{self.detection.length:X})"
+                        )
+                        errors.append("")
+
         else:
             self.FileText.SetLabel("Output file")
             self.LengthText.SetLabel("Reading length")
@@ -225,20 +239,15 @@ class FlashPanel(BasePanel):
                 warnings.append("Using manual parameters")
 
         verbose(
-            f"Update: read_full={self.read_full}, "
+            f"Update: "
             f"target={type(target).__name__}, "
             f"port={self.port}, "
             f"family={self.family}",
         )
 
-        if self.prev_read_full is not self.read_full:
-            # switching "entire chip" reading - update input text
-            self.length = self.length or 0x200000
-            self.prev_read_full = self.read_full
-
         if not self.family:
             errors.append("Choose the chip family")
-        if not self.length and not self.read_full:
+        if self.length == 0:
             errors.append("Enter a correct length")
         if not self.port:
             errors.append("Choose a serial port")
@@ -369,44 +378,41 @@ class FlashPanel(BasePanel):
         self.DoUpdate(self.File)
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         text: str = self.Offset.GetValue().strip() or "0"
         value = int_or_zero(text)
         return value
 
     @offset.setter
-    def offset(self, value: int):
+    def offset(self, value: int) -> None:
         value = value or 0
         self.Offset.SetValue(f"0x{value:X}")
 
     @property
-    def skip(self):
+    def skip(self) -> int:
         text: str = self.Skip.GetValue().strip() or "0"
         value = int_or_zero(text)
         return value
 
     @skip.setter
-    def skip(self, value: int):
+    def skip(self, value: int) -> None:
         value = value or 0
         self.Skip.SetValue(f"0x{value:X}")
 
     @property
-    def length(self):
-        text: str = self.Length.GetValue().strip() or "0"
+    def length(self) -> int | None:
+        text: str = self.Length.GetValue().strip()
+        if not text:
+            return None
         value = int_or_zero(text)
         return value
 
     @length.setter
     def length(self, value: int | None):
-        value = value or 0
-        if self.read_full:
-            self.Length.SetValue("Entire chip")
-        else:
+        if value:
             self.Length.SetValue(f"0x{value:X}")
-
-    @property
-    def read_full(self):
-        return self.length == 0 and self.auto_detect and self.operation != FlashOp.WRITE
+        else:
+            self.Length.SetValue("")
 
     def make_dump_filename(self):
         if not self.file:

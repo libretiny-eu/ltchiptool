@@ -62,9 +62,8 @@ class FlashThread(BaseThread):
 
     def stop(self):
         super().stop()
-        if self.ctx:
-            # try to break UF2 flashing
-            self.soc.flash_disconnect()
+        # try to break flashing & cleanup
+        self.soc.flash_disconnect()
 
     def _link(self):
         self.soc.flash_set_connection(FlashConnection(self.port, self.baudrate))
@@ -114,7 +113,7 @@ class FlashThread(BaseThread):
             return
 
         file = open(self.file, "rb")
-        size = stat(self.file).st_size
+        file_size = stat(self.file).st_size
         _read = file.read
 
         def read(n: int = -1) -> bytes | None:
@@ -124,7 +123,8 @@ class FlashThread(BaseThread):
 
         file.read = read
 
-        if self.skip + self.length > size:
+        self.length = self.length or max(file_size - self.skip, 0)
+        if self.skip + self.length > file_size:
             raise ValueError(f"File is too small (requested to write too much data)")
 
         max_length = self.soc.flash_get_size()
@@ -156,7 +156,7 @@ class FlashThread(BaseThread):
         else:
             max_length = self.soc.flash_get_size()
 
-        self.length = self.length or (max_length - self.offset)
+        self.length = self.length or max(max_length - self.offset, 0)
 
         if self.offset + self.length > max_length:
             raise ValueError(

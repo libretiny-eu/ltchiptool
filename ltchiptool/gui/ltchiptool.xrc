@@ -376,7 +376,6 @@
 						<border>5</border>
 						<object class="wxComboBox" name="combo_family">
 							<style>wxCB_READONLY</style>
-							<enabled>0</enabled>
 						</object>
 					</object>
 					<object class="sizeritem">
@@ -426,21 +425,21 @@
 						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
 						<border>5</border>
 						<object class="wxTextCtrl" name="input_offset">
-							<enabled>0</enabled>
+							<hint>0x0</hint>
 						</object>
 					</object>
 					<object class="sizeritem">
 						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
 						<border>5</border>
 						<object class="wxTextCtrl" name="input_skip">
-							<enabled>0</enabled>
+							<hint>0x0</hint>
 						</object>
 					</object>
 					<object class="sizeritem">
 						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
 						<border>5</border>
 						<object class="wxTextCtrl" name="input_length">
-							<enabled>0</enabled>
+							<hint>All data</hint>
 						</object>
 					</object>
 				</object>

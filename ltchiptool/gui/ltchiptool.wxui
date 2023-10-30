@@ -329,7 +329,6 @@
             class="wxComboBox"
             style="wxCB_READONLY"
             var_name="combo_family"
-            disabled="1"
             borders="wxBOTTOM|wxRIGHT|wxLEFT"
             colspan="3"
             flags="wxEXPAND"
@@ -374,16 +373,16 @@
             row="2" />
           <node
             class="wxTextCtrl"
+            hint="0x0"
             var_name="input_offset"
-            disabled="1"
             borders="wxBOTTOM|wxRIGHT|wxLEFT"
             colspan="2"
             flags="wxEXPAND"
             row="3" />
           <node
             class="wxTextCtrl"
+            hint="0x0"
             var_name="input_skip"
-            disabled="1"
             borders="wxBOTTOM|wxRIGHT|wxLEFT"
             colspan="2"
             column="2"
@@ -391,8 +390,8 @@
             row="3" />
           <node
             class="wxTextCtrl"
+            hint="All data"
             var_name="input_length"
-            disabled="1"
             borders="wxBOTTOM|wxRIGHT|wxLEFT"
             colspan="2"
             column="4"
