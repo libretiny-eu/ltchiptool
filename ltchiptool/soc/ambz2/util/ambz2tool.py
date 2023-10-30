@@ -83,16 +83,20 @@ class AmbZ2Tool:
     def read(self, count: int = None) -> bytes:
         response = b""
         end = time() + self.read_timeout
+        self.s.timeout = self.read_timeout
         while time() < end:
+            to_read = self.s.in_waiting
+            if not to_read:
+                continue
             if count:
-                read = self.s.read(count - len(response))
-            else:
-                read = self.s.read_all()
+                to_read = min(to_read, count - len(response))
+            read = self.s.read(to_read)
+            if not read:
+                continue
+            end = time() + self.read_timeout
             response += read
             if count and len(response) >= count:
                 break
-            if read:
-                end = time() + self.read_timeout
 
         if not response:
             raise TimeoutError(f"Timeout in read({count}) - no data received")
@@ -139,11 +143,9 @@ class AmbZ2Tool:
 
     def error_flush(self) -> None:
         # try to clean up the serial buffer
-        # no data for 0.8 s means that the chip stopped sending bytes
-        self.push_timeout(0.8)
-        while True:
-            if not self.s.read(128):
-                break
+        # no data for 0.5 s means that the chip stopped sending bytes
+        self.push_timeout(0.5)
+        self.read()  # read all available data
         self.pop_timeout()
         # pop timeout of the failing function
         self.pop_timeout()
@@ -178,7 +180,9 @@ class AmbZ2Tool:
         self.command(f"ucfg {baudrate} 0 0")
         # change Serial port baudrate
         stream("-- UART: Changing port baudrate")
+        self.s.close()
         self.s.baudrate = baudrate
+        self.s.open()
         # wait up to 1 second for OK response
         self.push_timeout(1.0)
         try:
@@ -197,7 +201,10 @@ class AmbZ2Tool:
         self.push_timeout(max(min(count, 256), 16) * 1.5 / 500.0)
         # one line is 57 chars long, and it holds 4 words
         # make it 32 KiB at most
-        self.s.set_buffer_size(rx_size=min(32768, 57 * (count // 4)))
+        try:
+            self.s.set_buffer_size(rx_size=min(32768, 57 * (count // 4)))
+        except AttributeError:
+            pass
 
         read_count = 0
         self.flush()
@@ -227,7 +234,10 @@ class AmbZ2Tool:
         self.push_timeout(max(min(count, 1024), 64) * 0.5 / 500.0)
         # one line is 78 chars long, and it holds 16 bytes
         # make it 32 KiB at most
-        self.s.set_buffer_size(rx_size=min(32768, 78 * (count // 16)))
+        try:
+            self.s.set_buffer_size(rx_size=min(32768, 78 * (count // 16)))
+        except AttributeError:
+            pass
 
         read_count = 0
         self.flush()
@@ -402,6 +412,10 @@ class AmbZ2Tool:
         else:
             # can only check SHA of flash
             hash_check = False
+
+        # determine a reliable maximum chunk size
+        baud_coef = int(1 / self.s.baudrate**0.5 * 2000)
+        chunk_size = min(2**baud_coef * 1024, chunk_size)
 
         chunk = b""
         sha = sha256()
