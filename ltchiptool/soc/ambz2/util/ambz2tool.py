@@ -190,9 +190,13 @@ class AmbZ2Tool:
     def dump_words(self, start: int, count: int) -> Generator[List[int], None, None]:
         # at most ~350ms for initial output, when reading at least 256 words
         self.push_timeout(max(min(count, 256), 16) * 1.5 / 500.0)
-        # one line is 57 chars long, and it holds 4 words
-        # make it 32 KiB at most
-        self.s.set_buffer_size(rx_size=min(32768, 57 * (count // 4)))
+        try:
+            # one line is 57 chars long, and it holds 4 words
+            # make it 32 KiB at most
+            self.s.set_buffer_size(rx_size=min(32768, 57 * (count // 4)))
+        except AttributeError:
+            # Serial.set_buffer_size is only available on win32
+            pass
 
         read_count = 0
         self.flush()
@@ -220,9 +224,13 @@ class AmbZ2Tool:
     def dump_bytes(self, start: int, count: int) -> Generator[bytes, None, None]:
         # at most ~350ms for initial output, when reading at least 1024 bytes
         self.push_timeout(max(min(count, 1024), 64) * 0.5 / 500.0)
-        # one line is 78 chars long, and it holds 16 bytes
-        # make it 32 KiB at most
-        self.s.set_buffer_size(rx_size=min(32768, 78 * (count // 16)))
+        try:
+            # one line is 78 chars long, and it holds 16 bytes
+            # make it 32 KiB at most
+            self.s.set_buffer_size(rx_size=min(32768, 78 * (count // 16)))
+        except AttributeError:
+            # Serial.set_buffer_size is only available on win32
+            pass
 
         read_count = 0
         self.flush()
