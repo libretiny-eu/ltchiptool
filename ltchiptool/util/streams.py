@@ -12,11 +12,18 @@ from .logging import stream
 
 
 class StreamHook(ABC):
+    read_key: str
+    write_key: str
+
+    def __init__(self) -> None:
+        self.read_key = f"_read_{id(self)}"
+        self.write_key = f"_write_{id(self)}"
+
     def read(self, io: IO[bytes], n: int) -> bytes:
-        return getattr(io, "_read")(n)
+        return getattr(io, self.read_key)(n)
 
     def write(self, io: IO[bytes], data: bytes) -> int:
-        return getattr(io, "_write")(data)
+        return getattr(io, self.write_key)(data)
 
     def on_after_read(self, data: bytes) -> Optional[bytes]:
         return data
@@ -25,13 +32,13 @@ class StreamHook(ABC):
         return data
 
     def attach(self, io: IO[bytes], limit: int = 0) -> IO[bytes]:
-        if hasattr(io, "_read"):
+        if hasattr(io, self.read_key):
             return io
-        setattr(io, "_read", io.read)
-        setattr(io, "_write", io.write)
+        setattr(io, self.read_key, io.read)
+        setattr(io, self.write_key, io.write)
         try:
             end = io.tell() + limit
-        except UnsupportedOperation:
+        except (UnsupportedOperation, AttributeError):
             limit = 0
 
         def read(n: int = -1) -> bytes:
@@ -57,16 +64,15 @@ class StreamHook(ABC):
         setattr(io, "write", write)
         return io
 
-    @staticmethod
-    def detach(io: IO[bytes]) -> IO[bytes]:
-        read = getattr(io, "_read", None)
-        write = getattr(io, "_read", None)
+    def detach(self, io: IO[bytes]) -> IO[bytes]:
+        read = getattr(io, self.read_key, None)
+        write = getattr(io, self.write_key, None)
         if read is not None:
             setattr(io, "read", read)
-            delattr(io, "_read")
+            delattr(io, self.read_key)
         if write is not None:
             setattr(io, "write", write)
-            delattr(io, "_write")
+            delattr(io, self.write_key)
         return io
 
     @classmethod
@@ -107,6 +113,7 @@ class LoggingStreamHook(StreamHook):
     buf: dict
 
     def __init__(self):
+        super().__init__()
         self.buf = {"-> RX": "", "<- TX": ""}
 
     def _print(self, data: bytes, msg: str):
@@ -175,6 +182,7 @@ class ProgressCallback(StreamHook):
 
 class ClickProgressCallback(ProgressCallback):
     def __init__(self, length: int = 0, width: int = 64):
+        super().__init__()
         self.bar = click.progressbar(length=length, width=width)
 
     def on_update(self, steps: int) -> None:
