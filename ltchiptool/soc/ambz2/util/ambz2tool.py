@@ -12,7 +12,7 @@ import click
 from xmodem import XMODEM
 
 from ltchiptool.util.intbin import align_down
-from ltchiptool.util.logging import LoggingHandler, stream, verbose
+from ltchiptool.util.logging import LoggingHandler, verbose
 from ltchiptool.util.misc import retry_catching, retry_generator
 from ltchiptool.util.serialtool import SerialToolBase
 
@@ -92,10 +92,7 @@ class AmbZ2Tool(SerialToolBase):
         self.ping()
         self.command(f"ucfg {baudrate} 0 0")
         # change Serial port baudrate
-        stream("-- UART: Changing port baudrate")
-        self.s.close()
-        self.s.baudrate = baudrate
-        self.s.open()
+        self.set_baudrate(baudrate)
         # wait up to 1 second for OK response
         self.push_timeout(1.0)
         try:

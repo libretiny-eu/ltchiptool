@@ -7,6 +7,7 @@ from ltchiptool.util.cli import get_multi_command_class
 COMMANDS = {
     "bkpackager": "ltchiptool/soc/bk72xx/bkpackager.py",
     "rtltool": "ltchiptool/soc/ambz/util/rtltool.py",
+    "ambztool": "ltchiptool/soc/ambz/util/ambztool.py",
     "ambz2tool": "ltchiptool/soc/ambz2/util/ambz2tool.py",
 }
 

@@ -35,6 +35,7 @@ class SerialToolBase:
         self.s = None
 
     def set_baudrate(self, baudrate: int) -> None:
+        verbose(f"-- UART: Port baudrate set to {baudrate}")
         self.s.close()
         self.s.baudrate = baudrate
         self.s.open()
