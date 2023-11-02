@@ -139,10 +139,15 @@ class FlashPanel(BasePanel):
     def OnUpdate(self, target: wx.Window = None):
         writing = self.operation == FlashOp.WRITE
         reading = not writing
-        auto = self.auto_detect
-        manual = not auto
+
         is_uf2 = self.detection is not None and self.detection.is_uf2
         need_offset = self.detection is not None and self.detection.need_offset
+
+        auto = self.auto_detect
+        manual = not auto
+        if manual and is_uf2:
+            self.auto_detect = auto = True
+            manual = False
 
         match target:
             case (self.Read | self.ReadROM) if self.file:
@@ -183,8 +188,6 @@ class FlashPanel(BasePanel):
                 errors.append("File does not exist")
             else:
                 self.FileType.ChangeValue(self.detection.title)
-                if manual and is_uf2:
-                    self.auto_detect = auto = True
                 if auto:
                     self.family = self.detection.family
                     if not need_offset:
