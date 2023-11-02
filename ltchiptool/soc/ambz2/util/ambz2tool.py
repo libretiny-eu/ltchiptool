@@ -9,12 +9,12 @@ from time import time
 from typing import IO, Callable, Generator, List, Optional
 
 import click
-from serial import Serial
 from xmodem import XMODEM
 
 from ltchiptool.util.intbin import align_down
 from ltchiptool.util.logging import LoggingHandler, stream, verbose
 from ltchiptool.util.misc import retry_catching, retry_generator
+from ltchiptool.util.serialtool import SerialToolBase
 
 _T_XmodemCB = Optional[Callable[[int, int, int], None]]
 
@@ -33,9 +33,8 @@ class AmbZ2FlashSpeed(IntEnum):
     QPI = 5  # QPI
 
 
-class AmbZ2Tool:
+class AmbZ2Tool(SerialToolBase):
     crc_speed_bps: int = 1500000
-    prev_timeout_list: List[float]
     flash_mode: AmbZ2FlashMode = None
     flash_speed: AmbZ2FlashSpeed = AmbZ2FlashSpeed.SINGLE
     flash_hash_offset: int = None
@@ -48,13 +47,8 @@ class AmbZ2Tool:
         read_timeout: float = 0.6,
         retry_count: int = 10,
     ):
-        self.prev_timeout_list = []
-        self.link_timeout = link_timeout
-        self.read_timeout = read_timeout
-        self.retry_count = retry_count
-
+        super().__init__(port, baudrate, link_timeout, read_timeout, retry_count)
         LoggingHandler.get().attach(logging.getLogger("xmodem.XMODEM"))
-        self.s = Serial(port, baudrate)
         self.xm = XMODEM(
             getc=lambda size, timeout=1: self.read(size) or None,
             putc=lambda data, timeout=1: self.write(data),
@@ -65,94 +59,13 @@ class AmbZ2Tool:
     def flash_cfg(self) -> str:
         return f"{self.flash_speed} {self.flash_mode}"
 
-    #################################
-    # Serial transmission utilities #
-    #################################
-
-    def close(self) -> None:
-        self.s.close()
-        self.s = None
-
-    def write(self, data: bytes) -> None:
-        self.s.write(data)
+    #########################################
+    # Basic commands - public low-level API #
+    #########################################
 
     def command(self, cmd: str) -> None:
         self.flush()
         self.s.write(cmd.encode() + b"\n")
-
-    def read(self, count: int = None) -> bytes:
-        response = b""
-        end = time() + self.read_timeout
-        self.s.timeout = self.read_timeout
-        while time() < end:
-            to_read = self.s.in_waiting
-            if not to_read:
-                continue
-            if count:
-                to_read = min(to_read, count - len(response))
-            read = self.s.read(to_read)
-            if not read:
-                continue
-            end = time() + self.read_timeout
-            response += read
-            if count and len(response) >= count:
-                break
-
-        if not response:
-            raise TimeoutError(f"Timeout in read({count}) - no data received")
-        if not count:
-            return response
-        response = response[:count]
-        if len(response) != count:
-            raise TimeoutError(
-                f"Timeout in read({count}) - not enough data received ({len(response)})"
-            )
-        return response
-
-    def readlines(self) -> Generator[str, None, None]:
-        response = b""
-        end = time() + self.read_timeout
-        self.s.timeout = self.read_timeout
-        while time() < end:
-            read = self.s.read_all()
-            if not read:
-                continue
-            end = time() + self.read_timeout
-            while b"\n" in read:
-                line, _, read = read.partition(b"\n")
-                line = (response + line).decode().strip()
-                if not line:
-                    continue
-                yield line
-                response = b""
-            response += read
-        raise TimeoutError("Timeout in readlines() - no more data received")
-
-    def flush(self) -> None:
-        self.s.read_all()
-        self.s.flush()
-
-    def push_timeout(self, timeout: float) -> None:
-        verbose(f"push_timeout({timeout})")
-        self.prev_timeout_list.append(self.read_timeout)
-        self.read_timeout = timeout
-
-    def pop_timeout(self) -> None:
-        verbose("pop_timeout()")
-        self.read_timeout = self.prev_timeout_list.pop(-1)
-
-    def error_flush(self) -> None:
-        # try to clean up the serial buffer
-        # no data for 0.5 s means that the chip stopped sending bytes
-        self.push_timeout(0.5)
-        self.read()  # read all available data
-        self.pop_timeout()
-        # pop timeout of the failing function
-        self.pop_timeout()
-
-    #########################################
-    # Basic commands - public low-level API #
-    #########################################
 
     def ping(self) -> None:
         self.command("ping")
