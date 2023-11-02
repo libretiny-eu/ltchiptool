@@ -139,7 +139,7 @@ class AmebaZ2Flash(SocInterface, ABC):
 
         # collect continuous blocks of data
         parts = ctx.collect_data(OTAScheme.FLASHER_DUAL_1)
-        callback.on_total(sum(len(part.getvalue()) for part in parts.values()) + 4)
+        callback.on_total(sum(len(part.getvalue()) for part in parts.values()))
 
         # write blocks to flash
         for offset, data in parts.items():
@@ -150,4 +150,3 @@ class AmebaZ2Flash(SocInterface, ABC):
 
         callback.on_message("Booting firmware")
         self.amb.disconnect()
-        callback.on_update(4)

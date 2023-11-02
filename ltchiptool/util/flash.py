@@ -28,9 +28,11 @@ class FlashConnection:
     link_timeout: float = 20.0
     linked: bool = False
 
-    def fill_baudrate(self, baudrate: int) -> None:
-        self.link_baudrate = self.link_baudrate or baudrate
-        self.baudrate = self.baudrate or self.link_baudrate or baudrate
+    def fill_baudrate(self, baudrate: int, link_baudrate: int = None) -> None:
+        if link_baudrate is None:
+            link_baudrate = baudrate
+        self.link_baudrate = self.link_baudrate or link_baudrate
+        self.baudrate = self.baudrate or baudrate or self.link_baudrate
 
 
 def format_flash_guide(soc) -> List[str]:
