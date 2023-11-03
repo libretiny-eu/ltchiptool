@@ -42,6 +42,8 @@ class StreamHook(ABC):
             limit = 0
 
         def read(n: int = -1) -> bytes:
+            if self.is_unregistered(type(io)):
+                return getattr(io, self.read_key)(n)
             if limit > 0:
                 # read at most 'limit' bytes
                 pos = io.tell()
@@ -55,6 +57,8 @@ class StreamHook(ABC):
             return data
 
         def write(data: bytes) -> int:
+            if self.is_unregistered(type(io)):
+                return getattr(io, self.write_key)(data)
             data_new = self.on_before_write(data)
             if isinstance(data_new, bytes):
                 data = data_new
@@ -77,24 +81,27 @@ class StreamHook(ABC):
 
     @classmethod
     def register(cls, target: Type, *hook_args, **hook_kwargs) -> None:
-        if hasattr(target, "__init_hook__"):
+        if hasattr(target, f"__hook_unregistered_{cls.__name__}__"):
+            delattr(target, f"__hook_unregistered_{cls.__name__}__")
+        if hasattr(target, f"__init_hook_{cls.__name__}__"):
             return
-        setattr(target, "__init_hook__", target.__init__)
+        setattr(target, f"__init_hook_{cls.__name__}__", target.__init__)
 
         # noinspection PyArgumentList
         def init(self, *args, **kwargs):
-            self.__init_hook__(*args, **kwargs)
+            getattr(target, f"__init_hook_{cls.__name__}__")(self, *args, **kwargs)
             hook = cls(*hook_args, **hook_kwargs)
             hook.attach(self)
 
         setattr(target, "__init__", init)
 
-    @staticmethod
-    def unregister(target: Type):
-        __init__ = getattr(target, "__init_hook__", None)
+    @classmethod
+    def unregister(cls, target: Type):
+        setattr(target, f"__hook_unregistered_{cls.__name__}__", True)
+        __init__ = getattr(target, f"__init_hook_{cls.__name__}__", None)
         if __init__ is not None:
             setattr(target, "__init__", __init__)
-            delattr(target, "__init_hook__")
+            delattr(target, f"__init_hook_{cls.__name__}__")
 
     @classmethod
     def set_registered(cls, target: Type, registered: bool):
@@ -103,9 +110,13 @@ class StreamHook(ABC):
         else:
             cls.unregister(target)
 
-    @staticmethod
-    def is_registered(target: Type):
-        return hasattr(target, "__init_hook__")
+    @classmethod
+    def is_registered(cls, target: Type):
+        return hasattr(target, f"__init_hook_{cls.__name__}__")
+
+    @classmethod
+    def is_unregistered(cls, target: Type):
+        return hasattr(target, f"__hook_unregistered_{cls.__name__}__")
 
 
 class LoggingStreamHook(StreamHook):
