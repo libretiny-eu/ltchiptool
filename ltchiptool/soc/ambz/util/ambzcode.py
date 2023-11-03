@@ -58,15 +58,26 @@ class AmbZCode:
 
     @staticmethod
     def download_mode() -> bytes:
+        """Disable booting to SRAM and run download mode again."""
+        # ldr r3, uartimg_boot_sram
+        # ldr r0, [r3]
+        # ldr r1, uartimg_boot_mask
+        # ands r0, r0, r1
+        # str r0, [r3]
         # movs r0, #2
         # ldr r3, UARTIMG_Download
         # blx r3
-        # movs r0, r0
         # UARTIMG_Download: .word 0x900+1
+        # uartimg_boot_sram: .word 0x40000210
+        # uartimg_boot_mask: .word 0xEFFFFFFF
         return (
-            b"\x02\x20\x01\x4b"
-            b"\x98\x47\x00\x00"
+            b"\x04\x4b\x18\x68"
+            b"\x04\x49\x08\x40"
+            b"\x18\x60\x02\x20"
+            b"\x00\x4b\x98\x47"
             b"\x01\x09\x00\x00"  # UARTIMG_Download()
+            b"\x10\x02\x00\x40"  # uartimg_boot_sram
+            b"\xff\xff\xff\xef"  # uartimg_boot_mask
         )
 
     @staticmethod

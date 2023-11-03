@@ -152,12 +152,22 @@ class AmbZTool(SerialToolBase):
     # Basic commands - public low-level API #
     #########################################
 
-    def link(self, disconnect: bool = False) -> None:
+    def disconnect(self) -> None:
+        # try to enter Loud-Handshake mode
+        command = [
+            # - Xmodem -> Handshake
+            # - Loud-Handshake -> Quiet-Handshake
+            AmbZCommand.XMODEM_CAN,
+            # - Handshake -> Xmodem
+            AmbZCommand.XMODEM_HANDSHAKE,
+            # - Xmodem -> Loud-Handshake (resets baud rate)
+            AmbZCommand.XMODEM_CAN,
+        ]
+        self.write(bytes(command))
+
+    def link(self) -> None:
         # clear any data before linking
         self.flush()
-        if disconnect:
-            # break NAK stream to force resetting baudrate
-            self.quiet_handshake()
         handshake = b""
         end = time() + self.link_timeout
         while time() < end:
@@ -169,17 +179,7 @@ class AmbZTool(SerialToolBase):
             handshake = handshake[-4:]
             if len(handshake) == 4 and all(c == NAK[0] for c in handshake):
                 break
-            # try to enter Loud-Handshake mode
-            command = [
-                # - Xmodem -> Handshake
-                # - Loud-Handshake -> Quiet-Handshake
-                AmbZCommand.XMODEM_CAN,
-                # - Handshake -> Xmodem
-                AmbZCommand.XMODEM_HANDSHAKE,
-                # - Xmodem -> Loud-Handshake (resets baud rate)
-                AmbZCommand.XMODEM_CAN,
-            ]
-            self.write(bytes(command))
+            self.disconnect()
             sleep(0.1)
             self.set_baudrate(AMBZ_ROM_BAUDRATE)
         else:
@@ -351,7 +351,6 @@ class AmbZTool(SerialToolBase):
 
         self.write(bytes([AmbZCommand.XMODEM_HANDSHAKE]))
         self.expect_ack("Xmodem handshake")
-        self.xm.mode = "xmodem"
         # fake a NAK to make xmodem happy
         self.xm_send_code = NAK
         # fake an ACK after EOT to make xmodem very happy
@@ -499,7 +498,7 @@ def cli(device: str):
         warning(f"Couldn't process flash ID: got {chip_info!r}")
 
     info("Disconnecting...")
-    amb.link(disconnect=True)
+    amb.disconnect()
 
 
 if __name__ == "__main__":

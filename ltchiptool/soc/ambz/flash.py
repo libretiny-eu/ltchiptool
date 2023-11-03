@@ -1,13 +1,16 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
+from io import BytesIO
 from logging import debug, warning
 from time import sleep
 from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
+from ltchiptool.soc.amb.system import SystemData
 from ltchiptool.util.flash import FlashConnection
-from ltchiptool.util.intbin import gen2bytes, letoint
+from ltchiptool.util.intbin import gen2bytes
+from ltchiptool.util.logging import verbose
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
@@ -97,7 +100,7 @@ class AmebaZFlash(SocInterface, ABC):
     def flash_disconnect(self) -> None:
         if self.amb:
             try:
-                self.amb.link(disconnect=True)
+                self.amb.disconnect()
             except TimeoutError:
                 pass
             self.amb.close()
@@ -184,26 +187,40 @@ class AmebaZFlash(SocInterface, ABC):
     ) -> None:
         # read system data to get active OTA index
         callback.on_message("Checking OTA index...")
-        system = gen2bytes(self.flash_read_raw(0x9000, 256))
-        if len(system) < 256:
+        system_data = gen2bytes(self.flash_read_raw(0x9000, 4096, verify=False))
+        if len(system_data) != 4096:
             raise ValueError(
-                f"Length invalid while reading from 0x9000 - {len(system)}"
+                f"Length invalid while reading from 0x9000 - {len(system_data)}"
             )
+        system = SystemData.unpack(system_data)
+        verbose(f"Realtek System Data: {system}")
 
         # read OTA switch value
-        ota_switch = f"{letoint(system[4:8]):032b}"
+        ota_switch = f"{system.ota2_switch:032b}"
         # count 0-bits
         ota_idx = 1 + (ota_switch.count("0") % 2)
 
-        # validate OTA2 address in system data
-        if ota_idx == 2:
-            ota2_addr = letoint(system[0:4]) & 0xFFFFFF
+        # check OTA2 address
+        try:
+            ota2_addr = system.ota2_address & 0xFFFFFF
             part_addr = ctx.get_offset("ota2", 0)
             if ota2_addr != part_addr:
-                raise ValueError(
-                    f"Invalid OTA2 address on chip - "
-                    f"found {ota2_addr}, expected {part_addr}",
+                # if it differs, correct it
+                system.ota2_address = AMBZ_FLASH_ADDRESS | part_addr
+                # reset OTA switch to use OTA1
+                system.ota2_switch = 0xFFFFFFFF
+                ota_idx = 1
+                # flash new system data
+                system_data = system.pack()
+                callback.on_message("Adjusting OTA2 address...")
+                self.flash_write_raw(
+                    offset=0x9000,
+                    length=len(system_data),
+                    data=BytesIO(system_data),
+                    callback=callback,
                 )
+        except ValueError:
+            warning("OTA2 partition not found in UF2 package")
 
         # collect continuous blocks of data
         parts = ctx.collect_data(
