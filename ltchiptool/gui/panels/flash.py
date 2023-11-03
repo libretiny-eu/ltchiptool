@@ -1,12 +1,14 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import os
+import webbrowser
 from datetime import datetime
 from logging import debug, info
 from os.path import dirname, isfile, realpath
 
 import wx
 import wx.adv
+import wx.lib.agw.genericmessagedialog as GMD
 import wx.xrc
 
 from ltchiptool import Family, SocInterface
@@ -16,7 +18,7 @@ from ltchiptool.gui.work.ports import PortWatcher
 from ltchiptool.util.cli import list_serial_ports
 from ltchiptool.util.detection import Detection
 from ltchiptool.util.fileio import chname
-from ltchiptool.util.flash import FlashOp
+from ltchiptool.util.flash import FlashFeatures, FlashOp, format_flash_guide
 from ltchiptool.util.logging import verbose
 
 from .base import BasePanel
@@ -42,10 +44,14 @@ class FlashPanel(BasePanel):
         self.Write = self.BindRadioButton("radio_write")
         self.Read = self.BindRadioButton("radio_read")
         self.ReadROM = self.BindRadioButton("radio_read_rom")
+        self.ReadEfuse = self.BindRadioButton("radio_read_efuse")
+        self.ReadInfo = self.BindRadioButton("radio_read_info")
         self.AutoDetect = self.BindCheckBox("checkbox_auto_detect")
         self.FileText = self.FindStaticText("text_file")
         self.File = self.BindTextCtrl("input_file")
         self.Family = self.BindComboBox("combo_family")
+        self.Guide = self.BindButton("button_guide", self.OnGuideClick)
+        self.Docs = self.BindButton("button_docs", self.OnDocsClick)
         self.BindButton("button_browse", self.OnBrowseClick)
         self.Start: wx.adv.CommandLinkButton = self.BindButton(
             "button_start", self.OnStartClick
@@ -137,6 +143,35 @@ class FlashPanel(BasePanel):
         self.StartWork(PortWatcher(self.OnPortsUpdated), freeze_ui=False)
 
     def OnUpdate(self, target: wx.Window = None):
+        if target == self.Family:
+            # update components based on SocInterface feature set
+            soc = self.soc
+            if soc:
+                features = soc.flash_get_features()
+                guide = soc.flash_get_guide()
+                docs = soc.flash_get_docs_url()
+            else:
+                features = FlashFeatures()
+                guide = None
+                docs = None
+            self.Write.Enable(features.can_write)
+            self.Read.Enable(features.can_read)
+            self.ReadROM.Enable(features.can_read_rom)
+            self.ReadEfuse.Enable(features.can_read_efuse)
+            self.ReadInfo.Enable(features.can_read_info)
+            self.Guide.Enable(bool(guide))
+            self.Docs.Enable(bool(docs))
+            if not features.can_write and self.Write.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read and self.Read.GetValue():
+                self.Write.SetValue(True)
+            if not features.can_read_rom and self.ReadROM.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read_efuse and self.ReadEfuse.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read_info and self.ReadInfo.GetValue():
+                self.Read.SetValue(True)
+
         writing = self.operation == FlashOp.WRITE
         reading = not writing
 
@@ -145,12 +180,12 @@ class FlashPanel(BasePanel):
 
         auto = self.auto_detect
         manual = not auto
-        if manual and is_uf2:
+        if writing and manual and is_uf2:
             self.auto_detect = auto = True
             manual = False
 
         match target:
-            case (self.Read | self.ReadROM) if self.file:
+            case (self.Read | self.ReadROM | self.ReadEfuse) if self.file:
                 # generate a new filename for reading, to prevent
                 # accidentally overwriting firmware files
                 if not self.prev_file:
@@ -321,6 +356,10 @@ class FlashPanel(BasePanel):
             return FlashOp.READ
         if self.ReadROM.GetValue():
             return FlashOp.READ_ROM
+        if self.ReadEfuse.GetValue():
+            return FlashOp.READ_EFUSE
+        if self.ReadInfo.GetValue():
+            return FlashOp.READ_INFO
 
     @operation.setter
     def operation(self, value: FlashOp):
@@ -334,6 +373,12 @@ class FlashPanel(BasePanel):
             case FlashOp.READ_ROM:
                 self.ReadROM.SetValue(True)
                 self.DoUpdate(self.ReadROM)
+            case FlashOp.READ_EFUSE:
+                self.ReadEfuse.SetValue(True)
+                self.DoUpdate(self.ReadEfuse)
+            case FlashOp.READ_INFO:
+                self.ReadInfo.SetValue(True)
+                self.DoUpdate(self.ReadInfo)
 
     @property
     def auto_detect(self):
@@ -358,6 +403,15 @@ class FlashPanel(BasePanel):
             for family in value.inheritance:
                 self.Family.SetValue(family.description)
         self.DoUpdate(self.Family)
+
+    @property
+    def soc(self) -> SocInterface | None:
+        if not self.family:
+            return None
+        if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
+            return self.detection.soc or SocInterface.get(self.family)
+        else:
+            return SocInterface.get(self.family)
 
     @property
     def file(self):
@@ -454,6 +508,31 @@ class FlashPanel(BasePanel):
         self.OnPortsUpdated(list_serial_ports())
 
     @on_event
+    def OnGuideClick(self):
+        guide = self.soc.flash_get_guide()
+        if not guide:
+            self.Guide.Disable()
+            return
+        dialog = GMD.GenericMessageDialog(
+            parent=self,
+            message="\n".join(format_flash_guide(self.soc)),
+            caption="Flashing guide",
+            agwStyle=wx.ICON_INFORMATION | wx.OK,
+        )
+        font = wx.Font(wx.FontInfo(10).Family(wx.MODERN))
+        dialog.SetFont(font)
+        dialog.ShowModal()
+        dialog.Destroy()
+
+    @on_event
+    def OnDocsClick(self):
+        docs = self.soc.flash_get_docs_url()
+        if not docs:
+            self.Docs.Disable()
+            return
+        webbrowser.open_new_tab(docs)
+
+    @on_event
     def OnBrowseClick(self):
         if self.operation == FlashOp.WRITE:
             title = "Open file"
@@ -473,10 +552,7 @@ class FlashPanel(BasePanel):
 
     @on_event
     def OnStartClick(self):
-        if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
-            soc = self.detection.soc or SocInterface.get(self.family)
-        else:
-            soc = SocInterface.get(self.family)
+        soc = self.soc
 
         if self.operation != FlashOp.WRITE:
             if self.file == self.auto_file:

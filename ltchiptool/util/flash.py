@@ -17,6 +17,8 @@ class FlashOp(Enum):
     WRITE = "write"
     READ = "read"
     READ_ROM = "read_rom"
+    READ_EFUSE = "read_efuse"
+    READ_INFO = "read_info"
 
 
 @dataclass
@@ -33,6 +35,15 @@ class FlashConnection:
             link_baudrate = baudrate
         self.link_baudrate = self.link_baudrate or link_baudrate
         self.baudrate = self.baudrate or baudrate or self.link_baudrate
+
+
+@dataclass
+class FlashFeatures:
+    can_write: bool = True
+    can_read: bool = True
+    can_read_rom: bool = True
+    can_read_efuse: bool = True
+    can_read_info: bool = True
 
 
 def format_flash_guide(soc) -> List[str]:

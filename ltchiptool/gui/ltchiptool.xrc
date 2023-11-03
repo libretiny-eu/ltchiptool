@@ -280,10 +280,13 @@
 			<object class="sizeritem">
 				<cellpos>2,1</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL|wxEXPAND</flag>
+				<flag>wxALL</flag>
 				<border>5</border>
-				<object class="wxBoxSizer" name="sizer_operation">
-					<orient>wxHORIZONTAL</orient>
+				<object class="wxGridSizer" name="grid_sizer">
+					<rows>0</rows>
+					<cols>3</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
 					<object class="sizeritem">
 						<flag>wxALL</flag>
 						<border>5</border>
@@ -303,8 +306,29 @@
 					<object class="sizeritem">
 						<flag>wxALL</flag>
 						<border>5</border>
+						<object class="wxStaticText" name="text_dummy">
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_read_info">
+							<label>Get chip info</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
 						<object class="wxRadioButton" name="radio_read_rom">
 							<label>Read ROM</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxRadioButton" name="radio_read_efuse">
+							<label>Read eFuse</label>
 						</object>
 					</object>
 				</object>
@@ -446,6 +470,32 @@
 			</object>
 			<object class="sizeritem">
 				<cellpos>7,1</cellpos>
+				<cellspan>1,1</cellspan>
+				<flag>wxALL|wxEXPAND</flag>
+				<border>0</border>
+				<object class="wxGridSizer" name="sizer_guides">
+					<rows>0</rows>
+					<cols>2</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_guide">
+							<label>Connection guide</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_docs">
+							<label>Open flashing docs</label>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<cellpos>8,1</cellpos>
 				<cellspan>1,1</cellspan>
 				<flag>wxALL|wxEXPAND</flag>
 				<border>0</border>

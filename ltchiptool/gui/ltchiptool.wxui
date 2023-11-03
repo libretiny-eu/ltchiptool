@@ -259,10 +259,9 @@
             var_name="radio_baudrate_921600" />
         </node>
         <node
-          class="wxBoxSizer"
-          var_name="sizer_operation"
+          class="wxGridSizer"
+          cols="3"
           column="1"
-          flags="wxEXPAND"
           row="2">
           <node
             class="wxRadioButton"
@@ -275,9 +274,21 @@
             label="Read flash"
             var_name="radio_read" />
           <node
+            class="wxStaticText"
+            label=""
+            var_name="text_dummy" />
+          <node
+            class="wxRadioButton"
+            label="Get chip info"
+            var_name="radio_read_info" />
+          <node
             class="wxRadioButton"
             label="Read ROM"
             var_name="radio_read_rom" />
+          <node
+            class="wxRadioButton"
+            label="Read eFuse"
+            var_name="radio_read_efuse" />
         </node>
         <node
           class="wxStaticText"
@@ -400,11 +411,29 @@
         </node>
         <node
           class="wxGridSizer"
-          var_name="sizer_buttons"
+          var_name="sizer_guides"
           border_size="0"
           column="1"
           flags="wxEXPAND"
           row="7">
+          <node
+            class="wxButton"
+            label="Connection guide"
+            var_name="button_guide"
+            flags="wxEXPAND" />
+          <node
+            class="wxButton"
+            label="Open flashing docs"
+            var_name="button_docs"
+            flags="wxEXPAND" />
+        </node>
+        <node
+          class="wxGridSizer"
+          var_name="sizer_buttons"
+          border_size="0"
+          column="1"
+          flags="wxEXPAND"
+          row="8">
           <node
             class="wxCommandLinkButton"
             main_label="Start"

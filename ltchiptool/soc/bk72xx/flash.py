@@ -9,7 +9,7 @@ from typing import IO, Generator, List, Optional, Union
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashFeatures
 from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
 from ltchiptool.util.streams import ProgressCallback
@@ -21,21 +21,34 @@ BK72XX_GUIDE = [
         ("PC", "BK7231"),
         ("RX", "TX1 (GPIO11 / P11)"),
         ("TX", "RX1 (GPIO10 / P10)"),
-        ("RTS", "CEN (or RST, optional)"),
         ("", ""),
         ("GND", "GND"),
     ],
-    "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
-    "lose power during chip reset. Usually, the adapter's power regulator\n"
-    "is not enough and an external power supply is needed (like AMS1117).",
-    "If you didn't connect RTS to CEN, after running the command you have\n"
-    "around 20 seconds to reset the chip manually. In order to do that,\n"
-    "you need to bridge CEN to GND with a wire.",
+    "Using a good, stable 3.3V power supply is crucial. Most flashing issues\n"
+    "are caused by either voltage drops during intensive flash operations,\n"
+    "or bad/loose wires.",
+    "The UART adapter's 3.3V power regulator is usually not enough. Instead,\n"
+    "a regulated bench power supply, or a linear 1117-type regulator is recommended.",
+    "To enter download mode, the chip has to be rebooted while the flashing program\n"
+    "is trying to establish communication.\n"
+    "In order to do that, you need to bridge CEN pin to GND with a wire.",
 ]
 
 
 class BK72XXFlash(SocInterface, ABC):
     bk: Optional[BK7231Serial] = None
+
+    def flash_get_features(self) -> FlashFeatures:
+        return FlashFeatures(
+            can_read_efuse=False,
+            can_read_info=False,
+        )
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return BK72XX_GUIDE
+
+    def flash_get_docs_url(self) -> Optional[str]:
+        return "https://docs.libretiny.eu/link/flashing-beken-72xx"
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
@@ -94,9 +107,6 @@ class BK72XXFlash(SocInterface, ABC):
             f"Protocol: {self.bk.protocol_type.name}",
         ]
         return " / ".join(items)
-
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        return BK72XX_GUIDE
 
     def flash_get_size(self) -> int:
         return 0x200000

@@ -5,7 +5,7 @@ from typing import IO, Dict, Generator, List, Optional, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashFeatures
 from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import UploadContext
@@ -106,6 +106,18 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_get_features(self) -> FlashFeatures:
+        """Check which flasher features are supported."""
+        return FlashFeatures()  # Optional; do not fail here
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        """Get a short textual guide for putting the chip in download mode."""
+        return []  # Optional; do not fail here
+
+    def flash_get_docs_url(self) -> Optional[str]:
+        """Get a link to flashing documentation."""
+        return None  # Optional; do not fail here
+
     def flash_set_connection(self, connection: FlashConnection) -> None:
         """Configure device connection parameters."""
         raise NotImplementedError()
@@ -139,10 +151,6 @@ class SocInterface(ABC):
         """Read chip info from the protocol as a string."""
         raise NotImplementedError()
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        """Get a short textual guide for putting the chip in download mode."""
-        return []  # Optional; do not fail here
-
     def flash_get_size(self) -> int:
         """Retrieve the flash size, in bytes."""
         raise NotImplementedError()
@@ -150,7 +158,7 @@ class SocInterface(ABC):
     def flash_get_rom_size(self) -> int:
         """Retrieve the ROM size, in bytes. Raises NotImplementedError() if ROM is
         not available or not readable."""
-        raise NotImplementedError()
+        raise NotImplementedError("No ROM, or reading not possible via UART")
 
     def flash_read_raw(
         self,

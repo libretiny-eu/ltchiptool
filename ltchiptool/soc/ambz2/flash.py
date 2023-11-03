@@ -4,7 +4,7 @@ from abc import ABC
 from typing import IO, Generator, Optional
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashFeatures
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
@@ -13,6 +13,12 @@ from .util.ambz2tool import AmbZ2Tool
 
 class AmebaZ2Flash(SocInterface, ABC):
     amb: Optional[AmbZ2Tool] = None
+
+    def flash_get_features(self) -> FlashFeatures:
+        return FlashFeatures(
+            can_read_efuse=False,
+            can_read_info=False,
+        )
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:

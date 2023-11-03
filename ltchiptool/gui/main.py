@@ -145,8 +145,8 @@ class MainFrame(wx.Frame):
         self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
         self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
-        self.SetSize((700, 800))
-        self.SetMinSize((600, 700))
+        self.SetSize((750, 850))
+        self.SetMinSize((700, 800))
         self.SetIcon(wx.Icon(icon, wx.BITMAP_TYPE_ICO))
         self.CreateStatusBar()
 

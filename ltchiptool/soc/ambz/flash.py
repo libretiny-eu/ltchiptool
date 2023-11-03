@@ -8,7 +8,7 @@ from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.amb.system import SystemData
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashFeatures
 from ltchiptool.util.intbin import gen2bytes
 from ltchiptool.util.logging import verbose
 from ltchiptool.util.streams import ProgressCallback
@@ -28,19 +28,22 @@ AMEBAZ_GUIDE = [
         ("PC", "RTL8710B"),
         ("RX", "TX2 (Log_TX / PA30)"),
         ("TX", "RX2 (Log_RX / PA29)"),
-        ("RTS", "CEN (or RST, optional)"),
-        ("DTR", "TX2 (Log_TX / PA30, optional)"),
         ("", ""),
         ("GND", "GND"),
     ],
-    "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
-    "lose power during chip reset. Usually, the adapter's power regulator\n"
-    "is not enough and an external power supply is needed (like AMS1117).",
-    "If you didn't connect RTS and DTR, you need to put the chip in download\n"
-    "mode manually. This is done by connecting CEN to GND, while holding TX2 (Log_TX)\n"
-    "to GND as well. After doing that, you need to disconnect TX2 from GND.",
-    "If the download mode is enabled, you'll see a few garbage characters\n"
-    "printed to the serial console every second.",
+    "Using a good, stable 3.3V power supply is crucial. Most flashing issues\n"
+    "are caused by either voltage drops during intensive flash operations,\n"
+    "or bad/loose wires.",
+    "The UART adapter's 3.3V power regulator is usually not enough. Instead,\n"
+    "a regulated bench power supply, or a linear 1117-type regulator is recommended.",
+    "In order to flash the chip, you need to enable download mode.\n"
+    "This is done by pulling CEN to GND briefly, while still keeping the TX2 pin\n"
+    "connected to GND.",
+    "Do this, in order:\n"
+    " - connect CEN to GND\n"
+    " - connect TX2 to GND\n"
+    " - release CEN from GND\n"
+    " - release TX2 from GND",
 ]
 
 
@@ -48,6 +51,19 @@ AMEBAZ_GUIDE = [
 class AmebaZFlash(SocInterface, ABC):
     amb: Optional[AmbZTool] = None
     chip_info: bytes = None
+
+    def flash_get_features(self) -> FlashFeatures:
+        return FlashFeatures(
+            can_read_rom=False,
+            can_read_efuse=False,
+            can_read_info=False,
+        )
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return AMEBAZ_GUIDE
+
+    def flash_get_docs_url(self) -> Optional[str]:
+        return "https://docs.libretiny.eu/link/flashing-realtek-ambz"
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
@@ -124,9 +140,6 @@ class AmebaZFlash(SocInterface, ABC):
         chip_id = self.chip_info[0]
         return AMBZ_CHIP_TYPE.get(chip_id, f"Unknown 0x{chip_id:02X}")
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        return AMEBAZ_GUIDE
-
     def flash_get_size(self) -> int:
         if not self.chip_info:
             self._read_chip_info()
@@ -135,9 +148,6 @@ class AmebaZFlash(SocInterface, ABC):
             return 1 << size_id
         warning(f"Couldn't process flash ID: got {self.chip_info!r}")
         return 0x200000
-
-    def flash_get_rom_size(self) -> int:
-        raise NotImplementedError("ROM is not readable via UART on RTL87xxB")
 
     def flash_read_raw(
         self,
