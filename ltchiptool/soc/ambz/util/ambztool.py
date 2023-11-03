@@ -5,16 +5,17 @@ import struct
 from enum import IntEnum
 from hashlib import md5
 from io import BytesIO
-from logging import debug, warning
+from logging import debug, info, warning
 from time import sleep, time
 from typing import IO, Callable, Generator, Optional
 
 import click
 from xmodem import XMODEM
 
+from ltchiptool.util.cli import DevicePortParamType
 from ltchiptool.util.intbin import align_down, align_up, inttole16, inttole24, inttole32
 from ltchiptool.util.logging import LoggingHandler, verbose
-from ltchiptool.util.misc import retry_generator
+from ltchiptool.util.misc import retry_generator, sizeof
 from ltchiptool.util.serialtool import SerialToolBase
 from ltchiptool.util.streams import StreamHook
 
@@ -29,6 +30,7 @@ AMBZ_ROM_BAUDRATE = 1500000
 AMBZ_DIAG_BAUDRATE = 115200
 AMBZ_FLASH_ADDRESS = 0x8000000
 AMBZ_RAM_ADDRESS = 0x10002000
+AMBZ_GREETING_TEXT = b"AmbZTool_Marker!"
 
 AMBZ_CHIP_TYPE = {
     0xE0: "RTL8710BL",  # ???
@@ -109,7 +111,6 @@ class AmbZAddressHook(StreamHook):
 
 
 class AmbZTool(SerialToolBase):
-    crc_speed_bps: int = 1500000
     xm_send_code: Optional[bytes] = None
     xm_fake_ack: bool = False
 
@@ -120,6 +121,7 @@ class AmbZTool(SerialToolBase):
         link_timeout: float = 10.0,
         read_timeout: float = 0.6,
         retry_count: int = 10,
+        quiet_timeout: float = 10.0,
     ):
         super().__init__(port, baudrate, link_timeout, read_timeout, retry_count)
         LoggingHandler.get().attach(logging.getLogger("xmodem.XMODEM"))
@@ -128,6 +130,7 @@ class AmbZTool(SerialToolBase):
             putc=self.xm_putc,
             mode="xmodem1k",
         )
+        self.quiet_timeout = quiet_timeout
 
     #############################
     # Xmodem serial port access #
@@ -187,7 +190,7 @@ class AmbZTool(SerialToolBase):
     def quiet_handshake(self) -> None:
         self.flush()
         self.push_timeout(0.1)
-        end = time() + self.link_timeout
+        end = time() + self.quiet_timeout
         while time() < end:
             self.write(ACK)
             # discard everything from Loud-Handshake
@@ -422,12 +425,14 @@ class AmbZTool(SerialToolBase):
         prev_baudrate = self.s.baudrate
         self.change_baudrate(AMBZ_DIAG_BAUDRATE)
 
+        # find actual response using a marker message
+        # wait before printing to let previous bytes through
+        code = AmbZCode.print_greeting(delay=0.4, data=AMBZ_GREETING_TEXT) + code
         # go back into download mode after we're done
         code = code + AmbZCode.download_mode()
 
         # messages printed by the ROM
-        # DiagPrintf changes "\n" to "\n\r"
-        msg_pre = b"\rclose xModem Transfer ...\r\n\r"
+        msg_pre = AMBZ_GREETING_TEXT
         msg_post = b"UARTIMG_Download"
         # send RAM code, exit download mode (changes baudrate to 115200)
         self.ram_boot(code=code, callback=callback, keep_baudrate=True)
@@ -447,10 +452,10 @@ class AmbZTool(SerialToolBase):
         if msg_pre in resp:
             resp = resp.partition(msg_pre)[2]
         elif msg_pre[-7:] in resp:
-            warning(f"Expected message not found: {resp!r}")
+            warning(f"Partial marker message found: {resp!r}")
             resp = resp.partition(msg_pre[-7:])[2]
         else:
-            raise RuntimeError(f"Response unreadable: {resp!r}")
+            raise RuntimeError(f"Marker message not found: {resp!r}")
 
         if msg_post in resp:
             resp = resp.partition(msg_post)[0]
@@ -467,8 +472,34 @@ class AmbZTool(SerialToolBase):
 @click.command(
     help="AmebaZ flashing tool",
 )
-def cli():
-    raise NotImplementedError()
+@click.option(
+    "-d",
+    "--device",
+    help="Target device port (default: auto detect)",
+    type=DevicePortParamType(),
+    default=(),
+)
+def cli(device: str):
+    amb = AmbZTool(port=device, baudrate=AMBZ_ROM_BAUDRATE)
+    info("Linking...")
+    amb.link()
+
+    chip_info = amb.ram_boot_read(
+        AmbZCode.read_chip_id(offset=0)
+        + AmbZCode.read_flash_id(offset=1)
+        + AmbZCode.print_data(length=4)
+    )
+    info(f"Received chip info: {chip_info.hex()}")
+    chip_id = chip_info[0]
+    size_id = chip_info[3]
+    info("Chip type: " + AMBZ_CHIP_TYPE.get(chip_id, f"Unknown 0x{chip_id:02X}"))
+    if 0x14 <= size_id <= 0x19:
+        info("Flash size: " + sizeof(1 << size_id))
+    else:
+        warning(f"Couldn't process flash ID: got {chip_info!r}")
+
+    info("Disconnecting...")
+    amb.link(disconnect=True)
 
 
 if __name__ == "__main__":

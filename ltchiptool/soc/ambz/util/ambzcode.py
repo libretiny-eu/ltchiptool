@@ -22,6 +22,41 @@ class AmbZCode:
         )
 
     @staticmethod
+    def print_greeting(delay: float, data: bytes) -> bytes:
+        # ldr r0, ms_delay
+        # ldr r3, DelayMs
+        # blx r3
+        # adr r0, message_data
+        # ldr r1, message_size
+        # ldr r3, xmodem_uart_putdata
+        # blx r3
+        # b next
+        # DelayMs: .word 0x346C+1
+        # xmodem_uart_putdata: .word 0xEC48+1
+        # ms_delay: .word 1000
+        # message_size: .word 16
+        # message_data: .word 0,0,0,0
+        # next:
+        ms_delay = int(delay * 1000)
+        message_size = len(data)
+        if message_size > 16:
+            raise ValueError("Message must be 16 bytes or shorter")
+        message_data = data.ljust(16, b"\x00")
+        return (
+            (
+                b"\x05\x48\x03\x4b"
+                b"\x98\x47\x06\xa0"
+                b"\x04\x49\x02\x4b"
+                b"\x98\x47\x0f\xe0"
+                b"\x6d\x34\x00\x00"  # DelayMs()
+                b"\x49\xec\x00\x00"  # xmodem_uart_putdata()
+            )
+            + inttole32(ms_delay)
+            + inttole32(message_size)
+            + message_data
+        )
+
+    @staticmethod
     def download_mode() -> bytes:
         # movs r0, #2
         # ldr r3, UARTIMG_Download
@@ -166,14 +201,15 @@ class AmbZCode:
 
     @staticmethod
     def print_data(length: int, address: int = AMBZ_DATA_ADDRESS) -> bytes:
-        # ldr r0, read_data
-        # movs r1, #length
+        # ldr r0, address
+        # ldr r1, length
         # ldr r3, xmodem_uart_putdata
         # blx r3
         # b next
         # movs r0, r0
         # xmodem_uart_putdata: .word 0xEC48+1
-        # read_data: .word 0x10003000
+        # address: .word 0x10003000
+        # length: .word 4
         # next:
         return (
             (
