@@ -96,15 +96,16 @@ class FlashThread(BaseThread):
                 elapsed += 1
         if self.should_stop():
             return
+        self.callback.on_message("Reading chip info...")
         chip_info = self.soc.flash_get_chip_info_string()
         self.on_chip_info(f"Chip info: {chip_info}")
 
     def _do_write(self):
         if self.should_stop():
             return
-        self.callback.on_message(None)
 
         if self.ctx:
+            self.callback.on_message(None)
             self.soc.flash_write_uf2(
                 ctx=self.ctx,
                 verify=self.verify,
@@ -127,6 +128,7 @@ class FlashThread(BaseThread):
         if self.skip + self.length > file_size:
             raise ValueError(f"File is too small (requested to write too much data)")
 
+        self.callback.on_message("Checking flash size...")
         max_length = self.soc.flash_get_size()
         if self.offset > max_length - self.length:
             raise ValueError(
@@ -138,6 +140,7 @@ class FlashThread(BaseThread):
         tell = file.tell()
         debug(f"Starting file position: {tell} / 0x{tell:X} / {sizeof(tell)}")
         self.callback.on_total(self.length)
+        self.callback.on_message(None)
         self.soc.flash_write_raw(
             offset=self.offset,
             length=self.length,
@@ -149,8 +152,8 @@ class FlashThread(BaseThread):
     def _do_read(self):
         if self.should_stop():
             return
-        self.callback.on_message(None)
 
+        self.callback.on_message("Checking flash size...")
         if self.operation == FlashOp.READ_ROM:
             max_length = self.soc.flash_get_rom_size()
         else:
@@ -167,6 +170,7 @@ class FlashThread(BaseThread):
         makedirs(dirname(self.file), exist_ok=True)
         file = open(self.file, "wb")
         self.callback.on_total(self.length)
+        self.callback.on_message(None)
         for chunk in self.soc.flash_read_raw(
             offset=self.offset,
             length=self.length,
