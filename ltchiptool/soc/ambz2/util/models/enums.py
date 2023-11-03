@@ -40,24 +40,6 @@ class SectionType(IntEnum):
     XIP = 0x85
 
 
-class FlashSpeed(IntEnum):
-    QIO = 0xFFFF  # Quad IO
-    QO = 0x7FFF  # Quad Output
-    DIO = 0x3FFF  # Dual IO
-    DO = 0x1FFF  # Dual Output
-    SINGLE = 0x0FFF  # One IO
-
-
-class FlashSize(IntEnum):
-    F_2MB = 0xFFFF
-    F_32MB = 0x7FFF
-    F_16MB = 0x3FFF
-    F_8MB = 0x1FFF
-    F_4MB = 0x0FFF
-    F_2MB_ = 0x07FF
-    F_1MB = 0x03FF
-
-
 class EncAlgo(IntEnum):
     AES_EBC = 0
     AES_CBC = 1

@@ -9,7 +9,6 @@ from datastruct.fields import (
     action,
     adapter,
     align,
-    alignto,
     bitfield,
     built,
     field,
@@ -19,9 +18,9 @@ from datastruct.fields import (
     subfield,
 )
 
-from .enums import FlashSize, FlashSpeed, PartitionType
+from .enums import PartitionType
 from .headers import FST, EntryHeader, SectionHeader, header_is_last
-from .utils import FF_16, FF_32, FF_48, BitFlag, index
+from .utils import FF_32, BitFlag, index
 
 
 @dataclass
@@ -75,37 +74,6 @@ class PartitionTable(DataStruct):
     _4: ... = padding(14)
     partitions: List[PartitionRecord] = repeat(lambda ctx: ctx.count + 1)(subfield())
     user_data: bytes = field(lambda ctx: ctx.user_data_len, default=b"")
-
-
-@dataclass
-class SystemData(DataStruct):
-    @dataclass
-    class ForceOldOTA:
-        is_active: bool
-        port: int
-        pin: int
-
-    # OTA section
-    _1: ... = alignto(0x08 + 3)
-    force_old_ota: ForceOldOTA = bitfield("b1P1u1u5", ForceOldOTA, 0xFF)
-    # Flash section
-    _2: ... = alignto(0x22)
-    flash_speed: FlashSpeed = field("H", default=FlashSpeed.QIO)
-    flash_size: FlashSize = field("H", default=FlashSize.F_2MB)
-    flash_id: bytes = field("3s", default=b"\xFF\xFF\xFF")
-    # Log UART section
-    _3: ... = alignto(0x30)
-    baudrate: int = adapter(
-        encode=lambda v, ctx: 0xFFFFFFFF if v == 115200 else v,
-        decode=lambda v, ctx: 115200 if v == 0xFFFFFFFF else v,
-    )(field("I", default=115200))
-    # Calibration data
-    _4: ... = alignto(0x40)
-    spic_calibration: bytes = field("48s", default=FF_48)
-    _5: ... = alignto(0xFE0)
-    bt_ftl_gc_status: int = field("I", default=0xFFFFFFFF)
-    _6: ... = alignto(0xFF0)
-    bt_calibration: bytes = field("16s", default=FF_16)
 
 
 @dataclass
