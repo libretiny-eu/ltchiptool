@@ -8,7 +8,7 @@ from typing import IO, Generator, List, Optional, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.amb.system import SystemData
-from ltchiptool.util.flash import FlashConnection, FlashFeatures
+from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
 from ltchiptool.util.intbin import gen2bytes
 from ltchiptool.util.logging import verbose
 from ltchiptool.util.streams import ProgressCallback
@@ -17,6 +17,8 @@ from uf2tool import OTAScheme, UploadContext
 from .util.ambzcode import AmbZCode
 from .util.ambztool import (
     AMBZ_CHIP_TYPE,
+    AMBZ_EFUSE_LOGICAL_SIZE,
+    AMBZ_EFUSE_PHYSICAL_SIZE,
     AMBZ_FLASH_ADDRESS,
     AMBZ_ROM_BAUDRATE,
     AmbZTool,
@@ -55,7 +57,6 @@ class AmebaZFlash(SocInterface, ABC):
     def flash_get_features(self) -> FlashFeatures:
         return FlashFeatures(
             can_read_rom=False,
-            can_read_efuse=False,
             can_read_info=False,
         )
 
@@ -140,33 +141,45 @@ class AmebaZFlash(SocInterface, ABC):
         chip_id = self.chip_info[0]
         return AMBZ_CHIP_TYPE.get(chip_id, f"Unknown 0x{chip_id:02X}")
 
-    def flash_get_size(self) -> int:
-        if not self.chip_info:
-            self._read_chip_info()
-        size_id = self.chip_info[3]
-        if 0x14 <= size_id <= 0x19:
-            return 1 << size_id
-        warning(f"Couldn't process flash ID: got {self.chip_info!r}")
-        return 0x200000
+    def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
+        if memory == FlashMemoryType.FLASH:
+            if not self.chip_info:
+                self._read_chip_info()
+            size_id = self.chip_info[3]
+            if 0x14 <= size_id <= 0x19:
+                return 1 << size_id
+            warning(f"Couldn't process flash ID: got {self.chip_info!r}")
+            return 0x200000
+        if memory == FlashMemoryType.EFUSE:
+            return AMBZ_EFUSE_PHYSICAL_SIZE + AMBZ_EFUSE_LOGICAL_SIZE
+        raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
         self,
         offset: int,
         length: int,
         verify: bool = True,
-        use_rom: bool = False,
+        memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
-        if use_rom:
-            self.flash_get_rom_size()
+        if memory == FlashMemoryType.ROM:
+            self.flash_get_size(memory)
         self.flash_connect()
         assert self.amb
-        gen = self.amb.flash_read(
-            offset=offset,
-            length=length,
-            hash_check=verify,
-        )
-        yield from callback.update_with(gen)
+        if memory == FlashMemoryType.FLASH:
+            gen = self.amb.flash_read(
+                offset=offset,
+                length=length,
+                hash_check=verify,
+            )
+            yield from callback.update_with(gen)
+        elif memory == FlashMemoryType.EFUSE:
+            data = self.amb.ram_boot_read(
+                AmbZCode.read_efuse_raw(offset=0)
+                + AmbZCode.read_efuse_logical_map(offset=AMBZ_EFUSE_PHYSICAL_SIZE)
+                + AmbZCode.print_data(length=self.flash_get_size(memory))
+            )
+            yield data[offset : offset + length]
 
     def flash_write_raw(
         self,

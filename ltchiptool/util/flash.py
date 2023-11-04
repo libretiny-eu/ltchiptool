@@ -21,6 +21,12 @@ class FlashOp(Enum):
     READ_INFO = "read_info"
 
 
+class FlashMemoryType(Enum):
+    FLASH = "Flash"
+    ROM = "ROM"
+    EFUSE = "eFuse"
+
+
 @dataclass
 class FlashConnection:
     port: str

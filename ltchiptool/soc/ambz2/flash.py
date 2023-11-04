@@ -4,7 +4,7 @@ from abc import ABC
 from typing import IO, Generator, Optional
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, FlashFeatures
+from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
@@ -77,18 +77,19 @@ class AmebaZ2Flash(SocInterface, ABC):
         ]
         return " / ".join(items)
 
-    def flash_get_size(self) -> int:
-        return 0x200000
-
-    def flash_get_rom_size(self) -> int:
-        return 384 * 1024
+    def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
+        if memory == FlashMemoryType.FLASH:
+            return 0x200000
+        if memory == FlashMemoryType.ROM:
+            return 384 * 1024
+        raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
         self,
         offset: int,
         length: int,
         verify: bool = True,
-        use_rom: bool = False,
+        memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
@@ -96,7 +97,7 @@ class AmebaZ2Flash(SocInterface, ABC):
         gen = self.amb.memory_read(
             offset=offset,
             length=length,
-            use_flash=not use_rom,
+            use_flash=memory == FlashMemoryType.FLASH,
             hash_check=verify,
             yield_size=1024,
         )

@@ -9,7 +9,7 @@ from typing import IO, Generator, List, Optional, Union
 from bk7231tools.serial import BK7231Serial
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, FlashFeatures
+from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
 from ltchiptool.util.intbin import inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
 from ltchiptool.util.streams import ProgressCallback
@@ -108,26 +108,27 @@ class BK72XXFlash(SocInterface, ABC):
         ]
         return " / ".join(items)
 
-    def flash_get_size(self) -> int:
-        return 0x200000
-
-    def flash_get_rom_size(self) -> int:
-        self.flash_connect()
-        if self.bk.chip_info != "0x7231c":
-            raise NotImplementedError("Only BK7231N has built-in ROM")
-        return 16 * 1024
+    def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
+        if memory == FlashMemoryType.FLASH:
+            return 0x200000
+        if memory == FlashMemoryType.ROM:
+            self.flash_connect()
+            if self.bk.chip_info != "0x7231c":
+                raise NotImplementedError("Only BK7231N has built-in ROM")
+            return 16 * 1024
+        raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
         self,
         offset: int,
         length: int,
         verify: bool = True,
-        use_rom: bool = False,
+        memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
 
-        if use_rom:
+        if memory == FlashMemoryType.ROM:
             if offset % 4 != 0 or length % 4 != 0:
                 raise ValueError("Offset and length must be 4-byte aligned")
             for address in range(offset, offset + length, 4):
@@ -135,6 +136,8 @@ class BK72XXFlash(SocInterface, ABC):
                 yield inttole32(reg)
                 callback.on_update(4)
             return
+        elif memory != FlashMemoryType.FLASH:
+            raise NotImplementedError("Memory type not readable via UART")
 
         crc_offset = offset
         crc_length = 0

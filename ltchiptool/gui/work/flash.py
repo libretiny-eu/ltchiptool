@@ -6,13 +6,24 @@ from os.path import dirname
 from typing import Callable
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, FlashOp, format_flash_guide
+from ltchiptool.util.flash import (
+    FlashConnection,
+    FlashMemoryType,
+    FlashOp,
+    format_flash_guide,
+)
 from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ClickProgressCallback
 from uf2tool import UploadContext
 
 from .base import BaseThread
+
+OP_TO_MEMORY = {
+    FlashOp.READ: FlashMemoryType.FLASH,
+    FlashOp.READ_ROM: FlashMemoryType.ROM,
+    FlashOp.READ_EFUSE: FlashMemoryType.EFUSE,
+}
 
 
 class FlashThread(BaseThread):
@@ -54,10 +65,13 @@ class FlashThread(BaseThread):
         self.callback = ClickProgressCallback()
         with self.callback:
             self._link()
-            if self.operation == FlashOp.WRITE:
-                self._do_write()
-            else:
-                self._do_read()
+            match self.operation:
+                case FlashOp.WRITE:
+                    self._do_write()
+                case FlashOp.READ | FlashOp.READ_ROM | FlashOp.READ_EFUSE:
+                    self._do_read()
+                case FlashOp.READ_INFO:
+                    pass
         self.soc.flash_disconnect()
 
     def stop(self):
@@ -153,11 +167,9 @@ class FlashThread(BaseThread):
         if self.should_stop():
             return
 
-        self.callback.on_message("Checking flash size...")
-        if self.operation == FlashOp.READ_ROM:
-            max_length = self.soc.flash_get_rom_size()
-        else:
-            max_length = self.soc.flash_get_size()
+        memory = OP_TO_MEMORY[self.operation]
+        self.callback.on_message(f"Checking {memory.value} size...")
+        max_length = self.soc.flash_get_size(memory)
 
         self.length = self.length or max(max_length - self.offset, 0)
 
@@ -175,7 +187,7 @@ class FlashThread(BaseThread):
             offset=self.offset,
             length=self.length,
             verify=self.verify,
-            use_rom=self.operation == FlashOp.READ_ROM,
+            memory=memory,
             callback=self.callback,
         ):
             file.write(chunk)

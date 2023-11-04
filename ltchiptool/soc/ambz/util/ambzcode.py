@@ -153,6 +153,61 @@ class AmbZCode:
         ) + inttole32(AMBZ_DATA_ADDRESS + offset)
 
     @staticmethod
+    def read_efuse_raw(start: int = 0, length: int = 256, offset: int = 0) -> bytes:
+        # ldr r5, start
+        # loop:
+        # ldr r0, CtrlSetting
+        # movs r1, r5
+        # ldr r2, read_data
+        # adds r2, r2, r5
+        # movs r3, #7
+        # ldr r4, EFUSE_OneByteReadROM
+        # blx r4
+        # adds r5, r5, #1
+        # ldr r0, length
+        # cmp r5, r0
+        # bne loop
+        # b next
+        # movs r0, r0
+        # CtrlSetting: .word 9902
+        # EFUSE_OneByteReadROM: .word 0x6D64+1
+        # read_data: .word 0x10003000
+        # start: .word 0
+        # length: .word 256
+        # next:
+        return (
+            (
+                b"\x09\x4d\x06\x48"
+                b"\x29\x00\x07\x4a"
+                b"\x52\x19\x07\x23"
+                b"\x04\x4c\xa0\x47"
+                b"\x6d\x1c\x06\x48"
+                b"\x85\x42\xf4\xd1"
+                b"\x0a\xe0\x00\x00"
+                b"\xae\x26\x00\x00"  # CtrlSetting
+                b"\x65\x6d\x00\x00"  # EFUSE_OneByteReadROM()
+            )
+            + inttole32(AMBZ_DATA_ADDRESS + offset)
+            + inttole32(start)
+            + inttole32(length)
+        )
+
+    @staticmethod
+    def read_efuse_otp(offset: int = 0) -> bytes:
+        # ldr r0, read_data
+        # ldr r3, EFUSE_OTP_Read32B
+        # blx r3
+        # b next
+        # EFUSE_OTP_Read32B: .word 0x3C20+1
+        # read_data: .word 0x10003000
+        # next:
+        return (
+            b"\x02\x48\x01\x4b"
+            b"\x98\x47\x03\xe0"
+            b"\x21\x3C\x00\x00"  # EFUSE_OTP_Read32B()
+        ) + inttole32(AMBZ_DATA_ADDRESS + offset)
+
+    @staticmethod
     def read_efuse_logical_map(offset: int = 0) -> bytes:
         # ldr r0, read_data
         # ldr r3, EFUSE_LogicalMap_Read

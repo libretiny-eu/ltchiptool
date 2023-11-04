@@ -314,6 +314,10 @@ class FlashPanel(BasePanel):
         if target == self.File:
             self.file = self.file
 
+    def EnableAll(self):
+        super().EnableAll()
+        self.DoUpdate(self.Family)
+
     @property
     def port(self):
         if not self.ports:
@@ -476,10 +480,11 @@ class FlashPanel(BasePanel):
             return
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
+        efuse = "_efuse" if self.operation == FlashOp.READ_EFUSE else ""
         if self.family:
-            filename = f"ltchiptool_{self.family.code}_{date}{rom}.bin"
+            filename = f"ltchiptool_{self.family.code}_{date}{rom}{efuse}.bin"
         else:
-            filename = f"ltchiptool_dump_{date}{rom}.bin"
+            filename = f"ltchiptool_dump_{date}{rom}{efuse}.bin"
         self.auto_file = chname(self.file, filename)
         verbose(f"Generated dump filename: {self.auto_file}")
         return self.auto_file
@@ -519,6 +524,7 @@ class FlashPanel(BasePanel):
             caption="Flashing guide",
             agwStyle=wx.ICON_INFORMATION | wx.OK,
         )
+        # noinspection PyUnresolvedReferences
         font = wx.Font(wx.FontInfo(10).Family(wx.MODERN))
         dialog.SetFont(font)
         dialog.ShowModal()
