@@ -4,13 +4,14 @@ from abc import ABC
 from io import BytesIO
 from logging import debug, warning
 from time import sleep
-from typing import IO, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.amb.system import SystemData
 from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
-from ltchiptool.util.intbin import gen2bytes
+from ltchiptool.util.intbin import gen2bytes, letoint
 from ltchiptool.util.logging import verbose
+from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
@@ -52,12 +53,13 @@ AMEBAZ_GUIDE = [
 # noinspection PyProtectedMember
 class AmebaZFlash(SocInterface, ABC):
     amb: Optional[AmbZTool] = None
-    chip_info: bytes = None
+    chip_id: int = None
+    flash_id: bytes = None
+    info: bytes = None
 
     def flash_get_features(self) -> FlashFeatures:
         return FlashFeatures(
             can_read_rom=False,
-            can_read_info=False,
         )
 
     def flash_get_guide(self) -> List[Union[str, list]]:
@@ -125,30 +127,81 @@ class AmebaZFlash(SocInterface, ABC):
         if self.conn:
             self.conn.linked = False
 
-    def _read_chip_info(self) -> None:
+    def flash_get_chip_info(self) -> List[Tuple[str, str]]:
         self.flash_connect()
         assert self.amb
-        self.chip_info = self.amb.ram_boot_read(
-            AmbZCode.read_chip_id(offset=0)
-            + AmbZCode.read_flash_id(offset=1)
-            + AmbZCode.print_data(length=4)
+        if not self.info:
+            info = self.amb.ram_boot_read(
+                AmbZCode.read_efuse_raw(offset=0)
+                + AmbZCode.read_efuse_logical_map(offset=256)
+                + AmbZCode.read_flash_id(offset=256 + 512)
+                + AmbZCode.print_data(length=256 + 512 + 16)
+                + AmbZCode.print_data(length=16, address=0x400001F0)
+                + AmbZCode.print_data(length=128, address=AMBZ_FLASH_ADDRESS | 0x9000)
+            )
+            if len(info) != 256 + 512 + 16 + 16 + 128:
+                raise RuntimeError(
+                    f"Read data length invalid: " f"{len(info)} != {256+512+16+16+128}"
+                )
+            self.info = info
+            self.chip_id = info[0xF8]
+            self.flash_id = info[256 + 512 : 256 + 512 + 3]
+        chip_type = AMBZ_CHIP_TYPE.get(self.chip_id, f"Unknown 0x{self.chip_id:02X}")
+        size_id = self.flash_id[2]
+        if 0x14 <= size_id <= 0x19:
+            flash_size = sizeof(1 << size_id)
+        else:
+            flash_size = "Unknown"
+        syscfg0 = letoint(self.info[256 + 512 + 16 + 0 : 256 + 512 + 16 + 0 + 4])
+        syscfg1 = letoint(self.info[256 + 512 + 16 + 4 : 256 + 512 + 16 + 4 + 4])
+        syscfg2 = letoint(self.info[256 + 512 + 16 + 8 : 256 + 512 + 16 + 8 + 4])
+        system_data = self.info[256 + 512 + 16 + 16 : 256 + 512 + 16 + 16 + 128].ljust(
+            4096, b"\xFF"
         )
-        debug(f"Received chip info: {self.chip_info.hex()}")
+        system = SystemData.unpack(system_data)
+        return [
+            ("Chip Type", chip_type),
+            ("MAC Address", self.info[0x21A : 0x21A + 6].hex(":").upper()),
+            ("", ""),
+            ("Flash ID", self.flash_id.hex(" ").upper()),
+            ("Flash Size (real)", flash_size),
+            ("", ""),
+            ("OTA2 Address", f"0x{system.ota2_address:X}"),
+            ("RDP Address", f"0x{system.rdp_address:X}"),
+            ("RDP Length", f"0x{system.rdp_length:X}"),
+            ("Flash SPI Mode", system.flash_mode.name),
+            ("Flash SPI Speed", system.flash_speed.name[2:]),
+            ("Flash ID (system)", f"{system.flash_id:04X}"),
+            ("Flash Size (system)", sizeof(system.flash_size_mb << 20)),
+            ("LOG UART Baudrate", system.baudrate),
+            ("", ""),
+            ("SYSCFG 0/1/2", f"{syscfg0:08X} / {syscfg1:08X} / {syscfg2:08X}"),
+            ("ROM Version", f"V{syscfg2 >> 4}.{syscfg2 & 0xF}"),
+            ("CUT Version", f"{(syscfg0 & 0xFF) >> 4:X}"),
+        ]
 
     def flash_get_chip_info_string(self) -> str:
-        if not self.chip_info:
-            self._read_chip_info()
-        chip_id = self.chip_info[0]
-        return AMBZ_CHIP_TYPE.get(chip_id, f"Unknown 0x{chip_id:02X}")
+        if not self.chip_id or not self.flash_id:
+            self.flash_connect()
+            assert self.amb
+            data = self.amb.ram_boot_read(
+                AmbZCode.read_chip_id(offset=0)
+                + AmbZCode.read_flash_id(offset=1)
+                + AmbZCode.print_data(length=4)
+            )
+            self.chip_id = data[0]
+            self.flash_id = data[1:4]
+            debug(f"Received chip info: {data.hex()}")
+        return AMBZ_CHIP_TYPE.get(self.chip_id, f"Unknown 0x{self.chip_id:02X}")
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
         if memory == FlashMemoryType.FLASH:
-            if not self.chip_info:
-                self._read_chip_info()
-            size_id = self.chip_info[3]
+            if not self.flash_id:
+                self.flash_get_chip_info_string()
+            size_id = self.flash_id[2]
             if 0x14 <= size_id <= 0x19:
                 return 1 << size_id
-            warning(f"Couldn't process flash ID: got {self.chip_info!r}")
+            warning(f"Couldn't process flash ID: got {self.flash_id.hex()}")
             return 0x200000
         if memory == FlashMemoryType.EFUSE:
             return AMBZ_EFUSE_PHYSICAL_SIZE + AMBZ_EFUSE_LOGICAL_SIZE

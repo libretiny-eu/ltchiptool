@@ -1,7 +1,7 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import IO, Dict, Generator, List, Optional, Union
+from typing import IO, Dict, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
@@ -145,6 +145,10 @@ class SocInterface(ABC):
 
     def flash_disconnect(self) -> None:
         """Close the serial port, if it's open."""
+        raise NotImplementedError()
+
+    def flash_get_chip_info(self) -> List[Tuple[str, str]]:
+        """Read all available chip info as a dictionary."""
         raise NotImplementedError()
 
     def flash_get_chip_info_string(self) -> str:

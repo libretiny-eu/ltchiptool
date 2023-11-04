@@ -8,8 +8,8 @@ from os.path import dirname, isfile, realpath
 
 import wx
 import wx.adv
-import wx.lib.agw.genericmessagedialog as GMD
 import wx.xrc
+from prettytable import PrettyTable
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.gui.utils import int_or_zero, on_event, with_target
@@ -31,6 +31,7 @@ class FlashPanel(BasePanel):
     prev_file: str | None = None
     auto_file: str | None = None
     delayed_port: str | None = None
+    chip_info: list[tuple[str, str]] | None = None
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent, frame)
@@ -52,7 +53,7 @@ class FlashPanel(BasePanel):
         self.Family = self.BindComboBox("combo_family")
         self.Guide = self.BindButton("button_guide", self.OnGuideClick)
         self.Docs = self.BindButton("button_docs", self.OnDocsClick)
-        self.BindButton("button_browse", self.OnBrowseClick)
+        self.Browse = self.BindButton("button_browse", self.OnBrowseClick)
         self.Start: wx.adv.CommandLinkButton = self.BindButton(
             "button_start", self.OnStartClick
         )
@@ -143,6 +144,11 @@ class FlashPanel(BasePanel):
         self.StartWork(PortWatcher(self.OnPortsUpdated), freeze_ui=False)
 
     def OnUpdate(self, target: wx.Window = None):
+        if self.chip_info:
+            chip_info = self.chip_info
+            self.chip_info = None
+            self.ShowChipInfo(chip_info)
+
         if target == self.Family:
             # update components based on SocInterface feature set
             soc = self.soc
@@ -174,13 +180,15 @@ class FlashPanel(BasePanel):
 
         writing = self.operation == FlashOp.WRITE
         reading = not writing
+        reading_info = self.operation == FlashOp.READ_INFO
 
         is_uf2 = self.detection is not None and self.detection.is_uf2
         need_offset = self.detection is not None and self.detection.need_offset
 
+        force_auto = (writing and is_uf2) or reading_info
         auto = self.auto_detect
         manual = not auto
-        if writing and manual and is_uf2:
+        if manual and force_auto:
             self.auto_detect = auto = True
             manual = False
 
@@ -209,7 +217,9 @@ class FlashPanel(BasePanel):
         self.SkipText.Enable(writing)
         self.Skip.Enable(writing and manual)
         self.Length.Enable(manual)
-        self.AutoDetect.Enable(reading or not is_uf2)
+        self.AutoDetect.Enable(not force_auto)
+        self.File.Enable(not reading_info)
+        self.Browse.Enable(not reading_info)
 
         errors = []
         warnings = []
@@ -267,7 +277,7 @@ class FlashPanel(BasePanel):
             self.FileText.SetLabel("Output file")
             self.LengthText.SetLabel("Reading length")
             self.FileType.ChangeValue("")
-            if not self.file:
+            if not self.file and not reading_info:
                 errors.append("Choose an output file")
             self.skip = 0
             if auto:
@@ -508,6 +518,20 @@ class FlashPanel(BasePanel):
         self.port = user_port
         self.delayed_port = None
 
+    def OnChipInfoFull(self, chip_info: list[tuple[str, str]]):
+        self.chip_info = chip_info
+
+    def ShowChipInfo(self, chip_info: list[tuple[str, str]]):
+        table = PrettyTable()
+        table.field_names = ["Name", "Value"]
+        table.align = "l"
+        for key, value in chip_info:
+            table.add_row([key, value])
+        self.MessageDialogMonospace(
+            message=table.get_string(),
+            caption="Chip info",
+        )
+
     @on_event
     def OnRescanClick(self):
         self.OnPortsUpdated(list_serial_ports())
@@ -518,17 +542,10 @@ class FlashPanel(BasePanel):
         if not guide:
             self.Guide.Disable()
             return
-        dialog = GMD.GenericMessageDialog(
-            parent=self,
+        self.MessageDialogMonospace(
             message="\n".join(format_flash_guide(self.soc)),
             caption="Flashing guide",
-            agwStyle=wx.ICON_INFORMATION | wx.OK,
         )
-        # noinspection PyUnresolvedReferences
-        font = wx.Font(wx.FontInfo(10).Family(wx.MODERN))
-        dialog.SetFont(font)
-        dialog.ShowModal()
-        dialog.Destroy()
 
     @on_event
     def OnDocsClick(self):
@@ -583,7 +600,8 @@ class FlashPanel(BasePanel):
             length=self.length,
             verify=True,
             ctx=self.detection and self.detection.get_uf2_ctx(),
-            on_chip_info=self.Start.SetNote,
+            on_chip_info_summary=self.Start.SetNote,
+            on_chip_info_full=self.OnChipInfoFull,
         )
         self.StartWork(work)
         self.Start.SetNote("")

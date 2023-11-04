@@ -41,7 +41,8 @@ class FlashThread(BaseThread):
         length: int | None,
         verify: bool,
         ctx: UploadContext | None,
-        on_chip_info: Callable[[str], None],
+        on_chip_info_summary: Callable[[str], None],
+        on_chip_info_full: Callable[[list[tuple[str, str]]], None],
     ):
         super().__init__()
         self.port = port
@@ -54,7 +55,8 @@ class FlashThread(BaseThread):
         self.length = length
         self.verify = verify
         self.ctx = ctx
-        self.on_chip_info = on_chip_info
+        self.on_chip_info_summary = on_chip_info_summary
+        self.on_chip_info_full = on_chip_info_full
 
     def run_impl(self):
         debug(
@@ -65,13 +67,14 @@ class FlashThread(BaseThread):
         self.callback = ClickProgressCallback()
         with self.callback:
             self._link()
+            self.callback.on_message("Starting operation...")
             match self.operation:
                 case FlashOp.WRITE:
                     self._do_write()
                 case FlashOp.READ | FlashOp.READ_ROM | FlashOp.READ_EFUSE:
                     self._do_read()
                 case FlashOp.READ_INFO:
-                    pass
+                    self._do_info()
         self.soc.flash_disconnect()
 
     def stop(self):
@@ -112,7 +115,7 @@ class FlashThread(BaseThread):
             return
         self.callback.on_message("Reading chip info...")
         chip_info = self.soc.flash_get_chip_info_string()
-        self.on_chip_info(f"Chip info: {chip_info}")
+        self.on_chip_info_summary(f"Chip info: {chip_info}")
 
     def _do_write(self):
         if self.should_stop():
@@ -194,3 +197,10 @@ class FlashThread(BaseThread):
             if self.should_stop():
                 break
         file.close()
+
+    def _do_info(self):
+        if self.should_stop():
+            return
+
+        chip_info = self.soc.flash_get_chip_info()
+        self.on_chip_info_full(chip_info)
