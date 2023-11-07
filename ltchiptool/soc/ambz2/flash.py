@@ -1,15 +1,18 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-28.
 
 from abc import ABC
-from typing import IO, Generator, Optional
+from typing import IO, Generator, List, Optional, Tuple
 
 from ltchiptool import SocInterface
+from ltchiptool.soc.amb.efuse import efuse_physical_to_logical
 from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
+from ltchiptool.util.intbin import gen2bytes, letoint
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
 from .util.ambz2code import AMBZ2_CODE_EFUSE_READ
 from .util.ambz2tool import (
+    AMBZ2_CHIP_TYPE,
     AMBZ2_CODE_ADDR,
     AMBZ2_DATA_ADDR,
     AMBZ2_EFUSE_PHYSICAL_SIZE,
@@ -19,11 +22,12 @@ from .util.ambz2tool import (
 
 class AmebaZ2Flash(SocInterface, ABC):
     amb: Optional[AmbZ2Tool] = None
+    chip_id: int = None
+    flash_id: bytes = None
+    info: List[Tuple[str, str]] = None
 
     def flash_get_features(self) -> FlashFeatures:
-        return FlashFeatures(
-            can_read_info=False,
-        )
+        return FlashFeatures()
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
@@ -66,21 +70,62 @@ class AmebaZ2Flash(SocInterface, ABC):
         if self.conn:
             self.conn.linked = False
 
+    def flash_get_chip_info(self) -> List[Tuple[str, str]]:
+        if self.info:
+            return self.info
+        self.flash_connect()
+        assert self.amb
+        self.amb.flash_init(configure=False)
+
+        efuse_phys = gen2bytes(
+            self.flash_read_raw(
+                offset=0,
+                length=AMBZ2_EFUSE_PHYSICAL_SIZE,
+                memory=FlashMemoryType.EFUSE,
+            ),
+        )
+        efuse_logi = efuse_physical_to_logical(efuse_phys)
+        # self.flash_id =
+        self.chip_id = efuse_phys[0x1F8]
+
+        chip_type = AMBZ2_CHIP_TYPE.get(self.chip_id, f"Unknown 0x{self.chip_id:02X}")
+        # size_id = self.flash_id[2]
+        # if 0x14 <= size_id <= 0x19:
+        #     flash_size = sizeof(1 << size_id)
+        # else:
+        #     flash_size = "Unknown"
+
+        syscfg0 = self.amb.register_read(0x4000_01F0)
+        vid = (syscfg0 >> 8) & 0xF
+        ver = (syscfg0 >> 4) & 0xF
+
+        boot_debug = not (letoint(efuse_logi[0x18:0x1C]) & 0x100000)
+        secure_boot = (efuse_logi[0x19] ^ 0x80) <= 0x7E
+
+        self.info = [
+            ("Chip VID", str(vid)),
+            ("Chip Version", str(ver)),
+            ("ROM Version", "v2.1" if ver <= 2 else "v3.0"),
+            ("", ""),
+            ("Chip Type", chip_type),
+            ("MAC Address (Wi-Fi)", efuse_logi[0x11A : 0x11A + 6].hex(":").upper()),
+            ("MAC Address (BT)", efuse_logi[0x190 : 0x190 + 6].hex(":").upper()),
+            ("Boot Debugging", "Enabled" if boot_debug else "Disabled"),
+            ("Secure Boot", "Enabled" if secure_boot else "Disabled"),
+            ("", ""),
+            # ("Flash ID", self.flash_id.hex(" ").upper()),
+            # ("Flash Size (real)", flash_size),
+            ("Flash Type", self.amb.flash_mode.name.replace("_", "/")),
+            ("Flash Mode", self.amb.flash_speed.name),
+        ]
+
+        return self.info
+
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
         assert self.amb
         self.amb.flash_init(configure=False)
-        reg = self.amb.register_read(0x4000_01F0)
-        vid = (reg >> 8) & 0xF
-        ver = (reg >> 4) & 0xF
-        rom_ver = "2.1" if ver <= 2 else "3.0"
-        items = [
-            self.amb.flash_mode.name.replace("_", "/"),
-            f"Chip VID: {vid}",
-            f"Version: {ver}",
-            f"ROM: v{rom_ver}",
-        ]
-        return " / ".join(items)
+        return self.amb.flash_mode.name.replace("_", "/")
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
         if memory == FlashMemoryType.FLASH:
