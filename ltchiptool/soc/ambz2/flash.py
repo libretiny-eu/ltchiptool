@@ -8,7 +8,13 @@ from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryTyp
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
-from .util.ambz2tool import AmbZ2Tool
+from .util.ambz2code import AMBZ2_CODE_EFUSE_READ
+from .util.ambz2tool import (
+    AMBZ2_CODE_ADDR,
+    AMBZ2_DATA_ADDR,
+    AMBZ2_EFUSE_PHYSICAL_SIZE,
+    AmbZ2Tool,
+)
 
 
 class AmebaZ2Flash(SocInterface, ABC):
@@ -16,7 +22,6 @@ class AmebaZ2Flash(SocInterface, ABC):
 
     def flash_get_features(self) -> FlashFeatures:
         return FlashFeatures(
-            can_read_efuse=False,
             can_read_info=False,
         )
 
@@ -82,6 +87,8 @@ class AmebaZ2Flash(SocInterface, ABC):
             return 0x200000
         if memory == FlashMemoryType.ROM:
             return 384 * 1024
+        if memory == FlashMemoryType.EFUSE:
+            return AMBZ2_EFUSE_PHYSICAL_SIZE
         raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
@@ -94,6 +101,10 @@ class AmebaZ2Flash(SocInterface, ABC):
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
         assert self.amb
+        if memory == FlashMemoryType.EFUSE:
+            self.amb.register_write_bytes(AMBZ2_CODE_ADDR, AMBZ2_CODE_EFUSE_READ)
+            self.amb.memory_boot(AMBZ2_CODE_ADDR, force_find=True)
+            offset |= AMBZ2_DATA_ADDR
         gen = self.amb.memory_read(
             offset=offset,
             length=length,
