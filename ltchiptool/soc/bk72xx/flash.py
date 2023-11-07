@@ -104,9 +104,9 @@ class BK72XXFlash(SocInterface, ABC):
             self.conn.linked = False
 
     def flash_get_chip_info(self) -> List[Tuple[str, str]]:
-        self.flash_connect()
         if self.info:
             return self.info
+        self.flash_connect()
         crc = self.bk.read_flash_range_crc(0, 256) ^ 0xFFFFFFFF
         if crc in CHIP_BY_CRC:
             chip_type, boot_version = CHIP_BY_CRC[crc]

@@ -6,7 +6,10 @@ from logging import debug, warning
 from time import sleep
 from typing import IO, Generator, List, Optional, Tuple, Union
 
+from hexdump import hexdump
+
 from ltchiptool import SocInterface
+from ltchiptool.soc.amb.efuse import efuse_physical_to_logical
 from ltchiptool.soc.amb.system import SystemData
 from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
 from ltchiptool.util.intbin import gen2bytes, letoint
@@ -55,7 +58,7 @@ class AmebaZFlash(SocInterface, ABC):
     amb: Optional[AmbZTool] = None
     chip_id: int = None
     flash_id: bytes = None
-    info: bytes = None
+    info: List[Tuple[str, str]] = None
 
     def flash_get_features(self) -> FlashFeatures:
         return FlashFeatures(
@@ -127,41 +130,61 @@ class AmebaZFlash(SocInterface, ABC):
         if self.conn:
             self.conn.linked = False
 
+    @staticmethod
+    def _check_efuse(physical: bytes, logical: bytes) -> None:
+        logical_read = logical
+        logical_conv = efuse_physical_to_logical(physical)
+        if logical_read != logical_conv:
+            warning("eFuse Logical Map different from ROM and local conversion!")
+            print("Read:")
+            hexdump(logical_read)
+            print("Converted:")
+            hexdump(logical_conv)
+
     def flash_get_chip_info(self) -> List[Tuple[str, str]]:
+        if self.info:
+            return self.info
         self.flash_connect()
         assert self.amb
-        if not self.info:
-            info = self.amb.ram_boot_read(
-                AmbZCode.read_efuse_raw(offset=0)
-                + AmbZCode.read_efuse_logical_map(offset=256)
-                + AmbZCode.read_flash_id(offset=256 + 512)
-                + AmbZCode.print_data(length=256 + 512 + 16)
-                + AmbZCode.print_data(length=16, address=0x400001F0)
-                + AmbZCode.print_data(length=128, address=AMBZ_FLASH_ADDRESS | 0x9000)
+
+        data = self.amb.ram_boot_read(
+            AmbZCode.read_efuse_raw(offset=0)
+            + AmbZCode.read_efuse_logical_map(offset=256)
+            + AmbZCode.read_flash_id(offset=256 + 512)
+            + AmbZCode.print_data(length=256 + 512 + 16)
+            + AmbZCode.print_data(length=16, address=0x400001F0)
+            + AmbZCode.print_data(length=128, address=AMBZ_FLASH_ADDRESS | 0x9000)
+        )
+        if len(data) != 256 + 512 + 16 + 16 + 128:
+            raise RuntimeError(
+                f"Read data length invalid: " f"{len(data)} != {256+512+16+16+128}"
             )
-            if len(info) != 256 + 512 + 16 + 16 + 128:
-                raise RuntimeError(
-                    f"Read data length invalid: " f"{len(info)} != {256+512+16+16+128}"
-                )
-            self.info = info
-            self.chip_id = info[0xF8]
-            self.flash_id = info[256 + 512 : 256 + 512 + 3]
+
+        efuse_phys = data[0:256]
+        efuse_logi = data[256:768]
+        self.flash_id = data[768 : 768 + 3]
+        self.chip_id = efuse_phys[0xF8]
+        self._check_efuse(efuse_phys, efuse_logi)
+
         chip_type = AMBZ_CHIP_TYPE.get(self.chip_id, f"Unknown 0x{self.chip_id:02X}")
         size_id = self.flash_id[2]
         if 0x14 <= size_id <= 0x19:
             flash_size = sizeof(1 << size_id)
         else:
             flash_size = "Unknown"
-        syscfg0 = letoint(self.info[256 + 512 + 16 + 0 : 256 + 512 + 16 + 0 + 4])
-        syscfg1 = letoint(self.info[256 + 512 + 16 + 4 : 256 + 512 + 16 + 4 + 4])
-        syscfg2 = letoint(self.info[256 + 512 + 16 + 8 : 256 + 512 + 16 + 8 + 4])
-        system_data = self.info[256 + 512 + 16 + 16 : 256 + 512 + 16 + 16 + 128].ljust(
+
+        syscfg0 = letoint(data[256 + 512 + 16 + 0 : 256 + 512 + 16 + 0 + 4])
+        syscfg1 = letoint(data[256 + 512 + 16 + 4 : 256 + 512 + 16 + 4 + 4])
+        syscfg2 = letoint(data[256 + 512 + 16 + 8 : 256 + 512 + 16 + 8 + 4])
+
+        system_data = data[256 + 512 + 16 + 16 : 256 + 512 + 16 + 16 + 128].ljust(
             4096, b"\xFF"
         )
         system = SystemData.unpack(system_data)
+
         return [
             ("Chip Type", chip_type),
-            ("MAC Address", self.info[0x21A : 0x21A + 6].hex(":").upper()),
+            ("MAC Address", efuse_logi[0x11A : 0x11A + 6].hex(":").upper()),
             ("", ""),
             ("Flash ID", self.flash_id.hex(" ").upper()),
             ("Flash Size (real)", flash_size),
@@ -204,7 +227,7 @@ class AmebaZFlash(SocInterface, ABC):
             warning(f"Couldn't process flash ID: got {self.flash_id.hex()}")
             return 0x200000
         if memory == FlashMemoryType.EFUSE:
-            return AMBZ_EFUSE_PHYSICAL_SIZE + AMBZ_EFUSE_LOGICAL_SIZE
+            return AMBZ_EFUSE_PHYSICAL_SIZE
         raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
@@ -230,7 +253,13 @@ class AmebaZFlash(SocInterface, ABC):
             data = self.amb.ram_boot_read(
                 AmbZCode.read_efuse_raw(offset=0)
                 + AmbZCode.read_efuse_logical_map(offset=AMBZ_EFUSE_PHYSICAL_SIZE)
-                + AmbZCode.print_data(length=self.flash_get_size(memory))
+                + AmbZCode.print_data(
+                    length=AMBZ_EFUSE_PHYSICAL_SIZE + AMBZ_EFUSE_LOGICAL_SIZE
+                )
+            )
+            self._check_efuse(
+                physical=data[0:AMBZ_EFUSE_PHYSICAL_SIZE],
+                logical=data[AMBZ_EFUSE_PHYSICAL_SIZE:],
             )
             yield data[offset : offset + length]
 
