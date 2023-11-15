@@ -67,7 +67,7 @@ def find_serial_port() -> Optional[str]:
     return ports[0][0]
 
 
-def run_subprocess(*args) -> int:
+def run_subprocess(*args, cwd: str = None) -> int:
     def stream(io: IO[bytes], func: Callable[[str], None]):
         for line in iter(io.readline, b""):
             func(line.decode("utf-8").rstrip())
@@ -77,6 +77,7 @@ def run_subprocess(*args) -> int:
         args=args,
         stdout=PIPE,
         stderr=PIPE,
+        cwd=cwd,
     )
     threads = [
         Thread(target=stream, args=(p.stdout, info)),

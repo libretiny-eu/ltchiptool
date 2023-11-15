@@ -259,17 +259,17 @@ class FlashPanel(BasePanel):
 
                 if manual:
                     warnings.append("Warning: using custom options")
-                    if self.skip >= self.detection.length:
+                    if self.skip >= self.detection.size:
                         errors.append(
                             f"Skip offset (0x{self.skip:X}) "
                             f"not within input file bounds "
-                            f"(0x{self.detection.length:X})"
+                            f"(0x{self.detection.size:X})"
                         )
-                    elif self.skip + (self.length or 0) > self.detection.length:
+                    elif self.skip + (self.length or 0) > self.detection.size:
                         errors.append(
                             f"Writing length (0x{self.skip:X} + 0x{self.length:X}) "
                             f"not within input file bounds "
-                            f"(0x{self.detection.length:X})"
+                            f"(0x{self.detection.size:X})"
                         )
                         errors.append("")
 
