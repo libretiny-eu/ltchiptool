@@ -32,7 +32,7 @@ bitstruct = "^8.1.1"
 zeroconf = "^0"
 requests = "^2.31.0"
 
-[tool.poetry.dependencies.pycryptodomex]
+[tool.poetry.dependencies.pycryptodome]
 version = "^3.9.9"
 markers = "platform_machine not in 'armv6l,armv7l,armv8l,armv8b,aarch64'"
 

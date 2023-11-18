@@ -30,21 +30,21 @@ def make_aes_crypto(key: bytes, iv: bytes) -> CryptoAES:
 def _make_aes_pycryptodome(key: bytes, iv: bytes):
     from Crypto.Cipher import AES
 
-    debug("Using PyCryptodome for OTA encryption")
+    debug("Using PyCryptodome for AES encryption")
     return AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
 
 
 def _make_aes_pycryptodomex(key: bytes, iv: bytes):
     from Cryptodome.Cipher import AES
 
-    debug("Using PyCryptodomex for OTA encryption")
+    debug("Using PyCryptodomex for AES encryption")
     return AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
 
 
 def _make_aes_cryptography(key: bytes, iv: bytes):
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-    debug("Using Cryptography for OTA encryption")
+    debug("Using Cryptography for AES encryption")
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
     encryptor = cipher.encryptor()
     decryptor = cipher.decryptor()
@@ -64,7 +64,7 @@ def _make_aes_cryptography(key: bytes, iv: bytes):
 def _make_aes_pyaes(key: bytes, iv: bytes):
     from pyaes import AESModeOfOperationCBC, Decrypter, Encrypter
 
-    debug("Using PyAES for OTA encryption")
+    debug("Using PyAES for AES encryption")
     aes = AESModeOfOperationCBC(key=key, iv=iv)
     encrypter = Encrypter(aes)
     decrypter = Decrypter(aes)
