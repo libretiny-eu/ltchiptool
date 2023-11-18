@@ -21,8 +21,10 @@ from datastruct.fields import (
     switch,
 )
 
+from ltchiptool.soc.amb.system import SystemData
+
 from .headers import ImageHeader, Keyblock, KeyblockOTA, header_is_last
-from .partitions import Bootloader, Firmware, PartitionTable, SystemData
+from .partitions import Bootloader, Firmware, PartitionTable
 from .utils import FF_32
 
 FLASH_CALIBRATION = b"\x99\x99\x96\x96\x3F\xCC\x66\xFC\xC0\x33\xCC\x03\xE5\xDC\x31\x62"

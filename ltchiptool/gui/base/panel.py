@@ -1,10 +1,14 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
+import threading
 from logging import warning
+from queue import Queue
 from typing import Any, Callable, Tuple
 
 import wx
 import wx.xrc
+
+from ltchiptool.gui.utils import on_event
 
 from .window import BaseWindow
 
@@ -12,6 +16,7 @@ from .window import BaseWindow
 # noinspection PyPep8Naming
 class BasePanel(wx.Panel, BaseWindow):
     _components: list[wx.Window]
+    _events: Queue[wx.Window | None]
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent)
@@ -19,6 +24,8 @@ class BasePanel(wx.Panel, BaseWindow):
         self.Frame = frame
         self.Xrc: wx.xrc.XmlResource = frame.Xrc
         self._components = []
+        self._events = Queue()
+        self.Bind(wx.EVT_IDLE, self.OnIdle)
 
     def OnShow(self):
         self.OnUpdate()
@@ -41,9 +48,17 @@ class BasePanel(wx.Panel, BaseWindow):
     def DoUpdate(self, target: wx.Window = None):
         if self._in_update:
             return
+        if threading.current_thread() != threading.main_thread():
+            self._events.put(target)
+            return
         self._in_update = True
         self.OnUpdate(target)
         self._in_update = False
+
+    @on_event
+    def OnIdle(self):
+        while not self._events.empty():
+            self.OnUpdate(self._events.get())
 
     def OnUpdate(self, target: wx.Window = None):
         pass
@@ -131,7 +146,7 @@ class BasePanel(wx.Panel, BaseWindow):
             return
         for window in self._components:
             window.Enable()
-        self.OnUpdate()
+        self.DoUpdate()
 
     def DisableAll(self):
         if self.is_closing:

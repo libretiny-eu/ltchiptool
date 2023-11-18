@@ -9,7 +9,7 @@ from click import File
 from ltchiptool import Family, SocInterface
 from ltchiptool.models import FamilyParamType
 from ltchiptool.util.cli import AutoIntParamType, DevicePortParamType
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashMemoryType
 from ltchiptool.util.logging import graph
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ClickProgressCallback
@@ -62,8 +62,16 @@ from ._utils import flash_link_interactive
 @click.option(
     "-R",
     "--rom",
+    "memory",
+    flag_value=FlashMemoryType.ROM,
     help="Read from ROM instead of Flash (default: False)",
-    is_flag=True,
+)
+@click.option(
+    "-E",
+    "--efuse",
+    "memory",
+    flag_value=FlashMemoryType.EFUSE,
+    help="Read from eFuse instead of Flash (default: False)",
 )
 def cli(
     family: Family,
@@ -74,7 +82,7 @@ def cli(
     length: int,
     timeout: float,
     check: bool,
-    rom: bool,
+    memory: FlashMemoryType,
 ):
     """
     Read flash contents to a file.
@@ -94,10 +102,8 @@ def cli(
     soc.flash_set_connection(FlashConnection(device, baudrate))
     flash_link_interactive(soc, timeout)
 
-    if rom:
-        max_length = soc.flash_get_rom_size()
-    else:
-        max_length = soc.flash_get_size()
+    memory = memory or FlashMemoryType.FLASH
+    max_length = soc.flash_get_size(memory)
 
     offset = offset or 0
     length = length or (max_length - offset)
@@ -108,17 +114,14 @@ def cli(
             f"chip capacity ({sizeof(max_length)})",
         )
 
-    if rom:
-        graph(0, f"Reading ROM ({sizeof(length)}) to '{file.name}'")
-    else:
-        graph(0, f"Reading {sizeof(length)} @ 0x{offset:X} to '{file.name}'")
+    graph(0, f"Reading {memory.value} ({sizeof(length)}) to '{file.name}'")
 
     with ClickProgressCallback(length) as callback:
         for chunk in soc.flash_read_raw(
             offset=offset,
             length=length,
             verify=check,
-            use_rom=rom,
+            memory=memory,
             callback=callback,
         ):
             file.write(chunk)

@@ -17,6 +17,14 @@ class FlashOp(Enum):
     WRITE = "write"
     READ = "read"
     READ_ROM = "read_rom"
+    READ_EFUSE = "read_efuse"
+    READ_INFO = "read_info"
+
+
+class FlashMemoryType(Enum):
+    FLASH = "Flash"
+    ROM = "ROM"
+    EFUSE = "eFuse"
 
 
 @dataclass
@@ -28,9 +36,20 @@ class FlashConnection:
     link_timeout: float = 20.0
     linked: bool = False
 
-    def fill_baudrate(self, baudrate: int) -> None:
-        self.link_baudrate = self.link_baudrate or baudrate
-        self.baudrate = self.baudrate or self.link_baudrate or baudrate
+    def fill_baudrate(self, baudrate: int, link_baudrate: int = None) -> None:
+        if link_baudrate is None:
+            link_baudrate = baudrate
+        self.link_baudrate = self.link_baudrate or link_baudrate
+        self.baudrate = self.baudrate or baudrate or self.link_baudrate
+
+
+@dataclass
+class FlashFeatures:
+    can_write: bool = True
+    can_read: bool = True
+    can_read_rom: bool = True
+    can_read_efuse: bool = True
+    can_read_info: bool = True
 
 
 def format_flash_guide(soc) -> List[str]:

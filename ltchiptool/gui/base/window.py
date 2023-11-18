@@ -3,6 +3,7 @@
 import sys
 from os.path import dirname, isfile, join
 
+import wx.lib.agw.genericmessagedialog as GMD
 import wx.xrc
 
 from ltchiptool.gui.colors import ColorPalette
@@ -77,3 +78,16 @@ class BaseWindow:
 
     def DisableAll(self):
         pass
+
+    def MessageDialogMonospace(self, message: str, caption: str):
+        dialog = GMD.GenericMessageDialog(
+            parent=self,
+            message=message,
+            caption=caption,
+            agwStyle=wx.ICON_INFORMATION | wx.OK,
+        )
+        # noinspection PyUnresolvedReferences
+        font = wx.Font(wx.FontInfo(10).Family(wx.MODERN))
+        dialog.SetFont(font)
+        dialog.ShowModal()
+        dialog.Destroy()

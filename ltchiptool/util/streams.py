@@ -12,11 +12,18 @@ from .logging import stream
 
 
 class StreamHook(ABC):
+    read_key: str
+    write_key: str
+
+    def __init__(self) -> None:
+        self.read_key = f"_read_{id(self)}"
+        self.write_key = f"_write_{id(self)}"
+
     def read(self, io: IO[bytes], n: int) -> bytes:
-        return getattr(io, "_read")(n)
+        return getattr(io, self.read_key)(n)
 
     def write(self, io: IO[bytes], data: bytes) -> int:
-        return getattr(io, "_write")(data)
+        return getattr(io, self.write_key)(data)
 
     def on_after_read(self, data: bytes) -> Optional[bytes]:
         return data
@@ -25,16 +32,18 @@ class StreamHook(ABC):
         return data
 
     def attach(self, io: IO[bytes], limit: int = 0) -> IO[bytes]:
-        if hasattr(io, "_read"):
+        if hasattr(io, self.read_key):
             return io
-        setattr(io, "_read", io.read)
-        setattr(io, "_write", io.write)
+        setattr(io, self.read_key, io.read)
+        setattr(io, self.write_key, io.write)
         try:
             end = io.tell() + limit
-        except UnsupportedOperation:
+        except (UnsupportedOperation, AttributeError):
             limit = 0
 
         def read(n: int = -1) -> bytes:
+            if self.is_unregistered(type(io)):
+                return getattr(io, self.read_key)(n)
             if limit > 0:
                 # read at most 'limit' bytes
                 pos = io.tell()
@@ -48,6 +57,8 @@ class StreamHook(ABC):
             return data
 
         def write(data: bytes) -> int:
+            if self.is_unregistered(type(io)):
+                return getattr(io, self.write_key)(data)
             data_new = self.on_before_write(data)
             if isinstance(data_new, bytes):
                 data = data_new
@@ -57,38 +68,40 @@ class StreamHook(ABC):
         setattr(io, "write", write)
         return io
 
-    @staticmethod
-    def detach(io: IO[bytes]) -> IO[bytes]:
-        read = getattr(io, "_read", None)
-        write = getattr(io, "_read", None)
+    def detach(self, io: IO[bytes]) -> IO[bytes]:
+        read = getattr(io, self.read_key, None)
+        write = getattr(io, self.write_key, None)
         if read is not None:
             setattr(io, "read", read)
-            delattr(io, "_read")
+            delattr(io, self.read_key)
         if write is not None:
             setattr(io, "write", write)
-            delattr(io, "_write")
+            delattr(io, self.write_key)
         return io
 
     @classmethod
     def register(cls, target: Type, *hook_args, **hook_kwargs) -> None:
-        if hasattr(target, "__init_hook__"):
+        if hasattr(target, f"__hook_unregistered_{cls.__name__}__"):
+            delattr(target, f"__hook_unregistered_{cls.__name__}__")
+        if hasattr(target, f"__init_hook_{cls.__name__}__"):
             return
-        setattr(target, "__init_hook__", target.__init__)
+        setattr(target, f"__init_hook_{cls.__name__}__", target.__init__)
 
         # noinspection PyArgumentList
         def init(self, *args, **kwargs):
-            self.__init_hook__(*args, **kwargs)
+            getattr(target, f"__init_hook_{cls.__name__}__")(self, *args, **kwargs)
             hook = cls(*hook_args, **hook_kwargs)
             hook.attach(self)
 
         setattr(target, "__init__", init)
 
-    @staticmethod
-    def unregister(target: Type):
-        __init__ = getattr(target, "__init_hook__", None)
+    @classmethod
+    def unregister(cls, target: Type):
+        setattr(target, f"__hook_unregistered_{cls.__name__}__", True)
+        __init__ = getattr(target, f"__init_hook_{cls.__name__}__", None)
         if __init__ is not None:
             setattr(target, "__init__", __init__)
-            delattr(target, "__init_hook__")
+            delattr(target, f"__init_hook_{cls.__name__}__")
 
     @classmethod
     def set_registered(cls, target: Type, registered: bool):
@@ -97,9 +110,13 @@ class StreamHook(ABC):
         else:
             cls.unregister(target)
 
-    @staticmethod
-    def is_registered(target: Type):
-        return hasattr(target, "__init_hook__")
+    @classmethod
+    def is_registered(cls, target: Type):
+        return hasattr(target, f"__init_hook_{cls.__name__}__")
+
+    @classmethod
+    def is_unregistered(cls, target: Type):
+        return hasattr(target, f"__hook_unregistered_{cls.__name__}__")
 
 
 class LoggingStreamHook(StreamHook):
@@ -107,10 +124,11 @@ class LoggingStreamHook(StreamHook):
     buf: dict
 
     def __init__(self):
+        super().__init__()
         self.buf = {"-> RX": "", "<- TX": ""}
 
     def _print(self, data: bytes, msg: str):
-        if all(c in self.ASCII for c in data):
+        if data and all(c in self.ASCII for c in data):
             data = data.decode().replace("\r", "")
             while "\n" in data:
                 line, _, data = data.partition("\n")
@@ -118,12 +136,14 @@ class LoggingStreamHook(StreamHook):
                 self.buf[msg] = ""
                 if line:
                     stream(f"{msg}: '{line}'")
-            self.buf[msg] = data
+            self.buf[msg] += data
             return
 
         if self.buf[msg]:
             stream(f"{msg}: '{self.buf[msg]}'")
             self.buf[msg] = ""
+        if not data:
+            return
 
         if data.isascii():
             stream(f"{msg}: {data[0:128]}")
@@ -138,6 +158,7 @@ class LoggingStreamHook(StreamHook):
         return None
 
     def on_before_write(self, data: bytes) -> Optional[bytes]:
+        self._print(b"", "-> RX")  # print leftover bytes
         self._print(data, "<- TX")
         return None
 
@@ -172,6 +193,7 @@ class ProgressCallback(StreamHook):
 
 class ClickProgressCallback(ProgressCallback):
     def __init__(self, length: int = 0, width: int = 64):
+        super().__init__()
         self.bar = click.progressbar(length=length, width=width)
 
     def on_update(self, steps: int) -> None:

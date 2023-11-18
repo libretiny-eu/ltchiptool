@@ -1,11 +1,11 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 from abc import ABC
-from typing import IO, Dict, Generator, List, Optional, Union
+from typing import IO, Dict, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import Board, Family
 from ltchiptool.models import OTAType
-from ltchiptool.util.flash import FlashConnection
+from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
 from ltchiptool.util.fwbinary import FirmwareBinary
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import UploadContext
@@ -106,6 +106,18 @@ class SocInterface(ABC):
     # Flashing - reading/writing raw files and UF2 packages #
     #########################################################
 
+    def flash_get_features(self) -> FlashFeatures:
+        """Check which flasher features are supported."""
+        return FlashFeatures()  # Optional; do not fail here
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        """Get a short textual guide for putting the chip in download mode."""
+        return []  # Optional; do not fail here
+
+    def flash_get_docs_url(self) -> Optional[str]:
+        """Get a link to flashing documentation."""
+        return None  # Optional; do not fail here
+
     def flash_set_connection(self, connection: FlashConnection) -> None:
         """Configure device connection parameters."""
         raise NotImplementedError()
@@ -135,38 +147,39 @@ class SocInterface(ABC):
         """Close the serial port, if it's open."""
         raise NotImplementedError()
 
+    def flash_get_chip_info(self) -> List[Tuple[str, str]]:
+        """Read all available chip info as a dictionary."""
+        raise NotImplementedError()
+
     def flash_get_chip_info_string(self) -> str:
-        """Read chip info from the protocol as a string."""
+        """Read chip info **summary** from the protocol as a string."""
         raise NotImplementedError()
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        """Get a short textual guide for putting the chip in download mode."""
-        raise NotImplementedError()
-
-    def flash_get_size(self) -> int:
-        """Retrieve the flash size, in bytes."""
+    def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
+        """Retrieve the size of specified memory, in bytes.
+        Raises NotImplementedError() if the memory type is not available
+        or not readable."""
         raise NotImplementedError()
 
     def flash_get_rom_size(self) -> int:
-        """Retrieve the ROM size, in bytes. Raises NotImplementedError() if ROM is
-        not available or not readable."""
-        raise NotImplementedError()
+        """Deprecated, use flash_get_size(FlashMemoryType.ROM)."""
+        return self.flash_get_size(FlashMemoryType.ROM)
 
     def flash_read_raw(
         self,
         offset: int,
         length: int,
         verify: bool = True,
-        use_rom: bool = False,
+        memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         """
-        Read 'length' bytes from the flash, starting at 'offset'.
+        Read 'length' bytes from the chip, starting at 'offset'.
 
         :param offset: start memory offset
         :param length: length of data to read
         :param verify: whether to verify checksums
-        :param use_rom: whether to read from ROM instead of Flash
+        :param memory: type of memory to read from
         :param callback: reading progress callback
         :return: a generator yielding the chunks being read
         """
@@ -181,7 +194,7 @@ class SocInterface(ABC):
         callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         """
-        Write 'length' bytes (represented by 'data'), starting at 'offset' of the flash.
+        Write 'length' bytes (represented by 'data') to the chip, starting at 'offset'.
 
         :param offset: start memory offset
         :param length: length of data to write

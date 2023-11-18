@@ -1,17 +1,20 @@
 # Copyright (c) Kuba Szczodrzyński 2022-07-29.
 
 import logging
+import struct
 from abc import ABC
 from binascii import crc32
 from logging import DEBUG, debug
-from typing import IO, Generator, List, Optional, Union
+from typing import IO, Generator, List, Optional, Tuple, Union
 
 from bk7231tools.serial import BK7231Serial
+from bk7231tools.serial.protocol import CHIP_BY_CRC
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection
-from ltchiptool.util.intbin import inttole32
+from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
+from ltchiptool.util.intbin import gen2bytes, inttole32
 from ltchiptool.util.logging import VERBOSE, verbose
+from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
@@ -21,21 +24,35 @@ BK72XX_GUIDE = [
         ("PC", "BK7231"),
         ("RX", "TX1 (GPIO11 / P11)"),
         ("TX", "RX1 (GPIO10 / P10)"),
-        ("RTS", "CEN (or RST, optional)"),
         ("", ""),
         ("GND", "GND"),
     ],
-    "Make sure to use a good 3.3V power supply, otherwise the adapter might\n"
-    "lose power during chip reset. Usually, the adapter's power regulator\n"
-    "is not enough and an external power supply is needed (like AMS1117).",
-    "If you didn't connect RTS to CEN, after running the command you have\n"
-    "around 20 seconds to reset the chip manually. In order to do that,\n"
-    "you need to bridge CEN to GND with a wire.",
+    "Using a good, stable 3.3V power supply is crucial. Most flashing issues\n"
+    "are caused by either voltage drops during intensive flash operations,\n"
+    "or bad/loose wires.",
+    "The UART adapter's 3.3V power regulator is usually not enough. Instead,\n"
+    "a regulated bench power supply, or a linear 1117-type regulator is recommended.",
+    "To enter download mode, the chip has to be rebooted while the flashing program\n"
+    "is trying to establish communication.\n"
+    "In order to do that, you need to bridge CEN pin to GND with a wire.",
 ]
+
+SCTRL_EFUSE_CTRL = 0x00800074
+SCTRL_EFUSE_OPTR = 0x00800078
 
 
 class BK72XXFlash(SocInterface, ABC):
     bk: Optional[BK7231Serial] = None
+    info: List[Tuple[str, str]] = None
+
+    def flash_get_features(self) -> FlashFeatures:
+        return FlashFeatures()
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return BK72XX_GUIDE
+
+    def flash_get_docs_url(self) -> Optional[str]:
+        return "https://docs.libretiny.eu/link/flashing-beken-72xx"
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
@@ -86,38 +103,84 @@ class BK72XXFlash(SocInterface, ABC):
         if self.conn:
             self.conn.linked = False
 
+    def flash_get_chip_info(self) -> List[Tuple[str, str]]:
+        if self.info:
+            return self.info
+        self.flash_connect()
+        crc = self.bk.read_flash_range_crc(0, 256) ^ 0xFFFFFFFF
+        if crc in CHIP_BY_CRC:
+            chip_type, boot_version = CHIP_BY_CRC[crc]
+        else:
+            chip_type = f"Unrecognized (0x{crc:08X})"
+            boot_version = None
+        self.info = [
+            ("Chip Type", chip_type),
+            ("Bootloader Version", boot_version or "Unspecified"),
+        ]
+        if self.bk.check_protocol(0x11):  # CMD_ReadBootVersion
+            self.info.append(("Bootloader Message", self.bk.chip_info))
+        if self.bk.check_protocol(0x03):  # CMD_ReadReg
+            chip_id = hex(self.bk.register_read(0x800000))  # SCTRL_CHIP_ID
+            self.info.append(("Chip ID", chip_id))
+        self.info += [
+            ("Protocol Type", self.bk.protocol_type.name),
+        ]
+        if chip_type == "BK7231N":
+            tlv = self.bk.read_flash_4k(0x1D0000)
+        elif chip_type == "BK7231T":
+            tlv = self.bk.read_flash_4k(0x1E0000)
+        else:
+            tlv = None
+        if tlv and tlv[0x1C:0x24] == b"\x02\x11\x11\x11\x06\x00\x00\x00":
+            self.info += [
+                ("", ""),
+                ("MAC Address", tlv and tlv[0x24:0x2A].hex(":").upper() or "Unknown"),
+            ]
+        if self.bk.check_protocol(0x0E, True):  # # CMD_FlashGetMID
+            flash_id = self.bk.flash_read_id()
+            self.info += [
+                ("", ""),
+                ("Flash ID", flash_id["id"].hex(" ").upper()),
+                ("Flash Size (real)", sizeof(flash_id["size"])),
+            ]
+        if self.bk.check_protocol(0x03):  # CMD_ReadReg
+            efuse = gen2bytes(self.flash_read_raw(0, 16, memory=FlashMemoryType.EFUSE))
+            coeffs = struct.unpack("<IIII", efuse[0:16])
+            self.info += [
+                ("", ""),
+                ("Encryption Key", " ".join(f"{c:08x}" for c in coeffs)),
+            ]
+        return self.info
+
     def flash_get_chip_info_string(self) -> str:
         self.flash_connect()
-        items = [
-            self.bk.chip_info,
-            f"Flash ID: {self.bk.flash_id.hex(' ', -1) if self.bk.flash_id else None}",
-            f"Protocol: {self.bk.protocol_type.name}",
-        ]
-        return " / ".join(items)
+        return self.bk.chip_info
 
-    def flash_get_guide(self) -> List[Union[str, list]]:
-        return BK72XX_GUIDE
-
-    def flash_get_size(self) -> int:
-        return 0x200000
-
-    def flash_get_rom_size(self) -> int:
+    def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
+        if memory == FlashMemoryType.FLASH:
+            return 0x200000
         self.flash_connect()
-        if self.bk.chip_info != "0x7231c":
-            raise NotImplementedError("Only BK7231N has built-in ROM")
-        return 16 * 1024
+        if memory == FlashMemoryType.ROM:
+            if not self.bk.check_protocol(0x03):  # CMD_ReadReg
+                raise NotImplementedError("Only BK7231N has built-in ROM")
+            return 16 * 1024
+        if memory == FlashMemoryType.EFUSE:
+            if not self.bk.check_protocol(0x01):  # CMD_WriteReg
+                raise NotImplementedError("Only BK7231N can read eFuse via UART")
+            return 32
+        raise NotImplementedError("Memory type not readable via UART")
 
     def flash_read_raw(
         self,
         offset: int,
         length: int,
         verify: bool = True,
-        use_rom: bool = False,
+        memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
         self.flash_connect()
 
-        if use_rom:
+        if memory == FlashMemoryType.ROM:
             if offset % 4 != 0 or length % 4 != 0:
                 raise ValueError("Offset and length must be 4-byte aligned")
             for address in range(offset, offset + length, 4):
@@ -125,6 +188,22 @@ class BK72XXFlash(SocInterface, ABC):
                 yield inttole32(reg)
                 callback.on_update(4)
             return
+        elif memory == FlashMemoryType.EFUSE:
+            for addr in range(offset, offset + length):
+                reg = self.bk.register_read(SCTRL_EFUSE_CTRL)
+                reg = (reg & ~0x1F02) | (addr << 8) | 1
+                self.bk.register_write(SCTRL_EFUSE_CTRL, reg)
+                while reg & 1:
+                    reg = self.bk.register_read(SCTRL_EFUSE_CTRL)
+                reg = self.bk.register_read(SCTRL_EFUSE_OPTR)
+                if reg & 0x100:
+                    yield bytes([reg & 0xFF])
+                    callback.on_update(1)
+                else:
+                    raise RuntimeError(f"eFuse data {addr} invalid: {hex(reg)}")
+            return
+        elif memory != FlashMemoryType.FLASH:
+            raise NotImplementedError("Memory type not readable via UART")
 
         crc_offset = offset
         crc_length = 0

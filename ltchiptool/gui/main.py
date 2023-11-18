@@ -31,6 +31,7 @@ class MainFrame(wx.Frame):
     Panels: dict[str, BasePanel]
     Menus: dict[str, wx.Menu]
     MenuItems: dict[str, dict[str, wx.MenuItem]]
+    NormalSize: wx.Size
     init_params: dict
     Zeroconf: Zeroconf = None
 
@@ -142,11 +143,12 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_SHOW, self.OnShow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnMenu)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
         self.Notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 
-        self.SetSize((700, 800))
-        self.SetMinSize((600, 700))
+        self.SetSize((750, 850))
+        self.SetMinSize((700, 800))
         self.SetIcon(wx.Icon(icon, wx.BITMAP_TYPE_ICO))
         self.CreateStatusBar()
 
@@ -161,13 +163,15 @@ class MainFrame(wx.Frame):
     # noinspection PyPropertyAccess
     def GetSettings(self) -> dict:
         pos: wx.Point = self.GetPosition()
-        size: wx.Size = self.GetSize()
+        size: wx.Size = self.NormalSize or self.GetSize()
+        maximized: bool = self.IsMaximized()
         split: int = self.Splitter.GetSashPosition()
         page: str = self.NotebookPageName
         palette: str = self.palette
         return dict(
             pos=[pos.x, pos.y],
             size=[size.x, size.y],
+            maximized=maximized,
             split=split,
             page=page,
             palette=palette,
@@ -177,6 +181,7 @@ class MainFrame(wx.Frame):
         self,
         pos: tuple[int, int] = None,
         size: tuple[int, int] = None,
+        maximized: bool = None,
         split: int = None,
         page: str = None,
         palette: str = None,
@@ -186,6 +191,8 @@ class MainFrame(wx.Frame):
             self.SetPosition(pos)
         if size:
             self.SetSize(size)
+        if maximized:
+            self.Maximize()
         if split:
             self.Splitter.SetSashPosition(split)
         if page is not None:
@@ -273,6 +280,13 @@ class MainFrame(wx.Frame):
         self._settings = settings
         info(f"Saved settings to {self.config_file}")
         self.Destroy()
+
+    @with_event
+    def OnSize(self, event: wx.SizeEvent):
+        event.Skip()
+        if self.IsMaximized():
+            return
+        self.NormalSize = event.GetSize()
 
     @with_target
     def OnMenu(self, event: wx.CommandEvent, target: wx.Menu):

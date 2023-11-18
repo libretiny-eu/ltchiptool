@@ -1,6 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import os
+import webbrowser
 from datetime import datetime
 from logging import debug, info
 from os.path import dirname, isfile, realpath
@@ -8,6 +9,7 @@ from os.path import dirname, isfile, realpath
 import wx
 import wx.adv
 import wx.xrc
+from prettytable import PrettyTable
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.gui.utils import int_or_zero, on_event, with_target
@@ -16,7 +18,7 @@ from ltchiptool.gui.work.ports import PortWatcher
 from ltchiptool.util.cli import list_serial_ports
 from ltchiptool.util.detection import Detection
 from ltchiptool.util.fileio import chname
-from ltchiptool.util.flash import FlashOp
+from ltchiptool.util.flash import FlashFeatures, FlashOp, format_flash_guide
 from ltchiptool.util.logging import verbose
 
 from .base import BasePanel
@@ -29,6 +31,7 @@ class FlashPanel(BasePanel):
     prev_file: str | None = None
     auto_file: str | None = None
     delayed_port: str | None = None
+    chip_info: list[tuple[str, str]] | None = None
 
     def __init__(self, parent: wx.Window, frame):
         super().__init__(parent, frame)
@@ -42,11 +45,15 @@ class FlashPanel(BasePanel):
         self.Write = self.BindRadioButton("radio_write")
         self.Read = self.BindRadioButton("radio_read")
         self.ReadROM = self.BindRadioButton("radio_read_rom")
+        self.ReadEfuse = self.BindRadioButton("radio_read_efuse")
+        self.ReadInfo = self.BindRadioButton("radio_read_info")
         self.AutoDetect = self.BindCheckBox("checkbox_auto_detect")
         self.FileText = self.FindStaticText("text_file")
         self.File = self.BindTextCtrl("input_file")
         self.Family = self.BindComboBox("combo_family")
-        self.BindButton("button_browse", self.OnBrowseClick)
+        self.Guide = self.BindButton("button_guide", self.OnGuideClick)
+        self.Docs = self.BindButton("button_docs", self.OnDocsClick)
+        self.Browse = self.BindButton("button_browse", self.OnBrowseClick)
         self.Start: wx.adv.CommandLinkButton = self.BindButton(
             "button_start", self.OnStartClick
         )
@@ -112,7 +119,7 @@ class FlashPanel(BasePanel):
         file: str = None,
         offset: int = None,
         skip: int = None,
-        length: int = None,
+        length: int | None = None,
         prev_file: str = None,
         auto_file: str = None,
         **_,
@@ -137,15 +144,56 @@ class FlashPanel(BasePanel):
         self.StartWork(PortWatcher(self.OnPortsUpdated), freeze_ui=False)
 
     def OnUpdate(self, target: wx.Window = None):
+        if self.chip_info:
+            chip_info = self.chip_info
+            self.chip_info = None
+            self.ShowChipInfo(chip_info)
+
+        if target == self.Family:
+            # update components based on SocInterface feature set
+            soc = self.soc
+            if soc:
+                features = soc.flash_get_features()
+                guide = soc.flash_get_guide()
+                docs = soc.flash_get_docs_url()
+            else:
+                features = FlashFeatures()
+                guide = None
+                docs = None
+            self.Write.Enable(features.can_write)
+            self.Read.Enable(features.can_read)
+            self.ReadROM.Enable(features.can_read_rom)
+            self.ReadEfuse.Enable(features.can_read_efuse)
+            self.ReadInfo.Enable(features.can_read_info)
+            self.Guide.Enable(bool(guide))
+            self.Docs.Enable(bool(docs))
+            if not features.can_write and self.Write.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read and self.Read.GetValue():
+                self.Write.SetValue(True)
+            if not features.can_read_rom and self.ReadROM.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read_efuse and self.ReadEfuse.GetValue():
+                self.Read.SetValue(True)
+            if not features.can_read_info and self.ReadInfo.GetValue():
+                self.Read.SetValue(True)
+
         writing = self.operation == FlashOp.WRITE
         reading = not writing
-        auto = self.auto_detect
-        manual = not auto
+        reading_info = self.operation == FlashOp.READ_INFO
+
         is_uf2 = self.detection is not None and self.detection.is_uf2
         need_offset = self.detection is not None and self.detection.need_offset
 
+        force_auto = (writing and is_uf2) or reading_info
+        auto = self.auto_detect
+        manual = not auto
+        if manual and force_auto:
+            self.auto_detect = auto = True
+            manual = False
+
         match target:
-            case (self.Read | self.ReadROM) if self.file:
+            case (self.Read | self.ReadROM | self.ReadEfuse) if self.file:
                 # generate a new filename for reading, to prevent
                 # accidentally overwriting firmware files
                 if not self.prev_file:
@@ -169,7 +217,9 @@ class FlashPanel(BasePanel):
         self.SkipText.Enable(writing)
         self.Skip.Enable(writing and manual)
         self.Length.Enable(manual)
-        self.AutoDetect.Enable(reading or not is_uf2)
+        self.AutoDetect.Enable(not force_auto)
+        self.File.Enable(not reading_info)
+        self.Browse.Enable(not reading_info)
 
         errors = []
         warnings = []
@@ -183,14 +233,12 @@ class FlashPanel(BasePanel):
                 errors.append("File does not exist")
             else:
                 self.FileType.ChangeValue(self.detection.title)
-                if manual and is_uf2:
-                    self.auto_detect = auto = True
                 if auto:
                     self.family = self.detection.family
                     if not need_offset:
                         self.offset = self.detection.offset
                     self.skip = self.detection.skip
-                    self.length = self.detection.length
+                    self.length = None if is_uf2 else self.detection.length
 
                 match self.detection.type:
                     case Detection.Type.UNRECOGNIZED if auto:
@@ -211,11 +259,25 @@ class FlashPanel(BasePanel):
 
                 if manual:
                     warnings.append("Warning: using custom options")
+                    if self.skip >= self.detection.size:
+                        errors.append(
+                            f"Skip offset (0x{self.skip:X}) "
+                            f"not within input file bounds "
+                            f"(0x{self.detection.size:X})"
+                        )
+                    elif self.skip + (self.length or 0) > self.detection.size:
+                        errors.append(
+                            f"Writing length (0x{self.skip:X} + 0x{self.length:X}) "
+                            f"not within input file bounds "
+                            f"(0x{self.detection.size:X})"
+                        )
+                        errors.append("")
+
         else:
             self.FileText.SetLabel("Output file")
             self.LengthText.SetLabel("Reading length")
             self.FileType.ChangeValue("")
-            if not self.file:
+            if not self.file and not reading_info:
                 errors.append("Choose an output file")
             self.skip = 0
             if auto:
@@ -225,20 +287,15 @@ class FlashPanel(BasePanel):
                 warnings.append("Using manual parameters")
 
         verbose(
-            f"Update: read_full={self.read_full}, "
+            f"Update: "
             f"target={type(target).__name__}, "
             f"port={self.port}, "
             f"family={self.family}",
         )
 
-        if self.prev_read_full is not self.read_full:
-            # switching "entire chip" reading - update input text
-            self.length = self.length or 0x200000
-            self.prev_read_full = self.read_full
-
         if not self.family:
             errors.append("Choose the chip family")
-        if not self.length and not self.read_full:
+        if self.length == 0:
             errors.append("Enter a correct length")
         if not self.port:
             errors.append("Choose a serial port")
@@ -266,6 +323,10 @@ class FlashPanel(BasePanel):
         event.Skip()
         if target == self.File:
             self.file = self.file
+
+    def EnableAll(self):
+        super().EnableAll()
+        self.DoUpdate(self.Family)
 
     @property
     def port(self):
@@ -309,6 +370,10 @@ class FlashPanel(BasePanel):
             return FlashOp.READ
         if self.ReadROM.GetValue():
             return FlashOp.READ_ROM
+        if self.ReadEfuse.GetValue():
+            return FlashOp.READ_EFUSE
+        if self.ReadInfo.GetValue():
+            return FlashOp.READ_INFO
 
     @operation.setter
     def operation(self, value: FlashOp):
@@ -322,6 +387,12 @@ class FlashPanel(BasePanel):
             case FlashOp.READ_ROM:
                 self.ReadROM.SetValue(True)
                 self.DoUpdate(self.ReadROM)
+            case FlashOp.READ_EFUSE:
+                self.ReadEfuse.SetValue(True)
+                self.DoUpdate(self.ReadEfuse)
+            case FlashOp.READ_INFO:
+                self.ReadInfo.SetValue(True)
+                self.DoUpdate(self.ReadInfo)
 
     @property
     def auto_detect(self):
@@ -348,6 +419,15 @@ class FlashPanel(BasePanel):
         self.DoUpdate(self.Family)
 
     @property
+    def soc(self) -> SocInterface | None:
+        if not self.family:
+            return None
+        if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
+            return self.detection.soc or SocInterface.get(self.family)
+        else:
+            return SocInterface.get(self.family)
+
+    @property
     def file(self):
         return self.File.GetValue()
 
@@ -369,54 +449,52 @@ class FlashPanel(BasePanel):
         self.DoUpdate(self.File)
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         text: str = self.Offset.GetValue().strip() or "0"
         value = int_or_zero(text)
         return value
 
     @offset.setter
-    def offset(self, value: int):
+    def offset(self, value: int) -> None:
         value = value or 0
         self.Offset.SetValue(f"0x{value:X}")
 
     @property
-    def skip(self):
+    def skip(self) -> int:
         text: str = self.Skip.GetValue().strip() or "0"
         value = int_or_zero(text)
         return value
 
     @skip.setter
-    def skip(self, value: int):
+    def skip(self, value: int) -> None:
         value = value or 0
         self.Skip.SetValue(f"0x{value:X}")
 
     @property
-    def length(self):
-        text: str = self.Length.GetValue().strip() or "0"
+    def length(self) -> int | None:
+        text: str = self.Length.GetValue().strip()
+        if not text:
+            return None
         value = int_or_zero(text)
         return value
 
     @length.setter
     def length(self, value: int | None):
-        value = value or 0
-        if self.read_full:
-            self.Length.SetValue("Entire chip")
-        else:
+        if value:
             self.Length.SetValue(f"0x{value:X}")
-
-    @property
-    def read_full(self):
-        return self.length == 0 and self.auto_detect and self.operation != FlashOp.WRITE
+        else:
+            self.Length.SetValue("")
 
     def make_dump_filename(self):
         if not self.file:
             return
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
+        efuse = "_efuse" if self.operation == FlashOp.READ_EFUSE else ""
         if self.family:
-            filename = f"ltchiptool_{self.family.code}_{date}{rom}.bin"
+            filename = f"ltchiptool_{self.family.code}_{date}{rom}{efuse}.bin"
         else:
-            filename = f"ltchiptool_dump_{date}{rom}.bin"
+            filename = f"ltchiptool_dump_{date}{rom}{efuse}.bin"
         self.auto_file = chname(self.file, filename)
         verbose(f"Generated dump filename: {self.auto_file}")
         return self.auto_file
@@ -440,9 +518,42 @@ class FlashPanel(BasePanel):
         self.port = user_port
         self.delayed_port = None
 
+    def OnChipInfoFull(self, chip_info: list[tuple[str, str]]):
+        self.chip_info = chip_info
+
+    def ShowChipInfo(self, chip_info: list[tuple[str, str]]):
+        table = PrettyTable()
+        table.field_names = ["Name", "Value"]
+        table.align = "l"
+        for key, value in chip_info:
+            table.add_row([key, value])
+        self.MessageDialogMonospace(
+            message=table.get_string(),
+            caption="Chip info",
+        )
+
     @on_event
     def OnRescanClick(self):
         self.OnPortsUpdated(list_serial_ports())
+
+    @on_event
+    def OnGuideClick(self):
+        guide = self.soc.flash_get_guide()
+        if not guide:
+            self.Guide.Disable()
+            return
+        self.MessageDialogMonospace(
+            message="\n".join(format_flash_guide(self.soc)),
+            caption="Flashing guide",
+        )
+
+    @on_event
+    def OnDocsClick(self):
+        docs = self.soc.flash_get_docs_url()
+        if not docs:
+            self.Docs.Disable()
+            return
+        webbrowser.open_new_tab(docs)
 
     @on_event
     def OnBrowseClick(self):
@@ -464,10 +575,7 @@ class FlashPanel(BasePanel):
 
     @on_event
     def OnStartClick(self):
-        if self.operation == FlashOp.WRITE and self.auto_detect and self.detection:
-            soc = self.detection.soc or SocInterface.get(self.family)
-        else:
-            soc = SocInterface.get(self.family)
+        soc = self.soc
 
         if self.operation != FlashOp.WRITE:
             if self.file == self.auto_file:
@@ -492,7 +600,8 @@ class FlashPanel(BasePanel):
             length=self.length,
             verify=True,
             ctx=self.detection and self.detection.get_uf2_ctx(),
-            on_chip_info=self.Start.SetNote,
+            on_chip_info_summary=self.Start.SetNote,
+            on_chip_info_full=self.OnChipInfoFull,
         )
         self.StartWork(work)
         self.Start.SetNote("")
