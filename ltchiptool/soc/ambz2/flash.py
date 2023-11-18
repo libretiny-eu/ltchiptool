@@ -1,7 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-28.
 
 from abc import ABC
-from typing import IO, Generator, List, Optional, Tuple
+from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.soc.amb.efuse import efuse_physical_to_logical
@@ -19,6 +19,30 @@ from .util.ambz2tool import (
     AmbZ2Tool,
 )
 
+AMEBAZ2_GUIDE = [
+    "Connect UART2 of the Realtek chip to the USB-TTL adapter:",
+    [
+        ("PC", "RTL8720C"),
+        ("RX", "TX2 (Log_TX / PA16)"),
+        ("TX", "RX2 (Log_RX / PA15)"),
+        ("", ""),
+        ("GND", "GND"),
+    ],
+    "Using a good, stable 3.3V power supply is crucial. Most flashing issues\n"
+    "are caused by either voltage drops during intensive flash operations,\n"
+    "or bad/loose wires.",
+    "The UART adapter's 3.3V power regulator is usually not enough. Instead,\n"
+    "a regulated bench power supply, or a linear 1117-type regulator is recommended.",
+    "In order to flash the chip, you need to enable download mode.\n"
+    "This is similar to ESP8266/ESP32, but the strapping pin (GPIO 0 / PA00)\n"
+    "has to be pulled *to 3.3V*, not GND.",
+    "Additionally, make sure that pin PA13 (RX0) is NOT pulled to GND.",
+    "Do this, in order:\n"
+    " - connect PA00 to 3.3V\n"
+    " - apply power to the device OR shortly connect CEN to GND\n"
+    " - start the flashing process",
+]
+
 
 class AmebaZ2Flash(SocInterface, ABC):
     amb: Optional[AmbZ2Tool] = None
@@ -28,6 +52,9 @@ class AmebaZ2Flash(SocInterface, ABC):
 
     def flash_get_features(self) -> FlashFeatures:
         return FlashFeatures()
+
+    def flash_get_guide(self) -> List[Union[str, list]]:
+        return AMEBAZ2_GUIDE
 
     def flash_set_connection(self, connection: FlashConnection) -> None:
         if self.conn:
