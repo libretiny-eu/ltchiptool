@@ -3,7 +3,6 @@
 import sys
 from os.path import dirname, join
 
-import wx.adv
 import wx.xrc
 
 from ltchiptool import get_version
@@ -47,7 +46,7 @@ class AboutPanel(BasePanel):
             self.FindStaticText("text_build_date_title").Hide()
             self.FindStaticText("text_build_date").Hide()
         self.FindStaticText("text_path_title").SetLabel(lt_path_title)
-        path: wx.adv.HyperlinkCtrl = self.FindStaticText("text_path")
+        path = self.BindHyperlinkCtrl("text_path")
         path.SetLabel(lt_path)
         path.SetURL(lt_path)
 

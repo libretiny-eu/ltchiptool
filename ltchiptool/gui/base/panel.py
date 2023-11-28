@@ -6,6 +6,7 @@ from queue import Queue
 from typing import Any, Callable, Tuple
 
 import wx
+import wx.adv
 import wx.xrc
 
 from ltchiptool.gui.utils import on_event
@@ -124,6 +125,19 @@ class BasePanel(wx.Panel, BaseWindow):
         window: wx.Button = self.FindWindowByName(name, self)
         self._components.append(window)
         window.Bind(wx.EVT_BUTTON, func)
+        return window
+
+    def BindCommandButton(self, name: str, func: Callable[[wx.Event], None]):
+        window: wx.adv.CommandLinkButton = self.FindWindowByName(name, self)
+        self._components.append(window)
+        window.Bind(wx.EVT_BUTTON, func)
+        return window
+
+    def BindHyperlinkCtrl(self, name: str, func: Callable[[wx.Event], None] = None):
+        window: wx.adv.HyperlinkCtrl = self.FindWindowByName(name, self)
+        self._components.append(window)
+        if func:
+            window.Bind(wx.adv.EVT_HYPERLINK, func)
         return window
 
     def BindWindow(self, name: str, *handlers: Tuple[Any, Callable[[wx.Event], None]]):

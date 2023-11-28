@@ -7,7 +7,6 @@ from logging import debug, info
 from os.path import dirname, isfile, realpath
 
 import wx
-import wx.adv
 import wx.xrc
 from prettytable import PrettyTable
 
@@ -54,12 +53,8 @@ class FlashPanel(BasePanel):
         self.Guide = self.BindButton("button_guide", self.OnGuideClick)
         self.Docs = self.BindButton("button_docs", self.OnDocsClick)
         self.Browse = self.BindButton("button_browse", self.OnBrowseClick)
-        self.Start: wx.adv.CommandLinkButton = self.BindButton(
-            "button_start", self.OnStartClick
-        )
-        self.Cancel: wx.adv.CommandLinkButton = self.BindButton(
-            "button_cancel", self.OnCancelClick
-        )
+        self.Start = self.BindCommandButton("button_start", self.OnStartClick)
+        self.Cancel = self.BindCommandButton("button_cancel", self.OnCancelClick)
 
         self.Baudrate = {
             None: self.BindRadioButton("radio_baudrate_auto"),

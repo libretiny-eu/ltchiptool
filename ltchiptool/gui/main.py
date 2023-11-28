@@ -7,7 +7,6 @@ from os import rename, unlink
 from os.path import dirname, isfile, join
 
 import wx
-import wx.adv
 import wx.xrc
 from click import get_app_dir
 from zeroconf import Zeroconf
