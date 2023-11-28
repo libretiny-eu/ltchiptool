@@ -94,7 +94,7 @@ class LoggingHandler(StreamHandler):
         if record.exc_info:
             _, e, _ = record.exc_info
             if e:
-                self.emit_exception(e=e)
+                self.emit_exception(e=e, msg=record.msg)
 
     def emit_string(self, log_prefix: str, message: str, color: str = None):
         now = time()

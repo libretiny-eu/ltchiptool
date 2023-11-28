@@ -116,14 +116,17 @@ class MainFrame(wx.Frame):
                 if name.startswith("plugin."):
                     # mark as loaded after trying to build any plugin
                     self.loaded = True
-                if issubclass(cls, BasePanel):
-                    panel = cls(parent=self.Notebook, frame=self)
-                    self.Windows[name] = panel
-                elif issubclass(cls, BaseFrame):
-                    frame = cls(parent=self, frame=self)
-                    self.Windows[name] = frame
-                else:
-                    warning(f"Unknown GUI element: {cls}")
+                try:
+                    if issubclass(cls, BasePanel):
+                        panel = cls(parent=self.Notebook, frame=self)
+                        self.Windows[name] = panel
+                    elif issubclass(cls, BaseFrame):
+                        frame = cls(parent=self, frame=self)
+                        self.Windows[name] = frame
+                    else:
+                        warning(f"Unknown GUI element: {cls}")
+                except Exception as e:
+                    exception(f"Couldn't build {name}", exc_info=e)
 
             self.loaded = True
         except Exception as e:
