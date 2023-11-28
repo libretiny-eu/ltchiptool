@@ -1,10 +1,9 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
-import os
 import webbrowser
-from datetime import datetime
 from logging import debug, info
-from os.path import dirname, isfile, realpath
+from os.path import isfile
+from pathlib import Path
 
 import wx
 import wx.xrc
@@ -12,22 +11,18 @@ from prettytable import PrettyTable
 
 from ltchiptool import Family, SocInterface
 from ltchiptool.gui.mixin.devices import DevicesBase
-from ltchiptool.gui.utils import int_or_zero, on_event, with_target
+from ltchiptool.gui.mixin.file_dump import FileDumpBase
+from ltchiptool.gui.utils import int_or_zero, on_event
 from ltchiptool.gui.work.flash import FlashThread
 from ltchiptool.util.detection import Detection
-from ltchiptool.util.fileio import chname
 from ltchiptool.util.flash import FlashFeatures, FlashOp, format_flash_guide
 from ltchiptool.util.logging import verbose
 
-from .base import BasePanel
 
-
-class FlashPanel(BasePanel, DevicesBase):
+# noinspection PyPep8Naming
+class FlashPanel(FileDumpBase, DevicesBase):
     detection: Detection | None = None
     ports: list[tuple[str, bool, str]]
-    prev_read_full: bool = None
-    prev_file: str | None = None
-    auto_file: str | None = None
     last_port: str | None = None
     chip_info: list[tuple[str, str]] | None = None
 
@@ -71,7 +66,6 @@ class FlashPanel(BasePanel, DevicesBase):
         self.LengthText = self.FindStaticText("text_length")
         self.Length = self.BindTextCtrl("input_length")
 
-        self.File.Bind(wx.EVT_KILL_FOCUS, self.OnBlur)
         self.Cancel.SetNote("")
 
         families = set()
@@ -81,12 +75,11 @@ class FlashPanel(BasePanel, DevicesBase):
                 families.add(family.description)
         self.Family.Set(sorted(families))
 
-        self.EnableFileDrop()
-
     def SetInitParams(self, file: str = None, **kwargs):
+        super().SetInitParams(**kwargs)
         if file and isfile(file):
             self.operation = FlashOp.WRITE
-            self.file = realpath(file)
+            self.file = Path(file)
 
     def GetSettings(self) -> dict:
         return dict(
@@ -95,12 +88,10 @@ class FlashPanel(BasePanel, DevicesBase):
             operation=self.operation.value,
             auto_detect=self.auto_detect,
             family=self.family and self.family.name,
-            file=self.file,
             offset=self.offset,
             skip=self.skip,
             length=self.length,
-            prev_file=self.prev_file,
-            auto_file=self.auto_file,
+            **self.GetFileSettings(),
         )
 
     def SetSettings(
@@ -110,13 +101,10 @@ class FlashPanel(BasePanel, DevicesBase):
         operation: str = FlashOp.WRITE.value,
         auto_detect: bool = True,
         family: str = None,
-        file: str = None,
         offset: int = None,
         skip: int = None,
         length: int | None = None,
-        prev_file: str = None,
-        auto_file: str = None,
-        **_,
+        **kwargs,
     ):
         self.port = port
         self.baudrate = baudrate
@@ -126,12 +114,10 @@ class FlashPanel(BasePanel, DevicesBase):
             self.family = Family.get(name=family)
         except ValueError:
             self.family = None
-        self.file = file
         self.offset = offset
         self.skip = skip
         self.length = length
-        self.prev_file = prev_file
-        self.auto_file = auto_file
+        self.SetFileSettings(**kwargs)
 
     def OnActivate(self):
         self.StartDeviceWatcher()
@@ -192,19 +178,14 @@ class FlashPanel(BasePanel, DevicesBase):
             case (self.Read | self.ReadROM | self.ReadEfuse) if self.file:
                 # generate a new filename for reading, to prevent
                 # accidentally overwriting firmware files
-                if not self.prev_file:
-                    self.prev_file = self.file
-                self.file = self.make_dump_filename()
-            case self.Family if reading and self.file == self.auto_file:
+                self.generate_read_filename()
+            case self.Family if reading:
                 # regenerate the filename after changing family
-                self.file = self.make_dump_filename()
+                self.regenerate_read_filename()
             case self.Write:
                 # restore filename previously used for writing
-                if self.prev_file:
-                    self.file = self.prev_file
-                    self.prev_file = None
                 # perform file type detection again (in case of switching Read -> Write)
-                self.file = self.file
+                self.restore_write_filename()
 
         self.Family.Enable(reading or manual)
         self.FileTypeText.Enable(writing)
@@ -241,9 +222,9 @@ class FlashPanel(BasePanel, DevicesBase):
                         errors.append("File is unrecognized")
                     case Detection.Type.UNRECOGNIZED:
                         warnings.append("Warning: file is unrecognized")
-                    case Detection.Type.UNSUPPORTED:
+                    case Detection.Type.UNSUPPORTED if auto:
                         errors.append("File is not directly flashable")
-                    case Detection.Type.UNSUPPORTED_HERE:
+                    case Detection.Type.UNSUPPORTED_HERE if auto:
                         errors.append(
                             f"File is not flashable to "
                             f"'{self.detection.family.description}'",
@@ -252,6 +233,8 @@ class FlashPanel(BasePanel, DevicesBase):
                         errors.append("UF2 family unrecognized")
                     case Detection.Type.VALID_NEED_OFFSET:
                         warnings.append("Custom start offset needed")
+                    case Detection.Type.UNSUPPORTED | Detection.Type.UNSUPPORTED_HERE:
+                        warnings.append("Warning: file shouldn't be directly flashed")
 
                 if manual:
                     warnings.append("Warning: using custom options")
@@ -308,21 +291,42 @@ class FlashPanel(BasePanel, DevicesBase):
 
         self.Cancel.Disable()
 
-    def OnFileDrop(self, *files):
-        if not files:
-            return
-        self.operation = FlashOp.WRITE
-        self.file = files[0]
-
-    @with_target
-    def OnBlur(self, event: wx.FocusEvent, target: wx.Window):
-        event.Skip()
-        if target == self.File:
-            self.file = self.file
-
     def EnableAll(self):
         super().EnableAll()
         self.DoUpdate(self.Family)
+
+    def OnFileChanged(self, path: Path = None) -> None:
+        if self.operation != FlashOp.WRITE:
+            return
+        if self.detection and self.detection.name == str(path):
+            return
+        if not (path and path.is_file()):
+            self.detection = None
+        else:
+            with path.open("rb") as f:
+                self.detection = Detection.perform(f)
+        debug(f"Detection: {str(self.detection)}")
+
+    @property
+    def filename_stem(self) -> str:
+        return self.family and self.family.code or "dump"
+
+    @property
+    def filename_tags(self) -> str:
+        rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
+        efuse = "_efuse" if self.operation == FlashOp.READ_EFUSE else ""
+        return rom + efuse
+
+    @property
+    def is_reading(self) -> bool:
+        return self.operation in [FlashOp.READ, FlashOp.READ_ROM, FlashOp.READ_EFUSE]
+
+    @property
+    def is_writing(self) -> bool:
+        return self.operation == FlashOp.WRITE
+
+    def set_writing(self) -> None:
+        self.operation = FlashOp.WRITE
 
     @property
     def port(self):
@@ -428,27 +432,6 @@ class FlashPanel(BasePanel, DevicesBase):
             return SocInterface.get(self.family)
 
     @property
-    def file(self):
-        return self.File.GetValue()
-
-    # noinspection PyTypeChecker
-    @file.setter
-    def file(self, value: str | None):
-        value = value or ""
-        self.File.ChangeValue(value)
-        if self.operation != FlashOp.WRITE:
-            return
-        if self.detection and self.detection.name == value:
-            return
-        if not isfile(value):
-            self.detection = None
-        else:
-            with open(value, "rb") as f:
-                self.detection = Detection.perform(f)
-        debug(f"Detection: {str(self.detection)}")
-        self.DoUpdate(self.File)
-
-    @property
     def offset(self) -> int:
         text: str = self.Offset.GetValue().strip() or "0"
         value = int_or_zero(text)
@@ -484,20 +467,6 @@ class FlashPanel(BasePanel, DevicesBase):
             self.Length.SetValue(f"0x{value:X}")
         else:
             self.Length.SetValue("")
-
-    def make_dump_filename(self):
-        if not self.file:
-            return
-        date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        rom = "_rom" if self.operation == FlashOp.READ_ROM else ""
-        efuse = "_efuse" if self.operation == FlashOp.READ_EFUSE else ""
-        if self.family:
-            filename = f"ltchiptool_{self.family.code}_{date}{rom}{efuse}.bin"
-        else:
-            filename = f"ltchiptool_dump_{date}{rom}{efuse}.bin"
-        self.auto_file = chname(self.file, filename)
-        verbose(f"Generated dump filename: {self.auto_file}")
-        return self.auto_file
 
     def OnPortsUpdated(self, ports: list[tuple[str, bool, str]]):
         user_port = self.port
@@ -555,31 +524,12 @@ class FlashPanel(BasePanel, DevicesBase):
         webbrowser.open_new_tab(docs)
 
     @on_event
-    def OnBrowseClick(self):
-        if self.operation == FlashOp.WRITE:
-            title = "Open file"
-            flags = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        else:
-            title = "Save file"
-            flags = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
-        init_dir = dirname(self.file) if self.file else os.getcwd()
-        with wx.FileDialog(self, title, init_dir, style=flags) as dialog:
-            dialog: wx.FileDialog
-            if dialog.ShowModal() == wx.ID_CANCEL:
-                return
-            self.file = dialog.GetPath()
-            if self.operation != FlashOp.WRITE:
-                # clear previous writing filename
-                self.prev_file = None
-
-    @on_event
     def OnStartClick(self):
         soc = self.soc
 
         if self.operation != FlashOp.WRITE:
-            if self.file == self.auto_file:
-                self.file = self.make_dump_filename()
-            if isfile(self.file):
+            self.regenerate_read_filename()
+            if self.file.is_file():
                 btn = wx.MessageBox(
                     message=f"File already exists. Do you want to overwrite it?",
                     caption="Warning",
@@ -592,7 +542,7 @@ class FlashPanel(BasePanel, DevicesBase):
             port=self.port,
             baudrate=self.baudrate,
             operation=self.operation,
-            file=self.file,
+            file=self.file and str(self.file) or "",
             soc=soc,
             offset=self.offset,
             skip=self.skip,
