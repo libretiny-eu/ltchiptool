@@ -70,12 +70,20 @@ class BasePanel(wx.Panel, BaseWindow):
     def OnFileDrop(self, *files):
         pass
 
-    def LoadXRC(self, name: str):
-        panel = self.Xrc.LoadPanel(self, name)
+    def LoadXRC(self, name: str, wrap_scrolled: bool = True):
+        parent = self
+        if wrap_scrolled:
+            parent = wx.ScrolledWindow(self)
+            parent.SetScrollRate(10, 10)
+        panel = self.Xrc.LoadPanel(parent, name)
         if not panel:
             raise ValueError(f"Panel not found: {name}")
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(panel, 1, wx.EXPAND)
+        if wrap_scrolled:
+            parent.SetSizerAndFit(sizer)
+            sizer = wx.BoxSizer(wx.VERTICAL)
+            sizer.Add(parent, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
     def AddToNotebook(self, title: str):
