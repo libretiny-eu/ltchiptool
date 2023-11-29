@@ -11,10 +11,9 @@ import wx.xrc
 from prettytable import PrettyTable
 
 from ltchiptool import Family, SocInterface
+from ltchiptool.gui.mixin.devices import DevicesBase
 from ltchiptool.gui.utils import int_or_zero, on_event, with_target
 from ltchiptool.gui.work.flash import FlashThread
-from ltchiptool.gui.work.ports import PortWatcher
-from ltchiptool.util.cli import list_serial_ports
 from ltchiptool.util.detection import Detection
 from ltchiptool.util.fileio import chname
 from ltchiptool.util.flash import FlashFeatures, FlashOp, format_flash_guide
@@ -23,13 +22,13 @@ from ltchiptool.util.logging import verbose
 from .base import BasePanel
 
 
-class FlashPanel(BasePanel):
+class FlashPanel(BasePanel, DevicesBase):
     detection: Detection | None = None
     ports: list[tuple[str, bool, str]]
     prev_read_full: bool = None
     prev_file: str | None = None
     auto_file: str | None = None
-    delayed_port: str | None = None
+    last_port: str | None = None
     chip_info: list[tuple[str, str]] | None = None
 
     def __init__(self, parent: wx.Window, frame):
@@ -40,7 +39,7 @@ class FlashPanel(BasePanel):
         self.ports = []
 
         self.Port = self.BindComboBox("combo_port")
-        self.Rescan = self.BindButton("button_rescan", self.OnRescanClick)
+        self.Rescan = self.BindButton("button_rescan", self.CallDeviceWatcher)
         self.Write = self.BindRadioButton("radio_write")
         self.Read = self.BindRadioButton("radio_read")
         self.ReadROM = self.BindRadioButton("radio_read_rom")
@@ -91,7 +90,7 @@ class FlashPanel(BasePanel):
 
     def GetSettings(self) -> dict:
         return dict(
-            port=self.port,
+            port=self.port or self.last_port,
             baudrate=self.baudrate,
             operation=self.operation.value,
             auto_detect=self.auto_detect,
@@ -134,9 +133,11 @@ class FlashPanel(BasePanel):
         self.prev_file = prev_file
         self.auto_file = auto_file
 
-    def OnShow(self):
-        super().OnShow()
-        self.StartWork(PortWatcher(self.OnPortsUpdated), freeze_ui=False)
+    def OnActivate(self):
+        self.StartDeviceWatcher()
+
+    def OnDeactivate(self):
+        self.StopDeviceWatcher()
 
     def OnUpdate(self, target: wx.Window = None):
         if self.chip_info:
@@ -344,7 +345,8 @@ class FlashPanel(BasePanel):
                     self.Port.SetValue(description)
                     self.DoUpdate(self.Port)
                     return
-            self.delayed_port = value
+            self.last_port = value
+        self.DoUpdate(self.Port)
 
     @property
     def baudrate(self):
@@ -498,23 +500,26 @@ class FlashPanel(BasePanel):
         return self.auto_file
 
     def OnPortsUpdated(self, ports: list[tuple[str, bool, str]]):
-        self.Port.Enable(not not ports)
-        if not ports:
-            self.ports = []
-            self.Port.Set(["No serial ports found"])
-            self.Port.SetSelection(0)
-            return
-        user_port = self.port or self.delayed_port
+        user_port = self.port
+        auto_port = None
+
         for port, is_usb, description in set(ports) - set(self.ports):
             info(f"Found new device: {description}")
-            if user_port is None and is_usb:
-                user_port = port
+            if is_usb and not auto_port:
+                auto_port = port
         for _, _, description in set(self.ports) - set(ports):
             info(f"Device unplugged: {description}")
-        self.Port.Set([port[2] for port in ports])
-        self.ports = ports
-        self.port = user_port
-        self.delayed_port = None
+
+        self.Port.Enable(bool(ports))
+        if ports:
+            self.Port.Set([port[2] for port in ports])
+            self.ports = ports
+            self.port = user_port or auto_port or self.last_port
+        else:
+            self.Port.Set(["No serial ports found"])
+            self.Port.SetSelection(0)
+            self.ports = []
+            self.DoUpdate(self.Port)
 
     def OnChipInfoFull(self, chip_info: list[tuple[str, str]]):
         self.chip_info = chip_info
@@ -529,10 +534,6 @@ class FlashPanel(BasePanel):
             message=table.get_string(),
             caption="Chip info",
         )
-
-    @on_event
-    def OnRescanClick(self):
-        self.OnPortsUpdated(list_serial_ports())
 
     @on_event
     def OnGuideClick(self):
