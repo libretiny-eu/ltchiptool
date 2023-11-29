@@ -214,9 +214,13 @@ class MainFrame(wx.Frame):
 
     @NotebookPagePanel.setter
     def NotebookPagePanel(self, panel: BasePanel):
+        prev_panel = self.NotebookPagePanel
         for i in range(self.Notebook.GetPageCount()):
             if panel == self.Notebook.GetPage(i):
                 self.Notebook.SetSelection(i)
+                if panel != prev_panel:
+                    panel.OnActivate()
+                    prev_panel.OnDeactivate()
                 return
 
     @property
@@ -263,6 +267,7 @@ class MainFrame(wx.Frame):
         )
 
     def OnShow(self, *_):
+        self.NotebookPagePanel.OnActivate()
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
         for name, window in self.Windows.items():
