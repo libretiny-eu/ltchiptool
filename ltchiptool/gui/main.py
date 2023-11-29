@@ -8,8 +8,8 @@ from os.path import dirname, isfile, join
 
 import wx
 import wx.xrc
+import zeroconf
 from click import get_app_dir
-from zeroconf import Zeroconf
 
 from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler, verbose
@@ -32,7 +32,7 @@ class MainFrame(wx.Frame):
     MenuItems: dict[str, dict[str, wx.MenuItem]]
     NormalSize: wx.Size
     init_params: dict
-    Zeroconf: Zeroconf = None
+    Zeroconf: zeroconf.Zeroconf | None = None
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -102,8 +102,11 @@ class MainFrame(wx.Frame):
                 continue
             if not plugin.has_gui:
                 continue
-            for gui_name, cls in plugin.build_gui().items():
-                windows.append((f"plugin.{plugin.namespace}.{gui_name}", cls))
+            try:
+                for gui_name, cls in plugin.build_gui().items():
+                    windows.append((f"plugin.{plugin.namespace}.{gui_name}", cls))
+            except Exception as e:
+                exception(f"Couldn't build {plugin.namespace}", exc_info=e)
 
         # dummy name for exception messages
         name = "UI"
@@ -135,7 +138,10 @@ class MainFrame(wx.Frame):
                 self.OnClose()
 
         # start zeroconf listener
-        self.Zeroconf = Zeroconf()
+        try:
+            self.Zeroconf = zeroconf.Zeroconf()
+        except Exception as e:
+            warning("Couldn't start Zeroconf listener", exc_info=e)
 
         self.UpdateMenus()
         for title in sorted(ColorPalette.get_titles(), key=lambda t: t.lower()):

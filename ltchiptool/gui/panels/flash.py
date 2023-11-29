@@ -329,7 +329,10 @@ class FlashPanel(BasePanel):
             return None
         if self.Port.GetSelection() == wx.NOT_FOUND:
             return None
-        return self.ports[self.Port.GetSelection()][0]
+        try:
+            return self.ports[self.Port.GetSelection()][0]
+        except IndexError:
+            return None
 
     @port.setter
     def port(self, value: str | None):
