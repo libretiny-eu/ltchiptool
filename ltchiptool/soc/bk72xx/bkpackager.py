@@ -95,6 +95,12 @@ def main(*argv):
     unpackage.add_argument(
         "size", type=auto_int, help="Container total size (incl. CRC) (dec/hex)"
     )
+    unpackage.add_argument(
+        "-C",
+        "--no-crc-check",
+        help="Do not check CRC16",
+        action="store_true",
+    )
 
     ota = sub.add_parser("ota", description="Package OTA firmware")
     ota.add_argument("input", type=FileType("rb"), help="Input file")
@@ -120,6 +126,7 @@ def main(*argv):
     size = stat(args.input.name).st_size
     start = time()
     gen: Union[ByteGenerator, None] = None
+    length: int = 0
 
     if args.action == "encrypt":
         info(f"Encrypting '{f.name}' ({size} bytes)")
@@ -173,10 +180,14 @@ def main(*argv):
         rbl = f.read(102)
         rbl = b"".join(bk.uncrc(rbl))
         rbl = RBL.deserialize(rbl)
-        info(f" - found '{rbl.name}' ({rbl.version}), size {rbl.data_size}")
+        info(f" - found '{rbl.name}' ({rbl.version}), size {rbl.raw_size}")
         f.seek(0, SEEK_SET)
-        crc_size = (rbl.data_size - 16) // 32 * 34
-        gen = bk.crypt(args.addr, bk.uncrc(fileiter(f, 32, 0xFF, crc_size)))
+        crc_size = ((rbl.data_size - 16) // 32 + 1) * 34
+        gen = bk.crypt(
+            args.addr,
+            bk.uncrc(fileiter(f, 32, 0xFF, crc_size), check=not args.no_crc_check),
+        )
+        length = rbl.raw_size
 
     algo_comp = {
         "none": OTACompression.NONE,
@@ -215,12 +226,15 @@ def main(*argv):
             f"encryption {rbl.encryption.name}"
         )
         gen = bk.ota_unpackage(f, rbl, key=args.key, iv=args.iv)
+        length = rbl.raw_size
 
     if not gen:
         raise RuntimeError("gen is None")
 
     written = 0
     for data in gen:
+        if length:
+            data = data[0 : length - written]
         args.output.write(data)
         written += len(data)
     info(f" - wrote {written} bytes in {time()-start:.3f} s")
