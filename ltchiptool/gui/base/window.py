@@ -27,6 +27,7 @@ class BaseWindow:
         self._threads.append(thread)
 
         def on_stop(t: BaseThread):
+            self._threads.remove(t)
             self.OnWorkStopped(t)
             if freeze_ui:
                 self.EnableAll()
@@ -42,7 +43,7 @@ class BaseWindow:
                 t.stop()
 
     def OnWorkStopped(self, t: BaseThread):
-        self._threads.remove(t)
+        pass
 
     def SetInitParams(self, **kwargs):
         pass
