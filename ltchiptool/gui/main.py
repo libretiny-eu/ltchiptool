@@ -1,7 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
 import sys
-import threading
 from logging import debug, exception, info, warning
 from os import rename, unlink
 from os.path import dirname, isfile, join
@@ -36,8 +35,6 @@ class MainFrame(wx.Frame):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        sys.excepthook = self.OnException
-        threading.excepthook = self.OnException
         LoggingHandler.get().exception_hook = self.ShowExceptionMessage
 
         is_bundled = getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
@@ -248,20 +245,17 @@ class MainFrame(wx.Frame):
                 self.MenuItems[label][item.GetItemLabel()] = item
 
     @staticmethod
-    def OnException(*args):
-        if isinstance(args[0], type):
-            exception(None, exc_info=args[1])
-        else:
-            exception(None, exc_info=args[0].exc_value)
-
-    @staticmethod
     def ShowExceptionMessage(e, msg):
-        if type(e) is RuntimeError:
-            text = str(e)
-        else:
-            text = f"{type(e).__name__}: {e}"
+        lines = [msg] if msg else []
+        while e:
+            if type(e) in [RuntimeError, ValueError, OSError]:
+                lines.append(str(e))
+            else:
+                lines.append(f"{type(e).__name__}: {e}")
+            e = e.__context__
+        lines.insert(1, "")
         wx.MessageBox(
-            message=f"{msg}\n\n{text}" if msg else text,
+            message="\n".join(lines),
             caption="Error",
             style=wx.ICON_ERROR,
         )

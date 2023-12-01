@@ -52,7 +52,7 @@ class PluginBase(ABC):
             path = PackagePath(file)
             for d in distributions():
                 d: Distribution
-                if not d:
+                if not d or not d.files:
                     continue
                 if path in d.files:
                     return d

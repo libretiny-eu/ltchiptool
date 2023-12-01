@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import threading
 from logging import (
     CRITICAL,
     DEBUG,
@@ -11,6 +12,7 @@ from logging import (
     LogRecord,
     StreamHandler,
     error,
+    exception,
     log,
 )
 from time import time
@@ -33,7 +35,7 @@ class LoggingHandler(StreamHandler):
         "C": "bright_magenta",
         "S": "bright_magenta",
     }
-    exception_hook: Callable[[Exception, Optional[str]], None] = None
+    exception_hook: Callable[[BaseException, Optional[str]], None] = None
 
     @staticmethod
     def get() -> "LoggingHandler":
@@ -58,6 +60,8 @@ class LoggingHandler(StreamHandler):
         self.full_traceback = full_traceback
         self.emitters = []
         self.attach()
+        sys.excepthook = self.excepthook
+        threading.excepthook = self.excepthook
 
     @property
     def level(self):
@@ -70,6 +74,7 @@ class LoggingHandler(StreamHandler):
     def attach(self, logger: Logger = None):
         logging.addLevelName(VERBOSE, "VERBOSE")
         logging.addLevelName(STREAM, "STREAM")
+        logging.captureWarnings(True)
         if logger:
             root = logging.root
             logger.setLevel(root.level)
@@ -87,14 +92,14 @@ class LoggingHandler(StreamHandler):
 
     def emit(self, record: LogRecord) -> None:
         message = record.msg
-        if message:
-            if record.args:
-                message = message % record.args
-            self.emit_string(record.levelname[:1], message)
+        if message and record.args:
+            message = message % record.args
         if record.exc_info:
             _, e, _ = record.exc_info
             if e:
-                self.emit_exception(e=e, msg=record.msg)
+                self.emit_exception(e=e, msg=message)
+        else:
+            self.emit_string(record.levelname[:1], message)
 
     def emit_string(self, log_prefix: str, message: str, color: str = None):
         now = time()
@@ -138,20 +143,31 @@ class LoggingHandler(StreamHandler):
         line = tb.tb_lineno
         graph(1, f'File "{filename}", line {line}, in {name}', loglevel=ERROR)
 
-    def emit_exception(self, e: Exception, no_hook: bool = False, msg: str = None):
+    def emit_exception(self, e: BaseException, no_hook: bool = False, msg: str = None):
+        original_exc = e
         if msg:
             error(msg)
-        error(f"{type(e).__name__}: {e}")
-        tb = e.__traceback__
-        if self.exception_hook and not no_hook:
-            self.exception_hook(e, msg)
-        if not tb:
-            return
-        while tb.tb_next:
-            if self.full_traceback:
+        while e:
+            if e == original_exc:
+                error(f"{type(e).__name__}: {e}")
+            else:
+                error(f"Caused by {type(e).__name__}: {e}")
+            tb = e.__traceback__
+            if tb:
+                while tb.tb_next:
+                    if self.full_traceback:
+                        self.tb_echo(tb)
+                    tb = tb.tb_next
                 self.tb_echo(tb)
-            tb = tb.tb_next
-        self.tb_echo(tb)
+            e = e.__context__
+        if self.exception_hook and not no_hook:
+            self.exception_hook(original_exc, msg)
+
+    def excepthook(self, *args):
+        if isinstance(args[0], type):
+            exception(None, exc_info=args[1])
+        else:
+            exception(None, exc_info=args[0].exc_value)
 
 
 def log_setup_click_bars():
