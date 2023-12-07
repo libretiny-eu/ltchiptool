@@ -213,6 +213,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
                 errors.append("File does not exist")
             else:
                 self.FileType.ChangeValue(self.detection.title)
+                if self.offset % 0x1000:
+                    errors.append(f"Offset (0x{self.offset:X}) is not 4 KiB-aligned")
                 if auto:
                     self.family = self.detection.family
                     if not need_offset:
