@@ -49,7 +49,7 @@ class FileDumpBase(BasePanel):
         if not files:
             return
         self.set_writing()
-        self.file = files[0]
+        self.file = Path(files[0])
 
     @with_target
     def OnBlur(self, event: wx.FocusEvent, target: wx.Window) -> None:
@@ -81,7 +81,7 @@ class FileDumpBase(BasePanel):
                 return
             self.file = Path(dialog.GetPath())
 
-    def OnFileChanged(self, path: Path = None) -> None:
+    def OnFileChanged(self, path: Path = None) -> bool | None:
         pass
 
     @property
@@ -110,8 +110,9 @@ class FileDumpBase(BasePanel):
 
     @file.setter
     def file(self, value: Path | None) -> None:
+        if self.OnFileChanged(value) is False:
+            return
         self.File.ChangeValue(str(value or ""))
-        self.OnFileChanged(value)
         self.DoUpdate(self.File)
 
     def generate_read_filename(self) -> None:

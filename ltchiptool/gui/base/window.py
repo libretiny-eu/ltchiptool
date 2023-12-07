@@ -42,6 +42,15 @@ class BaseWindow:
             if isinstance(t, cls):
                 t.stop()
 
+    def IsWorkRunning(self, cls: type[BaseThread]) -> bool:
+        for t in list(self._threads):
+            if isinstance(t, cls):
+                return True
+        return False
+
+    def IsAnyWorkRunning(self) -> bool:
+        return bool(self._threads)
+
     def OnWorkStopped(self, t: BaseThread):
         pass
 

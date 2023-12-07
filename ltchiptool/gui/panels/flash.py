@@ -131,6 +131,9 @@ class FlashPanel(FileDumpBase, DevicesBase):
             self.chip_info = None
             self.ShowChipInfo(chip_info)
 
+        if self.IsAnyWorkRunning():
+            return
+
         if target == self.Family:
             # update components based on SocInterface feature set
             soc = self.soc
@@ -295,7 +298,9 @@ class FlashPanel(FileDumpBase, DevicesBase):
         super().EnableAll()
         self.DoUpdate(self.Family)
 
-    def OnFileChanged(self, path: Path = None) -> None:
+    def OnFileChanged(self, path: Path = None) -> bool | None:
+        if self.IsAnyWorkRunning():
+            return False
         if self.operation != FlashOp.WRITE:
             return
         if self.detection and self.detection.name == str(path):
@@ -326,6 +331,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
         return self.operation == FlashOp.WRITE
 
     def set_writing(self) -> None:
+        if self.IsAnyWorkRunning():
+            return
         self.operation = FlashOp.WRITE
 
     @property
@@ -479,7 +486,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
         for _, _, description in set(self.ports) - set(ports):
             info(f"Device unplugged: {description}")
 
-        self.Port.Enable(bool(ports))
+        if not self.IsAnyWorkRunning():
+            self.Port.Enable(bool(ports))
         if ports:
             self.Port.Set([port[2] for port in ports])
             self.ports = ports
@@ -527,7 +535,7 @@ class FlashPanel(FileDumpBase, DevicesBase):
     def OnStartClick(self):
         soc = self.soc
 
-        if self.operation != FlashOp.WRITE:
+        if self.is_reading:
             self.regenerate_read_filename()
             if self.file.is_file():
                 btn = wx.MessageBox(
