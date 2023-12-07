@@ -64,6 +64,7 @@ from ._utils import flash_link_interactive
     "--rom",
     "memory",
     flag_value=FlashMemoryType.ROM,
+    type=FlashMemoryType,
     help="Read from ROM instead of Flash (default: False)",
 )
 @click.option(
@@ -71,6 +72,7 @@ from ._utils import flash_link_interactive
     "--efuse",
     "memory",
     flag_value=FlashMemoryType.EFUSE,
+    type=FlashMemoryType,
     help="Read from eFuse instead of Flash (default: False)",
 )
 def cli(

@@ -136,7 +136,7 @@ class BK72XXFlash(SocInterface, ABC):
                 ("", ""),
                 ("MAC Address", tlv and tlv[0x24:0x2A].hex(":").upper() or "Unknown"),
             ]
-        if self.bk.check_protocol(0x0E, True):  # # CMD_FlashGetMID
+        if self.bk.check_protocol(0x0E, True):  # CMD_FlashGetMID
             flash_id = self.bk.flash_read_id()
             self.info += [
                 ("", ""),
@@ -157,9 +157,12 @@ class BK72XXFlash(SocInterface, ABC):
         return self.bk.chip_info
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
-        if memory == FlashMemoryType.FLASH:
-            return 0x200000
         self.flash_connect()
+        if memory == FlashMemoryType.FLASH:
+            if not self.bk.check_protocol(0x0E, True):  # CMD_FlashGetMID
+                return 0x200000
+            flash_id = self.bk.flash_read_id()
+            return flash_id["size"]
         if memory == FlashMemoryType.ROM:
             if not self.bk.check_protocol(0x03):  # CMD_ReadReg
                 raise NotImplementedError("Only BK7231N has built-in ROM")
@@ -222,6 +225,7 @@ class BK72XXFlash(SocInterface, ABC):
                 callback.on_update(len(chunk))
                 continue
 
+            debug(f"Checking CRC @ 0x{crc_offset:X}..0x{crc_offset+crc_length:X}")
             crc_expected = self.bk.read_flash_range_crc(
                 crc_offset,
                 crc_offset + crc_length,

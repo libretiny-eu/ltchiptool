@@ -5,6 +5,7 @@ import click
 from ltchiptool.util.cli import get_multi_command_class
 
 COMMANDS = {
+    "info": "ltchiptool/commands/flash/info.py",
     "file": "ltchiptool/commands/flash/file.py",
     "read": "ltchiptool/commands/flash/read.py",
     "split": "ltchiptool/commands/flash/split.py",
