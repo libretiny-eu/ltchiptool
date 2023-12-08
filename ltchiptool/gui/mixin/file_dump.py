@@ -48,6 +48,7 @@ class FileDumpBase(BasePanel):
     def OnFileDrop(self, *files) -> None:
         if not files:
             return
+        self.prev_file = None
         self.set_writing()
         self.file = Path(files[0])
 
