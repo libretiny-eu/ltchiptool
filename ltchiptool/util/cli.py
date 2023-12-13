@@ -3,9 +3,10 @@
 import shlex
 from logging import WARNING, error, info, warning
 from os.path import basename, dirname, join
+from pathlib import Path
 from subprocess import PIPE, Popen
 from threading import Thread
-from typing import IO, Callable, Dict, Iterable, List, Optional
+from typing import IO, Callable, Dict, Iterable, List, Optional, Union
 
 import click
 from click import Command, Context, MultiCommand
@@ -67,7 +68,7 @@ def find_serial_port() -> Optional[str]:
     return ports[0][0]
 
 
-def run_subprocess(*args, cwd: str = None) -> int:
+def run_subprocess(*args, cwd: Union[str, Path] = None) -> int:
     def stream(io: IO[bytes], func: Callable[[str], None]):
         for line in iter(io.readline, b""):
             func(line.decode("utf-8").rstrip())

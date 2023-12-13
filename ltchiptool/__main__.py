@@ -9,10 +9,9 @@ from serial import Serial
 
 from ltchiptool.util.cli import get_multi_command_class
 from ltchiptool.util.logging import VERBOSE, LoggingHandler, log_setup_click_bars
+from ltchiptool.util.ltim import LTIM
 from ltchiptool.util.lvm import LVM
 from ltchiptool.util.streams import LoggingStreamHook
-
-from .version import get_version
 
 COMMANDS = {
     # compile commands
@@ -86,10 +85,10 @@ VERBOSITY_LEVEL = {
     type=click.Path(exists=True, dir_okay=True),
 )
 @click.version_option(
-    get_version(),
+    LTIM.get_version_full(),
     "-V",
     "--version",
-    message="ltchiptool v%(version)s",
+    message="ltchiptool %(version)s",
 )
 @click.pass_context
 def cli_entrypoint(

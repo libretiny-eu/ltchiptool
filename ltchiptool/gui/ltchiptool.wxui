@@ -557,18 +557,36 @@
             flags="wxEXPAND" />
         </node>
         <node
+          class="wxBoxSizer"
+          orientation="wxVERTICAL"
+          var_name="box_sizer_2"
+          colspan="3"
+          flags="wxEXPAND"
+          row="5">
+          <node
+            class="wxStaticText"
+            label="Python version"
+            var_name="m_staticText_6"
+            border_size="0" />
+          <node
+            class="wxStaticText"
+            label="3.10.0 (/usr/bin/python)"
+            var_name="text_python"
+            border_size="0" />
+        </node>
+        <node
           class="wxStaticLine"
           size="20,-1d"
           colspan="3"
           flags="wxEXPAND"
-          row="5" />
+          row="6" />
         <node
           class="wxBoxSizer"
           orientation="wxVERTICAL"
           var_name="box_sizer_3"
           colspan="3"
           flags="wxEXPAND"
-          row="6">
+          row="7">
           <node
             class="wxStaticText"
             label="Project page"
@@ -588,7 +606,7 @@
           var_name="box_sizer_4"
           colspan="3"
           flags="wxEXPAND"
-          row="7">
+          row="8">
           <node
             class="wxStaticText"
             label="Documentation / usage guide"
@@ -608,7 +626,7 @@
           var_name="box_sizer_5"
           colspan="3"
           flags="wxEXPAND"
-          row="8">
+          row="9">
           <node
             class="wxStaticText"
             label="Discord server of LibreTiny community"

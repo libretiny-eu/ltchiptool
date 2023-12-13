@@ -13,6 +13,8 @@ from semantic_version.base import BaseSpec, SimpleSpec
 
 
 class LVM:
+    """libretiny version manager"""
+
     INSTANCE: "LVM" = None
     platforms: List["LVMPlatform"] = field(default_factory=lambda: [])
     pio = None

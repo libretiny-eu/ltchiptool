@@ -5,8 +5,8 @@ from logging import INFO, NOTSET, error, exception
 
 import click
 
-from ltchiptool import get_version
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.ltim import LTIM
 
 
 def gui_entrypoint(*args, **kwargs):
@@ -27,7 +27,7 @@ def gui_entrypoint(*args, **kwargs):
 
         if LoggingHandler.get().level == NOTSET:
             LoggingHandler.get().level = INFO
-        frm = MainFrame(None, title=f"ltchiptool v{get_version()}")
+        frm = MainFrame(None, title=f"ltchiptool {LTIM.get_version_full()}")
         frm.init_params = kwargs
         frm.Show()
         app.MainLoop()

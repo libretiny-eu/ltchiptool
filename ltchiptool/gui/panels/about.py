@@ -5,7 +5,7 @@ from os.path import dirname, join
 
 import wx.xrc
 
-from ltchiptool import get_version
+from ltchiptool.util.ltim import LTIM
 from ltchiptool.util.lvm import LVM, LVMPlatform
 
 from .base import BasePanel
@@ -26,9 +26,8 @@ class AboutPanel(BasePanel):
         else:
             lt_path_title = "LibreTiny package path"
 
-        tool_version = "v" + get_version()
-        if "site-packages" not in __file__ and not hasattr(sys, "_MEIPASS"):
-            tool_version += " (dev)"
+        python = ".".join(str(i) for i in sys.version_info[:3])
+        python += f" ({sys.executable})"
 
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             logo = join(sys._MEIPASS, "ltchiptool-192x192.png")
@@ -39,7 +38,9 @@ class AboutPanel(BasePanel):
             build_date = None
 
         self.FindStaticText("text_lt_version").SetLabel(lt_version or "-")
-        self.FindStaticText("text_tool_version").SetLabel(tool_version or "-")
+        self.FindStaticText("text_tool_version").SetLabel(
+            LTIM.get_version_full() or "-"
+        )
         if build_date:
             self.FindStaticText("text_build_date").SetLabel(build_date)
         else:
@@ -49,6 +50,7 @@ class AboutPanel(BasePanel):
         path = self.BindHyperlinkCtrl("text_path")
         path.SetLabel(lt_path)
         path.SetURL(lt_path)
+        self.FindStaticText("text_python").SetLabel(python or "-")
 
         bitmap = self.FindStaticBitmap("bmp_logo")
         size = bitmap.GetSize().y
