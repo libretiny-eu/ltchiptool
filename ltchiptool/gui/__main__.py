@@ -2,6 +2,7 @@
 
 import sys
 from logging import INFO, NOTSET, error, exception
+from pathlib import Path
 
 import click
 
@@ -9,7 +10,7 @@ from ltchiptool.util.logging import LoggingHandler
 from ltchiptool.util.ltim import LTIM
 
 
-def gui_entrypoint(*args, **kwargs):
+def gui_entrypoint(install: bool, *args, **kwargs):
     if sys.version_info < (3, 10, 0):
         error("ltchiptool GUI requires Python 3.10 or newer")
         exit(1)
@@ -23,13 +24,20 @@ def gui_entrypoint(*args, **kwargs):
 
     app = wx.App()
     try:
-        from .main import MainFrame
-
         if LoggingHandler.get().level == NOTSET:
             LoggingHandler.get().level = INFO
-        frm = MainFrame(None, title=f"ltchiptool {LTIM.get_version_full()}")
-        frm.init_params = kwargs
-        frm.Show()
+
+        if not install:
+            from .main import MainFrame
+
+            frm = MainFrame(None, title=f"ltchiptool {LTIM.get_version_full()}")
+            frm.init_params = kwargs
+            frm.Show()
+        else:
+            from .install import InstallFrame
+
+            frm = InstallFrame(install_kwargs=kwargs, parent=None)
+            frm.Show()
         app.MainLoop()
     except Exception as e:
         LoggingHandler.get().exception_hook = None
@@ -47,7 +55,26 @@ def gui_entrypoint(*args, **kwargs):
 @click.argument("FILE", type=str, required=False)
 def cli(*args, **kwargs):
     try:
-        gui_entrypoint(*args, **kwargs)
+        gui_entrypoint(install=False, *args, **kwargs)
+    except Exception as e:
+        exception(None, exc_info=e)
+        exit(1)
+
+
+@click.command(help="Start the installer")
+@click.argument(
+    "out_path",
+    type=click.Path(
+        file_okay=False,
+        dir_okay=True,
+        writable=True,
+        resolve_path=True,
+        path_type=Path,
+    ),
+)
+def install_cli(*args, **kwargs):
+    try:
+        gui_entrypoint(install=True, *args, **kwargs)
     except Exception as e:
         exception(None, exc_info=e)
         exit(1)

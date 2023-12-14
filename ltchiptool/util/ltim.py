@@ -8,7 +8,7 @@ from logging import DEBUG, info
 from os.path import expandvars
 from pathlib import Path
 from subprocess import PIPE, Popen
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 from zipfile import ZipFile
 
 import requests
@@ -33,6 +33,7 @@ class LTIM:
     """ltchiptool installation manager"""
 
     INSTANCE: "LTIM" = None
+    on_message: Callable[[str], None] = None
 
     @staticmethod
     def get() -> "LTIM":
@@ -41,9 +42,19 @@ class LTIM:
         LTIM.INSTANCE = LTIM()
         return LTIM.INSTANCE
 
-    @staticmethod
-    def get_resource(name: str) -> Path:
-        pass
+    @property
+    def is_bundled(self) -> bool:
+        return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+
+    def get_resource(self, name: str) -> Path:
+        if self.is_bundled:
+            return Path(sys._MEIPASS) / name
+        return Path(__file__).parents[2] / name
+
+    def get_gui_resource(self, name: str) -> Path:
+        if self.is_bundled:
+            return Path(sys._MEIPASS) / name
+        return Path(__file__).parents[1] / "gui" / name
 
     @staticmethod
     @lru_cache
@@ -60,20 +71,25 @@ class LTIM:
             tool_version += " (dev)"
         return tool_version
 
+    def message(self, msg: str) -> None:
+        info(msg)
+        if self.on_message:
+            self.on_message(msg)
+
     def install(self, out_path: Path) -> None:
         out_path = out_path.expanduser().resolve()
         out_path.mkdir(parents=True, exist_ok=True)
 
         python_path, pythonw_path = self._install_python_windows(out_path)
 
-        info("Downloading get-pip.py...")
+        self.on_message("Downloading get-pip.py...")
         get_pip_path = out_path / "get-pip.py"
         with requests.get(PYTHON_GET_PIP) as r:
             get_pip_path.write_bytes(r.content)
 
         opts = ["--prefer-binary", "--no-warn-script-location"]
 
-        info("Installing pip...")
+        self.on_message("Installing pip...")
         return_code = run_subprocess(
             python_path,
             get_pip_path,
@@ -83,7 +99,7 @@ class LTIM:
         if return_code != 0:
             raise RuntimeError(f"{get_pip_path.name} returned {return_code}")
 
-        info("Checking pip installation...")
+        self.on_message("Checking pip installation...")
         return_code = run_subprocess(
             python_path,
             "-m",
@@ -94,7 +110,7 @@ class LTIM:
         if return_code != 0:
             raise RuntimeError(f"pip --version returned {return_code}")
 
-        info("Installing ltchiptool with GUI extras...")
+        self.on_message("Installing ltchiptool with GUI extras...")
         return_code = run_subprocess(
             python_path,
             "-m",
@@ -107,11 +123,10 @@ class LTIM:
         if return_code != 0:
             raise RuntimeError(f"pip install returned {return_code}")
 
-    @staticmethod
-    def _install_python_windows(out_path: Path) -> Tuple[Path, Path]:
+    def _install_python_windows(self, out_path: Path) -> Tuple[Path, Path]:
         version_spec = SimpleSpec("~3.11")
 
-        info("Checking the latest Python version...")
+        self.on_message("Checking the latest Python version...")
         with requests.get(PYTHON_RELEASES) as r:
             releases = r.json()
             releases_map = [
@@ -132,7 +147,7 @@ class LTIM:
                 if part.isnumeric()
             )
 
-        info(f"Will install Python {latest_version}")
+        self.on_message(f"Will install Python {latest_version}")
         with requests.get(PYTHON_RELEASE_FILE_FMT % latest_release_id) as r:
             release_files = r.json()
             for release_file in release_files:
@@ -145,12 +160,14 @@ class LTIM:
             else:
                 raise RuntimeError("Couldn't find embeddable package URL")
 
-        info(f"Downloading and extracting '{release_url}' to '{out_path}'...")
+        self.on_message(
+            f"Downloading and extracting '{release_url}' to '{out_path}'..."
+        )
         with requests.get(release_url) as r:
             with ZipFile(BytesIO(r.content)) as z:
                 z.extractall(out_path)
 
-        info("Checking installed executable...")
+        self.on_message("Checking installed executable...")
         python_path = out_path / "python.exe"
         pythonw_path = out_path / "pythonw.exe"
         p = Popen(
@@ -162,7 +179,7 @@ class LTIM:
             raise RuntimeError(f"{python_path.name} returned {p.returncode}")
         version_tuple = version_name.decode().partition(" ")[2].split(".")
 
-        info("Enabling site-packages...")
+        self.on_message("Enabling site-packages...")
         pth_path = out_path / ("python%s%s._pth" % tuple(version_tuple[:2]))
         if not pth_path.is_file():
             raise RuntimeError(f"Extraction failed, {pth_path.name} is not a file")

@@ -1,6 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-3.
 
-from os.path import join
+from pathlib import Path
 from typing import Callable
 
 import wx
@@ -40,12 +40,11 @@ def int_or_zero(value: str) -> int:
         return 0
 
 
-def load_xrc_file(*path: str) -> wx.xrc.XmlResource:
-    xrc = join(*path)
+def load_xrc_file(*path: str | Path) -> wx.xrc.XmlResource:
+    xrc = Path(*path)
     try:
-        with open(xrc, "r") as f:
-            xrc_str = f.read()
-            xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
+        xrc_str = xrc.read_text()
+        xrc_str = xrc_str.replace("<object>", '<object class="notebookpage">')
         res = wx.xrc.XmlResource()
         res.LoadFromBuffer(xrc_str.encode())
         return res
