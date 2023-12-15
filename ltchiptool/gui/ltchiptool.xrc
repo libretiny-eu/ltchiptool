@@ -842,4 +842,239 @@
 			</object>
 		</object>
 	</object>
+	<object class="wxPanel" name="InstallPanel">
+		<style>wxTAB_TRAVERSAL</style>
+		<object class="wxBoxSizer" name="box_sizer">
+			<orient>wxVERTICAL</orient>
+			<object class="sizeritem">
+				<flag>wxALL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="m_staticText">
+					<label>This page allows to install ltchiptool on your computer, making it possible to install plugins and keep the tool up-to-date.
+
+The program can be installed for all users (recommended) or in "portable" mode (for transferring between PCs).
+
+Proceeding with the installation will install Python in an isolated environment.
+Desktop shortcuts for using the GUI or CLI can also be created.</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxTOP|wxRIGHT|wxLEFT|wxALIGN_CENTER_HORIZONTAL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="m_staticText_6">
+					<label>Predefined installation modes:</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALIGN_CENTER_HORIZONTAL</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_2">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag>wxALL</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_full">
+							<label>Full installation</label>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxTOP|wxBOTTOM|wxRIGHT</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_portable">
+							<label>Portable installation</label>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line_2">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="m_staticText_2">
+					<label>Target directory</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxBOTTOM|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_3">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag>wxRIGHT|wxLEFT</flag>
+						<border>5</border>
+						<option>1</option>
+						<object class="wxTextCtrl" name="input_out_path" />
+					</object>
+					<object class="sizeritem">
+						<flag>wxRIGHT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxButton" name="button_browse">
+							<label>Browse</label>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line_3">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxBoxSizer" name="box_sizer_4">
+					<orient>wxHORIZONTAL</orient>
+					<object class="sizeritem">
+						<flag></flag>
+						<border>5</border>
+						<option>1</option>
+						<object class="wxBoxSizer" name="box_sizer_5">
+							<orient>wxVERTICAL</orient>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxStaticText" name="m_staticText_3">
+									<label>Desktop shortcuts</label>
+									<wrap>-1</wrap>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxBOTTOM|wxRIGHT|wxLEFT</flag>
+								<border>5</border>
+								<object class="wxRadioButton" name="radio_shortcut_none">
+									<label>Do not create</label>
+									<style>wxRB_GROUP</style>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxRadioButton" name="radio_shortcut_private">
+									<label>Just for me</label>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxRadioButton" name="radio_shortcut_public">
+									<label>For all users</label>
+								</object>
+							</object>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxStaticLine" name="static_line_4">
+							<style>wxLI_VERTICAL</style>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag></flag>
+						<border>5</border>
+						<option>1</option>
+						<object class="wxBoxSizer" name="box_sizer_6">
+							<orient>wxVERTICAL</orient>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxStaticText" name="m_staticText_4">
+									<label>File association</label>
+									<wrap>-1</wrap>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxBOTTOM|wxRIGHT|wxLEFT</flag>
+								<border>5</border>
+								<object class="wxCheckBox" name="checkbox_fta_uf2">
+									<label>UF2</label>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxCheckBox" name="checkbox_fta_rbl">
+									<label>RBL</label>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxCheckBox" name="checkbox_fta_bin">
+									<label>BIN</label>
+								</object>
+							</object>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxTOP|wxBOTTOM|wxRIGHT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxStaticLine" name="static_line_5">
+							<style>wxLI_VERTICAL</style>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag></flag>
+						<border>5</border>
+						<option>1</option>
+						<object class="wxBoxSizer" name="box_sizer_7">
+							<orient>wxVERTICAL</orient>
+							<object class="sizeritem">
+								<flag>wxALL</flag>
+								<border>5</border>
+								<object class="wxStaticText" name="m_staticText_5">
+									<label>Other options</label>
+									<wrap>-1</wrap>
+								</object>
+							</object>
+							<object class="sizeritem">
+								<flag>wxBOTTOM|wxRIGHT|wxLEFT</flag>
+								<border>5</border>
+								<object class="wxCheckBox" name="checkbox_add_path">
+									<label>Add to PATH</label>
+								</object>
+							</object>
+						</object>
+					</object>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxStaticLine" name="static_line_6">
+					<style>wxLI_HORIZONTAL</style>
+					<size>20,-1d</size>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxCommandLinkButton" name="button_start">
+					<label>Start</label>
+					<note>-</note>
+				</object>
+			</object>
+		</object>
+	</object>
 </resource>

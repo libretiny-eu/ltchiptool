@@ -9,7 +9,7 @@ from logging import DEBUG
 from os.path import expandvars
 from pathlib import Path
 from subprocess import PIPE, Popen
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from zipfile import ZipFile
 
 import requests
@@ -40,6 +40,7 @@ class LTIM:
 
     INSTANCE: "LTIM" = None
     callback: ClickProgressCallback = None
+    is_gui_entrypoint: bool = False
 
     @staticmethod
     def get() -> "LTIM":
@@ -81,7 +82,7 @@ class LTIM:
         self,
         out_path: Path,
         shortcut: Optional[str],
-        fta: Tuple[str],
+        fta: List[str],
         add_path: bool,
     ) -> None:
         self.callback = ClickProgressCallback()
@@ -327,7 +328,7 @@ class LTIM:
             HWND_BROADCAST,
             WM_SETTINGCHANGE,
             0,
-            u"Environment",
+            "Environment",
             SMTO_ABORTIFHUNG,
             5000,
         )

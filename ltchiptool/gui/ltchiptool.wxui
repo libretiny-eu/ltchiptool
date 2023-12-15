@@ -696,5 +696,180 @@
         </node>
       </node>
     </node>
+    <node
+      class="PanelForm"
+      base_file="installpanel_base"
+      class_name="InstallPanel">
+      <node
+        class="wxBoxSizer"
+        orientation="wxVERTICAL"
+        flags="wxEXPAND">
+        <node
+          class="wxStaticText"
+          label="This page allows to install ltchiptool on your computer, making it possible to install plugins and keep the tool up-to-date.&#10;&#10;The program can be installed for all users (recommended) or in &quot;portable&quot; mode (for transferring between PCs).&#10;&#10;Proceeding with the installation will install Python in an isolated environment.&#10;Desktop shortcuts for using the GUI or CLI can also be created." />
+        <node
+          class="wxStaticLine"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="6" />
+        <node
+          class="wxStaticText"
+          label="Predefined installation modes:"
+          var_name="m_staticText_6"
+          alignment="wxALIGN_CENTER_HORIZONTAL"
+          borders="wxTOP|wxRIGHT|wxLEFT" />
+        <node
+          class="wxBoxSizer"
+          var_name="box_sizer_2"
+          alignment="wxALIGN_CENTER_HORIZONTAL"
+          borders="">
+          <node
+            class="wxButton"
+            auth_needed="1"
+            label="Full installation"
+            var_name="button_full" />
+          <node
+            class="wxButton"
+            label="Portable installation"
+            var_name="button_portable"
+            borders="wxTOP|wxBOTTOM|wxRIGHT" />
+        </node>
+        <node
+          class="wxStaticLine"
+          var_name="static_line_2"
+          size="20,-1d"
+          colspan="3"
+          flags="wxEXPAND"
+          row="6" />
+        <node
+          class="wxStaticText"
+          label="Target directory"
+          var_name="m_staticText_2" />
+        <node
+          class="wxBoxSizer"
+          var_name="box_sizer_3"
+          borders="wxBOTTOM"
+          flags="wxEXPAND">
+          <node
+            class="wxTextCtrl"
+            var_name="input_out_path"
+            borders="wxRIGHT|wxLEFT"
+            proportion="1" />
+          <node
+            class="wxButton"
+            label="Browse"
+            var_name="button_browse"
+            borders="wxRIGHT"
+            column="2"
+            flags="wxEXPAND"
+            row="3" />
+        </node>
+        <node
+          class="wxStaticLine"
+          var_name="static_line_3"
+          size="20,-1d"
+          flags="wxEXPAND" />
+        <node
+          class="wxBoxSizer"
+          var_name="box_sizer_4"
+          borders=""
+          flags="wxEXPAND">
+          <node
+            class="wxBoxSizer"
+            orientation="wxVERTICAL"
+            var_name="box_sizer_5"
+            borders=""
+            proportion="1">
+            <node
+              class="wxStaticText"
+              label="Desktop shortcuts"
+              var_name="m_staticText_3" />
+            <node
+              class="wxRadioButton"
+              label="Do not create"
+              style="wxRB_GROUP"
+              var_name="radio_shortcut_none"
+              borders="wxBOTTOM|wxRIGHT|wxLEFT" />
+            <node
+              class="wxRadioButton"
+              label="Just for me"
+              var_name="radio_shortcut_private" />
+            <node
+              class="wxRadioButton"
+              label="For all users"
+              var_name="radio_shortcut_public" />
+          </node>
+          <node
+            class="wxStaticLine"
+            style="wxLI_VERTICAL"
+            var_name="static_line_4"
+            size="-1,-1d"
+            borders="wxTOP|wxBOTTOM|wxRIGHT"
+            flags="wxEXPAND" />
+          <node
+            class="wxBoxSizer"
+            orientation="wxVERTICAL"
+            var_name="box_sizer_6"
+            borders=""
+            proportion="1">
+            <node
+              class="wxStaticText"
+              label="File association"
+              var_name="m_staticText_4" />
+            <node
+              class="wxCheckBox"
+              label="UF2"
+              var_name="checkbox_fta_uf2"
+              borders="wxBOTTOM|wxRIGHT|wxLEFT" />
+            <node
+              class="wxCheckBox"
+              label="RBL"
+              var_name="checkbox_fta_rbl" />
+            <node
+              class="wxCheckBox"
+              label="BIN"
+              var_name="checkbox_fta_bin" />
+          </node>
+          <node
+            class="wxStaticLine"
+            style="wxLI_VERTICAL"
+            var_name="static_line_5"
+            size="-1,-1d"
+            borders="wxTOP|wxBOTTOM|wxRIGHT"
+            flags="wxEXPAND" />
+          <node
+            class="wxBoxSizer"
+            orientation="wxVERTICAL"
+            var_name="box_sizer_7"
+            borders=""
+            proportion="1">
+            <node
+              class="wxStaticText"
+              label="Other options"
+              var_name="m_staticText_5" />
+            <node
+              class="wxCheckBox"
+              label="Add to PATH"
+              var_name="checkbox_add_path"
+              borders="wxBOTTOM|wxRIGHT|wxLEFT" />
+          </node>
+        </node>
+        <node
+          class="wxStaticLine"
+          var_name="static_line_6"
+          size="20,-1d"
+          flags="wxEXPAND" />
+        <node
+          class="wxCommandLinkButton"
+          main_label="Start"
+          note="-"
+          var_name="button_start"
+          borders="wxBOTTOM|wxRIGHT|wxLEFT"
+          column="1"
+          flags="wxEXPAND"
+          row="7" />
+      </node>
+    </node>
   </node>
 </wxUiEditorData>
