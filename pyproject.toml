@@ -31,6 +31,8 @@ hexdump = "^3.3"
 bitstruct = "^8.1.1"
 zeroconf = {version = "^0", optional = true}
 requests = "^2.31.0"
+pyuac = {version = "^0.0.3", optional = true, markers = "sys_platform == 'win32'"}
+pylnk3 = {version = "^0.4.2", optional = true, markers = "sys_platform == 'win32'"}
 
 [tool.poetry.dependencies.pycryptodome]
 version = "^3.9.9"
@@ -41,7 +43,7 @@ version = "^1.6.1"
 markers = "platform_machine in 'armv6l,armv7l,armv8l,armv8b,aarch64'"
 
 [tool.poetry.extras]
-gui = ["wxPython", "pywin32", "zeroconf"]
+gui = ["wxPython", "pywin32", "zeroconf", "pyuac", "pylnk3"]
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"

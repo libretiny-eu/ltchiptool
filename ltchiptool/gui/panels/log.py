@@ -57,14 +57,13 @@ class GUIProgressBar(ProgressBar):
         self.time_left.Show()
         self.bar.Show()
 
-        pct = self.format_pct()
-        pos = sizeof(self.pos)
-        length = sizeof(self.length)
-
-        if self.length == 0:
+        if self.length in [0, None]:
             self.progress.SetLabel(self.label or "")
             self.bar.Pulse()
         else:
+            pct = self.format_pct()
+            pos = sizeof(self.pos)
+            length = sizeof(self.length)
             if self.label:
                 self.progress.SetLabel(f"{self.label} - {pct} ({pos} / {length})")
             else:
@@ -182,7 +181,13 @@ class LogPanel(BasePanel):
         handler.full_traceback = full_traceback
         LoggingStreamHook.set_registered(Serial, registered=dump_serial)
 
+        if donate_closed:
+            # noinspection PyTypeChecker
+            self.OnDonateClose(None)
+
         menu_bar: wx.MenuBar = self.TopLevelParent.MenuBar
+        if not menu_bar:
+            return
         menu: wx.Menu = menu_bar.GetMenu(menu_bar.FindMenu("Logging"))
         if not menu:
             warning(f"Couldn't find Logging menu")
@@ -199,10 +204,6 @@ class LogPanel(BasePanel):
                     item.Check(dump_serial)
                 case _ if item.GetItemLabel() == level_name:
                     item.Check()
-
-        if donate_closed:
-            # noinspection PyTypeChecker
-            self.OnDonateClose(None)
 
     @on_event
     def OnIdle(self):

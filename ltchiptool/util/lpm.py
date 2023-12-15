@@ -21,6 +21,8 @@ PYPI_URL = "https://pypi.org/search/"
 
 
 class LPM:
+    """ltchiptool plugin manager"""
+
     INSTANCE: "LPM" = None
     plugins: List[PluginBase]
     disabled: Set[str]

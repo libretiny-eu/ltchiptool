@@ -1,9 +1,9 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-2.
 
-import sys
+import os
 from logging import debug, exception, info, warning
 from os import rename, unlink
-from os.path import dirname, isfile, join
+from os.path import isfile, join
 
 import wx
 import wx.xrc
@@ -13,6 +13,7 @@ from click import get_app_dir
 from ltchiptool.util.fileio import readjson, writejson
 from ltchiptool.util.logging import LoggingHandler, verbose
 from ltchiptool.util.lpm import LPM
+from ltchiptool.util.ltim import LTIM
 from ltchiptool.util.lvm import LVM
 
 from .base.frame import BaseFrame
@@ -37,14 +38,9 @@ class MainFrame(wx.Frame):
         super().__init__(*args, **kw)
         LoggingHandler.get().exception_hook = self.ShowExceptionMessage
 
-        is_bundled = getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
-        if is_bundled:
-            xrc = join(sys._MEIPASS, "ltchiptool.xrc")
-            icon = join(sys._MEIPASS, "ltchiptool.ico")
-        else:
-            xrc = join(dirname(__file__), "ltchiptool.xrc")
-            icon = join(dirname(__file__), "ltchiptool.ico")
-
+        ltim = LTIM.get()
+        xrc = ltim.get_gui_resource("ltchiptool.xrc")
+        icon = ltim.get_gui_resource("ltchiptool.ico")
         self.Xrc = load_xrc_file(xrc)
 
         try:
@@ -84,11 +80,13 @@ class MainFrame(wx.Frame):
         # list all built-in panels
         from .panels.about import AboutPanel
         from .panels.flash import FlashPanel
+        from .panels.install import InstallPanel
         from .panels.plugins import PluginsPanel
 
         windows = [
             ("flash", FlashPanel),
-            ("plugins", (not is_bundled) and PluginsPanel),
+            ("plugins", (not ltim.is_bundled) and PluginsPanel),
+            ("install", ltim.is_gui_entrypoint and os.name == "nt" and InstallPanel),
             ("about", AboutPanel),
         ]
 
@@ -154,7 +152,7 @@ class MainFrame(wx.Frame):
 
         self.SetSize((750, 850))
         self.SetMinSize((700, 800))
-        self.SetIcon(wx.Icon(icon, wx.BITMAP_TYPE_ICO))
+        self.SetIcon(wx.Icon(str(icon), wx.BITMAP_TYPE_ICO))
         self.CreateStatusBar()
 
     @property
