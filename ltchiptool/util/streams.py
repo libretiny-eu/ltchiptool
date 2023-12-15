@@ -199,7 +199,8 @@ class ClickProgressCallback(ProgressCallback):
     def on_update(self, steps: int) -> None:
         self.bar.update(steps)
 
-    def on_total(self, total: int) -> None:
+    def on_total(self, total: Optional[int]) -> None:
+        self.bar.pos = 0
         self.bar.length = total
         self.bar.render_progress()
 

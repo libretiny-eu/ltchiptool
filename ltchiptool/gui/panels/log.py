@@ -57,14 +57,13 @@ class GUIProgressBar(ProgressBar):
         self.time_left.Show()
         self.bar.Show()
 
-        pct = self.format_pct()
-        pos = sizeof(self.pos)
-        length = sizeof(self.length)
-
-        if self.length == 0:
+        if self.length in [0, None]:
             self.progress.SetLabel(self.label or "")
             self.bar.Pulse()
         else:
+            pct = self.format_pct()
+            pos = sizeof(self.pos)
+            length = sizeof(self.length)
             if self.label:
                 self.progress.SetLabel(f"{self.label} - {pct} ({pos} / {length})")
             else:

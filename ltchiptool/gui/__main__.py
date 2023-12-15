@@ -72,6 +72,22 @@ def cli(*args, **kwargs):
         path_type=Path,
     ),
 )
+@click.option(
+    "--shortcut",
+    type=click.Choice(["private", "public"]),
+    help="Create a desktop shortcut",
+)
+@click.option(
+    "--fta",
+    type=str,
+    multiple=True,
+    help="File extensions to associate with ltchiptool",
+)
+@click.option(
+    "--add-path",
+    is_flag=True,
+    help="Add to system PATH",
+)
 def install_cli(*args, **kwargs):
     try:
         gui_entrypoint(install=True, *args, **kwargs)
