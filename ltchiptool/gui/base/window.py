@@ -3,12 +3,22 @@
 import sys
 from os.path import dirname, isfile, join
 
+import wx
 import wx.lib.agw.genericmessagedialog as GMD
 import wx.xrc
 
 from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.gui.utils import load_xrc_file
 from ltchiptool.gui.work.base import BaseThread
+
+THREAD_STOP_ID = wx.NewIdRef()
+
+
+class ThreadStopEvent(wx.PyCommandEvent):
+    def __init__(self, thread: BaseThread, freeze_ui: bool):
+        super().__init__(THREAD_STOP_ID)
+        self.thread = thread
+        self.freeze_ui = freeze_ui
 
 
 # noinspection PyPep8Naming
@@ -22,20 +32,24 @@ class BaseWindow:
     def InitWindow(self, main) -> None:
         self.Main = main
         self._threads = []
+        self.Connect(-1, -1, THREAD_STOP_ID, self._handle_thread_stop)
 
     def StartWork(self, thread: BaseThread, freeze_ui: bool = True):
         self._threads.append(thread)
 
         def on_stop(t: BaseThread):
-            self._threads.remove(t)
-            self.OnWorkStopped(t)
-            if freeze_ui:
-                self.EnableAll()
+            wx.PostEvent(self, ThreadStopEvent(t, freeze_ui))
 
         thread.on_stop = on_stop
         if freeze_ui:
             self.DisableAll()
         thread.start()
+
+    def _handle_thread_stop(self, event: ThreadStopEvent):
+        self._threads.remove(event.thread)
+        if event.freeze_ui:
+            self.EnableAll()
+        self.OnWorkStopped(event.thread)
 
     def StopWork(self, cls: type[BaseThread]):
         for t in list(self._threads):
