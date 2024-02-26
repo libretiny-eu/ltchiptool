@@ -170,9 +170,11 @@ class AmebaZ2Binary(SocInterface, ABC):
                     type=image.type,
                     # use FF to allow recalculating by OTA code
                     serial=0xFFFFFFFF if idx == 0 else 0,
-                    user_keys=[FF_32, config.keys.user_keys[region]]
-                    if idx == 0
-                    else [FF_32, FF_32],
+                    user_keys=(
+                        [FF_32, config.keys.user_keys[region]]
+                        if idx == 0
+                        else [FF_32, FF_32]
+                    ),
                 ),
                 data=Firmware(
                     sections=[

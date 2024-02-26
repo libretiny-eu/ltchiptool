@@ -147,11 +147,7 @@ class PluginBase(ABC):
         return (
             "CLI + GUI"
             if self.has_cli and self.has_gui
-            else "CLI"
-            if self.has_cli
-            else "GUI"
-            if self.has_gui
-            else "?"
+            else "CLI" if self.has_cli else "GUI" if self.has_gui else "?"
         )
 
     @property
