@@ -20,7 +20,9 @@ class RBL:
     version: Union[str, bytes] = "1.00"
     sn: Union[str, bytes] = "0" * 23
     data_crc: int = 0
-    data_hash: int = 0x811C9DC5  # https://github.com/znerol/py-fnvhash/blob/master/fnvhash/__init__.py
+    data_hash: int = (
+        0x811C9DC5  # https://github.com/znerol/py-fnvhash/blob/master/fnvhash/__init__.py
+    )
     raw_size: int = 0
     data_size: int = 0
     container_size: int = 0

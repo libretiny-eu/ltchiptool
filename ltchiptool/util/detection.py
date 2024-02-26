@@ -97,9 +97,11 @@ class Detection:
         return Detection(
             name="",
             size=0,
-            type=Detection.Type.VALID
-            if offset is not None
-            else Detection.Type.VALID_NEED_OFFSET,
+            type=(
+                Detection.Type.VALID
+                if offset is not None
+                else Detection.Type.VALID_NEED_OFFSET
+            ),
             file_type=type_name,
             offset=offset or 0,
             skip=skip,

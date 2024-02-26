@@ -68,15 +68,21 @@ def families():
                     indent + family.description,
                     family.name,
                     family.code,
-                    f"{family.short_name.upper()} / 0x{family.id:08X}"
-                    if family.short_name and family.id
-                    else "-",
+                    (
+                        f"{family.short_name.upper()} / 0x{family.id:08X}"
+                        if family.short_name and family.id
+                        else "-"
+                    ),
                     "-" if not family.id else "Yes" if family.is_supported else "No",
-                    "-"
-                    if not family.id
-                    else "Yes"
-                    if family.is_supported and family.has_arduino_core
-                    else "No",
+                    (
+                        "-"
+                        if not family.id
+                        else (
+                            "Yes"
+                            if family.is_supported and family.has_arduino_core
+                            else "No"
+                        )
+                    ),
                     family.target_package or "-",
                 ]
             )

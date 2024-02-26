@@ -4,11 +4,9 @@ from logging import debug
 
 
 class CryptoAES:
-    def encrypt(self, data: bytes) -> bytes:
-        ...
+    def encrypt(self, data: bytes) -> bytes: ...
 
-    def decrypt(self, data: bytes) -> bytes:
-        ...
+    def decrypt(self, data: bytes) -> bytes: ...
 
 
 def make_aes_crypto(key: bytes, iv: bytes) -> CryptoAES:

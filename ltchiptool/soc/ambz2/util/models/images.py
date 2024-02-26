@@ -57,9 +57,9 @@ class Image(DataStruct):
 
     _0: ... = action(packing(update))
     _hash: ... = checksum_start(
-        init=lambda ctx: HMAC(ctx.hash_key, digestmod=sha256)
-        if ctx.hash_key
-        else sha256(),
+        init=lambda ctx: (
+            HMAC(ctx.hash_key, digestmod=sha256) if ctx.hash_key else sha256()
+        ),
         update=lambda data, obj, ctx: obj.update(data),
         end=lambda obj, ctx: obj.digest(),
     )

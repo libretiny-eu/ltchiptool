@@ -178,7 +178,7 @@ class FlashPanel(FileDumpBase, DevicesBase):
             manual = False
 
         match target:
-            case (self.Read | self.ReadROM | self.ReadEfuse) if self.file:
+            case self.Read | self.ReadROM | self.ReadEfuse if self.file:
                 # generate a new filename for reading, to prevent
                 # accidentally overwriting firmware files
                 self.generate_read_filename()
