@@ -1,10 +1,10 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-5-22.
 
 import json
-import sys
-from os.path import dirname, join
 
 import wx
+
+from ltchiptool.util.ltim import LTIM
 
 
 class ColorPalette:
@@ -54,12 +54,8 @@ class ColorPalette:
     @staticmethod
     def load_colors() -> None:
         if not ColorPalette.COLORS_JSON:
-            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-                colors = join(sys._MEIPASS, "colors.json")
-            else:
-                colors = join(dirname(__file__), "colors.json")
-            with open(colors, "r") as f:
-                ColorPalette.COLORS_JSON = json.load(f)
+            colors = LTIM.get().get_gui_resource("colors.json")
+            ColorPalette.COLORS_JSON = json.loads(colors.read_text())
 
     @staticmethod
     def get() -> "ColorPalette":

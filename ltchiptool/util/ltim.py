@@ -61,7 +61,7 @@ class LTIM:
     def get_gui_resource(self, name: str) -> Path:
         if self.is_bundled:
             return Path(sys._MEIPASS) / name
-        return Path(__file__).parents[1] / "gui" / name
+        return Path(__file__).parents[1] / "gui" / "res" / name
 
     @staticmethod
     @lru_cache

@@ -1,12 +1,10 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-8.
 
 import logging
-import sys
 import threading
 import time
 from logging import INFO, info, log, warning
 from multiprocessing import Queue
-from os.path import dirname, join
 from queue import Empty
 
 import wx
@@ -17,6 +15,7 @@ from serial import Serial
 
 from ltchiptool.gui.colors import ColorPalette
 from ltchiptool.util.logging import LoggingHandler
+from ltchiptool.util.ltim import LTIM
 from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import LoggingStreamHook
 
@@ -119,14 +118,11 @@ class LogPanel(BasePanel):
         GUIProgressBar.render_finish(GUIProgressBar)
         setattr(_termui_impl, "ProgressBar", GUIProgressBar)
 
-        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-            donate = join(sys._MEIPASS, "ko-fi.png")
-        else:
-            donate = join(dirname(__file__), "..", "ko-fi.png")
+        donate = LTIM.get().get_gui_resource("ko-fi.png")
 
         bitmap = self.FindStaticBitmap("bmp_donate")
         height = 28
-        image = wx.Image(donate)
+        image = wx.Image(str(donate))
         ratio = image.GetWidth() / image.GetHeight()
         image.Rescale(int(ratio * height), height, wx.IMAGE_QUALITY_BICUBIC)
         bitmap.SetBitmap(image)

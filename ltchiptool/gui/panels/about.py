@@ -1,7 +1,6 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-16.
 
 import sys
-from os.path import dirname, join
 
 import wx.xrc
 
@@ -29,13 +28,9 @@ class AboutPanel(BasePanel):
         python = ".".join(str(i) for i in sys.version_info[:3])
         python += f" ({sys.executable})"
 
-        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-            logo = join(sys._MEIPASS, "ltchiptool-192x192.png")
-            with open(join(sys._MEIPASS, "ltchiptool.txt"), "r") as f:
-                build_date = f.read()
-        else:
-            logo = join(dirname(__file__), "..", "ltchiptool-192x192.png")
-            build_date = None
+        logo = LTIM.get().get_gui_resource("ltchiptool-192x192.png")
+        build_date_file = LTIM.get().get_gui_resource("ltchiptool.txt")
+        build_date = build_date_file.read_text() if build_date_file.is_file() else None
 
         self.FindStaticText("text_lt_version").SetLabel(lt_version or "-")
         self.FindStaticText("text_tool_version").SetLabel(
@@ -54,6 +49,6 @@ class AboutPanel(BasePanel):
 
         bitmap = self.FindStaticBitmap("bmp_logo")
         size = bitmap.GetSize().y
-        image = wx.Image(logo)
+        image = wx.Image(str(logo))
         image.Rescale(size, size)
         bitmap.SetBitmap(image)
