@@ -48,5 +48,5 @@ def load_xrc_file(*path: str | Path) -> wx.xrc.XmlResource:
         res = wx.xrc.XmlResource()
         res.LoadFromBuffer(xrc_str.encode())
         return res
-    except SystemError | FileNotFoundError:
+    except (SystemError, FileNotFoundError):
         raise FileNotFoundError(f"Couldn't load the layout file '{xrc}'")
