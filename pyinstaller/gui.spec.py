@@ -2,9 +2,8 @@
 
 from pkgutil import iter_modules
 
-from PyInstaller.utils.hooks import collect_data_files
-
 import ltctplugin
+from PyInstaller.utils.hooks import collect_data_files
 
 hiddenimports = [
     name
@@ -17,6 +16,7 @@ datas = []
 for module in hiddenimports:
     datas += collect_data_files(module)
 
+# noinspection PyUnresolvedReferences
 a = Analysis(
     ["gui.py"],
     datas=[
@@ -24,29 +24,13 @@ a = Analysis(
         ("ltchiptool/boards/", "./boards/"),
         ("ltchiptool/platform.json", "."),
         ("ltchiptool/families.json", "."),
-        ("ltchiptool/gui/ltchiptool-192x192.png", "."),
-        ("ltchiptool/gui/ltchiptool.ico", "."),
-        ("ltchiptool/gui/ltchiptool.xrc", "."),
-        ("ltchiptool/gui/ko-fi.png", "."),
-        ("ltchiptool/gui/colors.json", "."),
+        ("ltchiptool/gui/res/ltchiptool-192x192.png", "."),
+        ("ltchiptool/gui/res/ltchiptool.ico", "."),
+        ("ltchiptool/gui/res/ltchiptool.xrc", "."),
+        ("ltchiptool/gui/res/ko-fi.png", "."),
+        ("ltchiptool/gui/res/colors.json", "."),
         ("pyproject.toml", "."),
     ]
     + datas,
     hiddenimports=hiddenimports,
-)
-
-pyz = PYZ(a.pure, a.zipped_data)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    name="ltchiptool",
-    strip=False,
-    upx=True,
-    console=False,
-    icon=["ltchiptool\\gui\\ltchiptool.ico"],
-    version="gui-win32.txt",
 )

@@ -105,7 +105,7 @@ jobs:
         shell: cmd
         run: |
           set PATH=%cd%\python;%PATH%
-          python gui-win32.py || exit /b
+          python pyinstaller\build-gui.py || exit /b
 
       - name: Add GitHub release assets
         uses: softprops/action-gh-release@v1

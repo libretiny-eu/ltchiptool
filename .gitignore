@@ -395,8 +395,6 @@ pip-selfcheck.json
 *.ota
 
 # PyInstaller-related
-!*.spec
-gui-win32.txt
 ltchiptool.txt
 ltchiptool/platform.json
 ltchiptool/families.json

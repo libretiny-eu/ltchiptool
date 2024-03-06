@@ -50,6 +50,17 @@ class LTIMBase:
         return sys.platform == "darwin"
 
     @property
+    @lru_cache
+    def platform(self) -> str:
+        if self.is_windows():
+            return "windows"
+        if self.is_linux():
+            return "linux"
+        if self.is_macos():
+            return "macos"
+        return "unknown"
+
+    @property
     def is_bundled(self) -> bool:
         return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
@@ -154,3 +165,5 @@ class LTIMBase:
 
 if LTIMBase.is_windows():
     from .ltim_windows import LTIM
+else:
+    LTIM = LTIMBase
