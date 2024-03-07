@@ -1,6 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2022-12-22.
 
 import logging
+import logging.config
 import sys
 import threading
 from logging import (
@@ -83,6 +84,8 @@ class LoggingHandler(StreamHandler):
         for h in logger.handlers:
             logger.removeHandler(h)
         logger.addHandler(self)
+        # prevent changing logging config (e.g. pip)
+        logging.config.dictConfig = lambda *args, **kwargs: None
 
     def add_emitter(self, emitter: Callable[[str, str, str], None]):
         self.emitters.append(emitter)

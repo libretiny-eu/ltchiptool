@@ -16,8 +16,8 @@ from typing import List, Optional, Set, Tuple
 from click import get_app_dir
 
 import ltctplugin
-from ltchiptool.util.cli import run_subprocess
 from ltchiptool.util.fileio import readjson, writejson
+from ltchiptool.util.ltim import LTIM
 from ltctplugin.base import PluginBase
 
 PYPI_URL = "https://pypi.org/search/"
@@ -209,14 +209,25 @@ class LPM:
         return out
 
     def install(self, distribution: str) -> bool:
-        code = run_subprocess(
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            distribution,
-        )
+        info("Importing pip CLI...")
+        # noinspection PyProtectedMember
+        from pip._internal.cli.main import main
+
+        args = ["install", "--upgrade"]
+        if self.plugin_site_path:
+            info(f"Will install plugins to {self.plugin_site_path}")
+            args += ["--target", str(self.plugin_site_path)]
+        elif LTIM.get().is_bundled:
+            raise RuntimeError(
+                "Cannot install plugins in bundled setup! "
+                "No external site-packages directory configured"
+            )
+        else:
+            info(f"Will install plugins to Python-default site-packages")
+
+        info("Running pip install...")
+        code = main(args + [distribution])
+
         if code != 0:
             return False
         prev, curr = self.rescan()
