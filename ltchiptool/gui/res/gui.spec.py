@@ -2,8 +2,9 @@
 
 from pkgutil import iter_modules
 
-import ltctplugin
 from PyInstaller.utils.hooks import collect_data_files
+
+import ltctplugin
 
 hiddenimports = [
     name

@@ -10,11 +10,11 @@ if __name__ == "__main__":
     from shutil import SameFileError, copy, copytree, rmtree
 
     import PyInstaller.__main__
+
     from ltchiptool.util.ltim import LTIM
     from ltchiptool.util.lvm import LVM
 
-    script_path = Path(__file__).parent.resolve()
-    root_path = script_path.parent
+    root_path = Path(__file__).parent.resolve()
     cwd_path = Path(getcwd()).resolve()
     if cwd_path != root_path:
         raise ValueError(
@@ -55,8 +55,9 @@ if __name__ == "__main__":
 
     # get platform spec file
     ltim = LTIM.get()
-    spec_base_path = script_path / f"gui.spec.py"
-    spec_plat_path = script_path / f"gui-{ltim.platform}.spec.py"
+    res_path = root_path / "ltchiptool" / "gui" / "res"
+    spec_base_path = res_path / f"gui.spec.py"
+    spec_plat_path = res_path / f"gui-{ltim.platform}.spec.py"
     spec_path = root_path / f"gui-{ltim.platform}.spec"
     if not spec_plat_path.is_file():
         raise FileNotFoundError(
@@ -78,10 +79,17 @@ if __name__ == "__main__":
         date = datetime.now().strftime("%Y-%m-%d")
         f.write(f"{date} @ {socket.gethostname()}")
 
+    # cleanup dist files
+    if isfile(f"dist/ltchiptool-v{version}.exe"):
+        unlink(f"dist/ltchiptool-v{version}.exe")
+    if isdir(f"dist/ltchiptool/"):
+        rmtree(f"dist/ltchiptool/")
+    if isdir(f"dist/ltchiptool.app/"):
+        rmtree(f"dist/ltchiptool.app/")
+
     # run PyInstaller
     PyInstaller.__main__.run([str(spec_path)])
 
     # rename the resulting executable
-    if isfile(f"dist/ltchiptool-v{version}.exe"):
-        unlink(f"dist/ltchiptool-v{version}.exe")
-    rename("dist/ltchiptool.exe", f"dist/ltchiptool-v{version}.exe")
+    if ltim.is_windows():
+        rename("dist/ltchiptool.exe", f"dist/ltchiptool-v{version}.exe")
