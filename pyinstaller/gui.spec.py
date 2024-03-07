@@ -33,4 +33,7 @@ a = Analysis(
     ]
     + datas,
     hiddenimports=hiddenimports,
+    runtime_hooks=[
+        "ltchiptool/gui/res/sitecustomize.py",
+    ],
 )

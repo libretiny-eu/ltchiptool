@@ -5,9 +5,12 @@ import re
 import sys
 from dataclasses import dataclass
 from importlib import import_module
+from importlib.util import module_from_spec, spec_from_file_location
 from logging import debug, error, exception, info, warning
 from os.path import join
+from pathlib import Path
 from pkgutil import iter_modules
+from types import ModuleType
 from typing import List, Optional, Set, Tuple
 
 from click import get_app_dir
@@ -60,11 +63,42 @@ class LPM:
         )
         writejson(self.config_file, config)
 
+    @property
+    def plugin_site_path(self) -> Optional[Path]:
+        return getattr(sys, "_LTCHIPTOOLSITE", None)
+
+    @property
+    def plugin_path_list(self) -> Set[Path]:
+        path_list = set(Path(path) for path in ltctplugin.__path__)
+        if self.plugin_site_path:
+            path_list.add(self.plugin_site_path / "ltctplugin")
+        return path_list
+
+    def import_module(self, namespace: str) -> ModuleType:
+        module_name = f"ltctplugin.{namespace}"
+        try:
+            return import_module(module_name)
+        except (ModuleNotFoundError, ImportError):
+            pass
+        # try importing the module from plugin paths instead
+        # (fixes issues of importing namespace packages in PyInstaller bundles)
+        for path in self.plugin_path_list:
+            module_path = path / namespace / "__init__.py"
+            if not module_path.is_file():
+                continue
+            spec = spec_from_file_location(module_name, module_path)
+            module = module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            return module
+
     def rescan(self) -> Tuple[Set[str], Set[str]]:
         prev = self.disabled.union(p.namespace for p in self.plugins)
         loaded = set(p.namespace for p in self.plugins)
         found = set(
-            name for _, name, _ in iter_modules(ltctplugin.__path__) if name != "base"
+            name
+            for _, name, _ in iter_modules(str(p) for p in self.plugin_path_list)
+            if name != "base"
         )
         if self.disabled - found:
             # remove non-existent disabled plugins
@@ -83,7 +117,7 @@ class LPM:
             debug(f"Unloaded '{namespace}'")
         for namespace in found - loaded:
             # load newly found plugins
-            module = import_module(f"ltctplugin.{namespace}")
+            module = self.import_module(namespace)
             entrypoint = getattr(module, "entrypoint", None)
             if not entrypoint:
                 warning(f"Plugin '{namespace}' has no entrypoint!")
