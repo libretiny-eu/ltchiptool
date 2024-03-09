@@ -651,6 +651,20 @@
         var_name="sizer_main_plugins"
         flags="wxEXPAND">
         <node
+          class="wxStaticText"
+          label="Plugins will be installed to:"
+          borders="wxTOP|wxRIGHT|wxLEFT" />
+        <node
+          class="wxTextCtrl"
+          style="wxTE_READONLY"
+          var_name="input_site_path"
+          flags="wxEXPAND" />
+        <node
+          class="wxStaticText"
+          label="(reason: unknown)"
+          var_name="text_site_reason"
+          borders="wxBOTTOM|wxRIGHT|wxLEFT" />
+        <node
           class="wxDataViewCtrl"
           style="wxDV_HORIZ_RULES"
           var_name="plugins_tree"
@@ -663,7 +677,7 @@
           flags="wxEXPAND">
           <node
             class="wxButton"
-            label="Download plugins..."
+            label="Search for plugins..."
             var_name="button_download"
             flags="wxEXPAND" />
           <node

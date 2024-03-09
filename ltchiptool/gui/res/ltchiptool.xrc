@@ -783,6 +783,29 @@
 		<object class="wxBoxSizer" name="sizer_main_plugins">
 			<orient>wxVERTICAL</orient>
 			<object class="sizeritem">
+				<flag>wxTOP|wxRIGHT|wxLEFT</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="m_staticText">
+					<label>Plugins will be installed to:</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxALL|wxEXPAND</flag>
+				<border>5</border>
+				<object class="wxTextCtrl" name="input_site_path">
+					<style>wxTE_READONLY</style>
+				</object>
+			</object>
+			<object class="sizeritem">
+				<flag>wxBOTTOM|wxRIGHT|wxLEFT</flag>
+				<border>5</border>
+				<object class="wxStaticText" name="text_site_reason">
+					<label>(reason: unknown)</label>
+					<wrap>-1</wrap>
+				</object>
+			</object>
+			<object class="sizeritem">
 				<flag>wxALL|wxEXPAND</flag>
 				<border>5</border>
 				<option>1</option>
@@ -799,7 +822,7 @@
 						<flag>wxALL|wxEXPAND</flag>
 						<border>5</border>
 						<object class="wxButton" name="button_download">
-							<label>Download plugins...</label>
+							<label>Search for plugins...</label>
 						</object>
 					</object>
 					<object class="sizeritem">

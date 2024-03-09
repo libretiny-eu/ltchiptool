@@ -85,7 +85,7 @@ class MainFrame(wx.Frame):
 
         windows = [
             ("flash", FlashPanel),
-            ("plugins", (not ltim.is_bundled) and PluginsPanel),
+            ("plugins", PluginsPanel),
             ("install", ltim.is_gui_entrypoint and os.name == "nt" and InstallPanel),
             ("about", AboutPanel),
         ]

@@ -11,6 +11,7 @@ from wx.dataview import DataViewCtrl, DataViewItem, NullDataViewItem, PyDataView
 from ltchiptool.gui.utils import on_event, with_event
 from ltchiptool.gui.work.plugins import PluginsThread
 from ltchiptool.util.lpm import LPM
+from ltchiptool.util.ltim import LTIM
 from ltctplugin.base import PluginBase
 
 from .base import BasePanel
@@ -223,6 +224,7 @@ class PluginsPanel(BasePanel):
         self.LoadXRC("PluginsPanel")
         self.AddToNotebook("Plugins")
 
+        self.ltim = LTIM.get()
         self.lpm = LPM.get()
         self.model = PluginsDataModel()
         self.results: list[LPM.SearchResult] = []
@@ -241,6 +243,29 @@ class PluginsPanel(BasePanel):
         self.BindButton("button_download", self.OnDownloadClick)
         self.InstallInput = self.BindTextCtrl("input_install")
         self.InstallButton = self.BindButton("button_install", self.OnInstallClick)
+
+        self.SitePath = self.BindTextCtrl("input_site_path")
+        self.SiteReason = self.FindStaticText("text_site_reason")
+
+        reason = "unknown"
+        if self.ltim.is_bundled:
+            if self.ltim.is_windows():
+                reason = "running Windows .EXE bundle"
+            elif self.ltim.is_macos():
+                reason = "running macOS App Bundle"
+            else:
+                reason = "running a bundled copy"
+        elif self.lpm.plugin_site_path:
+            reason = "path set in sitecustomize.py"
+        elif self.ltim.is_dev:
+            reason = "development copy - editable"
+        elif "site-packages" in __file__:
+            reason = "installed using pip"
+
+        self.SitePath.SetLabelText(
+            str(self.lpm.plugin_site_path or "Python-default site-packages")
+        )
+        self.SiteReason.SetLabel(f"(reason: {reason})")
 
     def OnWorkStopped(self, t: PluginsThread):
         super().OnWorkStopped(t)
