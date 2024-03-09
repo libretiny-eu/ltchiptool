@@ -85,7 +85,7 @@ VERBOSITY_LEVEL = {
     type=click.Path(exists=True, dir_okay=True),
 )
 @click.version_option(
-    LTIM.get_version_full(),
+    LTIM.get().get_version_full(),
     "-V",
     "--version",
     message="ltchiptool %(version)s",

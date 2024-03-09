@@ -64,6 +64,10 @@ class LTIMBase:
     def is_bundled(self) -> bool:
         return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
+    @property
+    def is_dev(self) -> bool:
+        return not self.is_bundled and "site-packages" not in __file__
+
     def get_resource(self, name: str) -> Path:
         if self.is_bundled:
             return Path(sys._MEIPASS) / name
@@ -79,13 +83,12 @@ class LTIMBase:
     def get_version() -> Optional[str]:
         return get_version()
 
-    @staticmethod
-    def get_version_full() -> Optional[str]:
+    def get_version_full(self) -> Optional[str]:
         tool_version = LTIM.get_version()
         if not tool_version:
             return None
         tool_version = "v" + tool_version
-        if "site-packages" not in __file__ and not hasattr(sys, "_MEIPASS"):
+        if self.is_dev:
             tool_version += " (dev)"
         return tool_version
 

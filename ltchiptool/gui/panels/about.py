@@ -34,7 +34,7 @@ class AboutPanel(BasePanel):
 
         self.FindStaticText("text_lt_version").SetLabel(lt_version or "-")
         self.FindStaticText("text_tool_version").SetLabel(
-            LTIM.get_version_full() or "-"
+            LTIM.get().get_version_full() or "-"
         )
         if build_date:
             self.FindStaticText("text_build_date").SetLabel(build_date)

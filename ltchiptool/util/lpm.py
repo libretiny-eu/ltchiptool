@@ -213,17 +213,22 @@ class LPM:
         # noinspection PyProtectedMember
         from pip._internal.cli.main import main
 
+        ltim = LTIM.get()
         args = ["install", "--upgrade"]
+
         if self.plugin_site_path:
             info(f"Will install plugins to {self.plugin_site_path}")
-            args += ["--target", str(self.plugin_site_path)]
-        elif LTIM.get().is_bundled:
+            args += ["--user"]
+        elif ltim.is_bundled:
             raise RuntimeError(
                 "Cannot install plugins in bundled setup! "
                 "No external site-packages directory configured"
             )
         else:
             info(f"Will install plugins to Python-default site-packages")
+
+        if ltim.is_bundled:
+            args += ["--cert", str(ltim.get_gui_resource("certifi/cacert.pem"))]
 
         info("Running pip install...")
         code = main(args + [distribution])

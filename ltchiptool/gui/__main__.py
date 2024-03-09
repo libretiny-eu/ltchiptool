@@ -30,7 +30,7 @@ def gui_entrypoint(install: bool, *args, **kwargs):
         if not install:
             from .main import MainFrame
 
-            frm = MainFrame(None, title=f"ltchiptool {LTIM.get_version_full()}")
+            frm = MainFrame(None, title=f"ltchiptool {LTIM.get().get_version_full()}")
             frm.init_params = kwargs
             frm.Show()
         else:

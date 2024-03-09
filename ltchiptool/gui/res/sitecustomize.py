@@ -1,6 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2024-3-6.
 
 import os
+import site
 import sys
 from pathlib import Path
 
@@ -20,6 +21,13 @@ else:
     else:
         data_path = Path(env)
 
-site_path = data_path.expanduser().resolve() / "ltchiptool" / "site-packages"
+data_path = data_path.expanduser().resolve() / "ltchiptool"
+os.environ["PYTHONUSERBASE"] = str(data_path)
+
+site.ENABLE_USER_SITE = True
+site.USER_SITE = None
+site.USER_BASE = None
+
+site_path = Path(site.getusersitepackages())
 sys.path.insert(0, str(site_path))
 setattr(sys, "_LTCHIPTOOLSITE", site_path)
