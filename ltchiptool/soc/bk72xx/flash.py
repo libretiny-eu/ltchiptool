@@ -4,11 +4,16 @@ import logging
 import struct
 from abc import ABC
 from binascii import crc32
-from logging import DEBUG, debug
+from logging import DEBUG, debug, warning
 from typing import IO, Generator, List, Optional, Tuple, Union
 
 from bk7231tools.serial import BK7231Serial
-from bk7231tools.serial.protocol import CHIP_BY_CRC
+from bk7231tools.serial.base import BkChipType
+from bk7231tools.serial.base.packets import (
+    BkFlashReg24ReadCmnd,
+    BkReadRegCmnd,
+    BkWriteRegCmnd,
+)
 
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
@@ -74,6 +79,7 @@ class BK72XXFlash(SocInterface, ABC):
             self.bk.info = lambda *args: debug(" ".join(args))
         if loglevel <= VERBOSE:
             self.bk.debug = lambda *args: verbose(" ".join(args))
+        self.bk.warn = lambda *args: warning(" ".join(args))
         self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
 
     def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
@@ -98,6 +104,8 @@ class BK72XXFlash(SocInterface, ABC):
 
     def flash_disconnect(self) -> None:
         if self.bk:
+            # avoid printing retry warnings
+            self.bk.warn = lambda *_: None
             self.bk.close()
         self.bk = None
         if self.conn:
@@ -107,28 +115,33 @@ class BK72XXFlash(SocInterface, ABC):
         if self.info:
             return self.info
         self.flash_connect()
-        crc = self.bk.read_flash_range_crc(0, 256) ^ 0xFFFFFFFF
-        if crc in CHIP_BY_CRC:
-            chip_type, boot_version = CHIP_BY_CRC[crc]
-        else:
-            chip_type = f"Unrecognized (0x{crc:08X})"
-            boot_version = None
+
         self.info = [
-            ("Chip Type", chip_type),
-            ("Bootloader Version", boot_version or "Unspecified"),
-        ]
-        if self.bk.check_protocol(0x11):  # CMD_ReadBootVersion
-            self.info.append(("Bootloader Message", self.bk.chip_info))
-        if self.bk.check_protocol(0x03):  # CMD_ReadReg
-            chip_id = hex(self.bk.register_read(0x800000))  # SCTRL_CHIP_ID
-            self.info.append(("Chip ID", chip_id))
-        self.info += [
             ("Protocol Type", self.bk.protocol_type.name),
+            (
+                "Chip Type",
+                self.bk.chip_type and self.bk.chip_type.name or "Unrecognized",
+            ),
+            (
+                "Bootloader Type",
+                self.bk.bootloader
+                and f"{self.bk.bootloader.chip.name} {self.bk.bootloader.version or ''}"
+                or "Unrecognized",
+            ),
+            (
+                "Chip ID",
+                self.bk.bk_chip_id and hex(self.bk.bk_chip_id) or "N/A",
+            ),
+            (
+                "Boot Version String",
+                self.bk.bk_boot_version or "N/A",
+            ),
         ]
-        if chip_type == "BK7231N":
-            tlv = self.bk.read_flash_4k(0x1D0000)
-        elif chip_type == "BK7231T":
-            tlv = self.bk.read_flash_4k(0x1E0000)
+
+        if self.bk.chip_type == BkChipType.BK7231N:
+            tlv = self.bk.flash_read_bytes(0x1D0000, 0x1000)
+        elif self.bk.chip_type == BkChipType.BK7231T:
+            tlv = self.bk.flash_read_bytes(0x1E0000, 0x1000)
         else:
             tlv = None
         if tlv and tlv[0x1C:0x24] == b"\x02\x11\x11\x11\x06\x00\x00\x00":
@@ -136,14 +149,31 @@ class BK72XXFlash(SocInterface, ABC):
                 ("", ""),
                 ("MAC Address", tlv and tlv[0x24:0x2A].hex(":").upper() or "Unknown"),
             ]
-        if self.bk.check_protocol(0x0E, True):  # CMD_FlashGetMID
+
+        self.info += [
+            ("", ""),
+        ]
+        if self.bk.check_protocol(BkFlashReg24ReadCmnd):
             flash_id = self.bk.flash_read_id()
             self.info += [
-                ("", ""),
                 ("Flash ID", flash_id["id"].hex(" ").upper()),
-                ("Flash Size (real)", sizeof(flash_id["size"])),
+                ("Flash Size (by ID)", sizeof(flash_id["size"])),
             ]
-        if self.bk.check_protocol(0x03):  # CMD_ReadReg
+        if self.bk.bootloader and self.bk.bootloader.flash_size:
+            self.info += [
+                ("Flash Size (by BL)", sizeof(self.bk.bootloader.flash_size)),
+            ]
+        if self.bk.flash_size_detected:
+            self.info += [
+                ("Flash Size (detected)", sizeof(self.bk.flash_size)),
+            ]
+        else:
+            flash_size = self.bk.flash_detect_size()
+            self.info += [
+                ("Flash Size (detected)", sizeof(flash_size)),
+            ]
+
+        if self.bk.check_protocol(BkReadRegCmnd):
             efuse = gen2bytes(self.flash_read_raw(0, 16, memory=FlashMemoryType.EFUSE))
             coeffs = struct.unpack("<IIII", efuse[0:16])
             self.info += [
@@ -159,16 +189,13 @@ class BK72XXFlash(SocInterface, ABC):
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
         self.flash_connect()
         if memory == FlashMemoryType.FLASH:
-            if not self.bk.check_protocol(0x0E, True):  # CMD_FlashGetMID
-                return 0x200000
-            flash_id = self.bk.flash_read_id()
-            return flash_id["size"]
+            return self.bk.flash_size
         if memory == FlashMemoryType.ROM:
-            if not self.bk.check_protocol(0x03):  # CMD_ReadReg
+            if not self.bk.check_protocol(BkReadRegCmnd):
                 raise NotImplementedError("Only BK7231N has built-in ROM")
             return 16 * 1024
         if memory == FlashMemoryType.EFUSE:
-            if not self.bk.check_protocol(0x01):  # CMD_WriteReg
+            if not self.bk.check_protocol(BkWriteRegCmnd):
                 raise NotImplementedError("Only BK7231N can read eFuse via UART")
             return 32
         raise NotImplementedError("Memory type not readable via UART")
@@ -225,7 +252,7 @@ class BK72XXFlash(SocInterface, ABC):
                 callback.on_update(len(chunk))
                 continue
 
-            debug(f"Checking CRC @ 0x{crc_offset:X}..0x{crc_offset+crc_length:X}")
+            debug(f"Checking CRC @ 0x{crc_offset:X}..0x{crc_offset + crc_length:X}")
             crc_expected = self.bk.read_flash_range_crc(
                 crc_offset,
                 crc_offset + crc_length,
