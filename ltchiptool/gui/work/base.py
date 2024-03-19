@@ -25,7 +25,7 @@ class BaseThread(Thread):
         except Exception as e:
             if self.should_run():
                 # show exceptions only if not cancelled
-                exception(None, exc_info=e)
+                exception("An error has occurred", exc_info=e)
             self.stop()
 
         if self.on_stop:
