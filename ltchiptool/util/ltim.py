@@ -64,7 +64,7 @@ class LTIM:
         return Path(__file__).parents[1] / "gui" / name
 
     @staticmethod
-    @lru_cache
+    @lru_cache()
     def get_version() -> Optional[str]:
         return get_version()
 
