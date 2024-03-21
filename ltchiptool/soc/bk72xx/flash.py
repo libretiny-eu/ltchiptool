@@ -76,10 +76,10 @@ class BK72XXFlash(SocInterface, ABC):
         )
         loglevel = logging.getLogger().getEffectiveLevel()
         if loglevel <= DEBUG:
-            self.bk.info = lambda *args: debug(" ".join(args))
+            self.bk.info = lambda *args: debug(" ".join(map(str, args)))
         if loglevel <= VERBOSE:
-            self.bk.debug = lambda *args: verbose(" ".join(args))
-        self.bk.warn = lambda *args: warning(" ".join(args))
+            self.bk.debug = lambda *args: verbose(" ".join(map(str, args)))
+        self.bk.warn = lambda *args: warning(" ".join(map(str, args)))
         self.flash_change_timeout(self.conn.timeout, self.conn.link_timeout)
 
     def flash_change_timeout(self, timeout: float = 0.0, link_timeout: float = 0.0):
