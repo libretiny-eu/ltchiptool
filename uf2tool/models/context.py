@@ -163,12 +163,13 @@ class UploadContext:
                 return None
 
             # find BytesIO in the dict
+            did_append = False
             for io_offs, io_data in out.items():
                 if io_offs + len(io_data.getvalue()) == offs:
                     io_data.write(data)
-                    offs = 0
+                    did_append = True
                     break
-            if offs == 0:
+            if did_append:
                 continue
 
             # create BytesIO at specified offset
