@@ -28,6 +28,7 @@ from .util.models.partitions import (
     Section,
 )
 from .util.models.utils import FF_32
+from .util.ota import patch_firmware_for_ota
 
 
 class AmebaZ2Binary(SocInterface, ABC):
@@ -109,6 +110,12 @@ class AmebaZ2Binary(SocInterface, ABC):
             title="Application Image",
             description="Firmware partition image for direct flashing",
             public=True,
+        )
+        out_ota1_ota = FirmwareBinary(
+            location=input,
+            name="firmware_is_ota",
+            offset=ota1_offset,
+            title="Application Image for OTA",
         )
         out_ptab = FirmwareBinary(
             location=input,
@@ -215,6 +222,10 @@ class AmebaZ2Binary(SocInterface, ABC):
         with out_ota1.write() as f:
             ota1 = data[ota1_offset:ota1_end]
             f.write(ota1)
+        with out_ota1_ota.write() as f:
+            ota1 = data[ota1_offset:ota1_end]
+            ota1_ota = patch_firmware_for_ota(ota1)
+            f.write(ota1_ota)
         return output.group()
 
     def detect_file_type(
