@@ -104,8 +104,10 @@ jobs:
 
       - name: Build GUI with PyInstaller
         shell: cmd
+        # First patch dis.py which causes issues in Python 3.10.0
         run: |
           set PATH=%cd%\python;%PATH%
+          python -c "s='arg = None';x=open('python/Lib/dis.py').read().replace(s, s+'\n'+' '*12+'extended_arg = 0');open('python/Lib/dis.py', 'w').write(x)"
           python gui-win32.py || exit /b
 
       - name: Add GitHub release assets
