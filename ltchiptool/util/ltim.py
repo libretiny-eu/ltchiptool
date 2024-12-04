@@ -24,6 +24,7 @@ PYTHON_RELEASES = "https://www.python.org/api/v2/downloads/release/?pre_release=
 PYTHON_RELEASE_FILE_FMT = (
     "https://www.python.org/api/v2/downloads/release_file/?release=%s&os=1"
 )
+PYTHON_RELEASE_VERSION_SPEC = SimpleSpec("3.11.9")
 PYTHON_GET_PIP = "https://bootstrap.pypa.io/get-pip.py"
 
 PYTHON_WIN = "python.exe"
@@ -144,8 +145,6 @@ class LTIM:
         self.callback.finish()
 
     def _install_python_windows(self, out_path: Path) -> Tuple[Path, Path]:
-        version_spec = SimpleSpec("~3.11")
-
         self.callback.on_message("Checking the latest Python version")
         with requests.get(PYTHON_RELEASES) as r:
             releases = r.json()
@@ -157,7 +156,7 @@ class LTIM:
                 (
                     (version, release)
                     for (version, release) in releases_map
-                    if version in version_spec
+                    if version in PYTHON_RELEASE_VERSION_SPEC
                 ),
                 key=lambda tpl: tpl[0],
             )
@@ -336,4 +335,9 @@ class LTIM:
 
 if __name__ == "__main__":
     LoggingHandler.get().level = DEBUG
-    LTIM.get().install(out_path=Path(expandvars("%PROGRAMFILES%\\kuba2k2\\ltchiptool")))
+    LTIM.get().install(
+        out_path=Path.cwd().resolve() / "ltchiptool",
+        shortcut=None,
+        fta=[],
+        add_path=False,
+    )
