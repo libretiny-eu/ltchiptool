@@ -59,12 +59,12 @@ jobs:
           path: libretiny
 
       - name: Set up Python Custom
-        # Configure embedded Python 3.10 modified to work on Windows 7
+        # Configure embedded Python 3.10.2 modified to work on Windows 7
         shell: cmd
         run: |
           mkdir python
           pushd python
-          certutil -urlcache -split -f https://github.com/kuba2k2/cpython/releases/download/v3.10.0-win7/python-3.10.0-embed-amd64-win7.zip python.zip || exit /b
+          certutil -urlcache -split -f https://github.com/kuba2k2/cpython/releases/download/v3.10.2-win7/python-3.10.2-embed-amd64-win7.zip python.zip || exit /b
           tar -xf python.zip || exit /b
           certutil -urlcache -split -f https://bootstrap.pypa.io/get-pip.py get-pip.py || exit /b
           python get-pip.py || exit /b
@@ -104,10 +104,8 @@ jobs:
 
       - name: Build GUI with PyInstaller
         shell: cmd
-        # First patch dis.py which causes issues in Python 3.10.0
         run: |
           set PATH=%cd%\python;%PATH%
-          python -c "s='arg = None';x=open('python/Lib/dis.py').read().replace(s, s+'\n'+' '*12+'extended_arg = 0');open('python/Lib/dis.py', 'w').write(x)"
           python gui-win32.py || exit /b
 
       - name: Add GitHub release assets
