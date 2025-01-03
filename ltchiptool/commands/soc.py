@@ -9,6 +9,8 @@ COMMANDS = {
     "rtltool": "ltchiptool/soc/ambz/util/rtltool.py",
     "ambztool": "ltchiptool/soc/ambz/util/ambztool.py",
     "ambz2tool": "ltchiptool/soc/ambz2/util/ambz2tool.py",
+    "ln-makeimage": "ltchiptool/soc/ln882x/util/makeimage.py",
+    "ln-otagen": "ltchiptool/soc/ln882x/util/ota_image_generator.py",
 }
 
 
