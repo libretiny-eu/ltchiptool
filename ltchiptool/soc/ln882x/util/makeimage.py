@@ -17,8 +17,6 @@
 
 import argparse
 import json
-import click
-from typing import List
 
 from .boot_header import *
 from .image_header import *
@@ -419,7 +417,7 @@ class MakeImageTool:
         return output_str
 
 
-def main(*argv):
+if __name__ == "__main__":
     """
     The following arguments are required:
     --boot      /path/to/boot_ln88xx.bin, that is ramcode;
@@ -481,18 +479,3 @@ def main(*argv):
         exit(-1)
 
     exit(0)
-
-@click.command(
-    help="makeimage tool from ln882x sdk",
-    context_settings=dict(
-        help_option_names=[],
-        ignore_unknown_options=True,
-    ),
-)
-@click.argument("args", nargs=-1)
-def cli(args: List[str]):
-    main(*args)
-
-
-if __name__ == "__main__":
-    main(*sys.argv[1:])

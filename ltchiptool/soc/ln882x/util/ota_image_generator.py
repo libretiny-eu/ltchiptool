@@ -24,8 +24,6 @@ import shutil
 import argparse
 from .part_desc_info import *
 from .image_header import *
-import click
-from typing import List
 
 
 class OTATOOL:
@@ -219,7 +217,7 @@ class OTATOOL:
             raise TypeError("dir MUST be a valid string")
 
 
-def main(*argv):
+if __name__ == "__main__":
     prog = os.path.basename(__file__)
     usage = ("\nargv1: /path/to/flashimage.bin \n"
             "Example: \n"
@@ -244,18 +242,3 @@ def main(*argv):
     print("Succeed to build: {}".format(ota_tool.output_filepath))
 
     exit(0)
-
-@click.command(
-    help="ota_image_generator tool from ln882x sdk",
-    context_settings=dict(
-        help_option_names=[],
-        ignore_unknown_options=True,
-    ),
-)
-@click.argument("args", nargs=-1)
-def cli(args: List[str]):
-    main(*args)
-
-
-if __name__ == "__main__":
-    main(*sys.argv[1:])
