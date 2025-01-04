@@ -66,7 +66,7 @@ class LN882xBinary(SocInterface, ABC):
             }
         )
         _, ota_size, _ = self.board.region("ota")
-        if stat(ota_tool.output_filepath) > ota_size:
+        if stat(ota_tool.output_filepath).st_size > ota_size:
             warning(
                 f"OTA size too large: {ota_tool.output_filepath} > {ota_size} (0x{ota_size:X})"
             )
