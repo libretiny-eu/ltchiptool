@@ -1,0 +1,40 @@
+{
+	"vendor_define": [],
+	"user_define": [
+		{
+			"partition_type": "BOOT",
+			"start_addr": "0x00000000",
+			"size_KB": 24
+		},
+		{
+			"partition_type": "PART_TAB",
+			"start_addr": "0x00006000",
+			"size_KB": 4
+		},
+		{
+			"partition_type": "APP",
+			"start_addr": "0x00007000",
+			"size_KB": 1200
+		},
+		{
+			"partition_type": "OTA",
+			"start_addr": "0x00133000",
+			"size_KB": 680
+		},
+		{
+			"partition_type": "NVDS",
+			"start_addr": "0x001DD000",
+			"size_KB": 12
+		},
+		{
+			"partition_type": "KV",
+			"start_addr": "0x001E0000",
+			"size_KB": 16
+		},
+		{
+			"partition_type": "USER",
+			"start_addr": "0x001E4000",
+			"size_KB": 112
+		}
+	]
+}

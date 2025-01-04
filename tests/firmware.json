@@ -1,0 +1,16 @@
+[
+	{
+		"title": "Flash Image",
+		"description": "Complete image with boot for flashing at offset 0",
+		"filename": "image_firmware.bin",
+		"offset": null,
+		"public": true
+	},
+	{
+		"title": "Flash OTA Image",
+		"description": "Compressed App image for OTA flashing",
+		"filename": "image_firmware-ota-xz-v1.0.bin",
+		"offset": null,
+		"public": true
+	}
+]
