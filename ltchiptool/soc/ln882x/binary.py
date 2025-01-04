@@ -4,15 +4,13 @@ from abc import ABC
 from datetime import datetime
 from logging import warning
 from os import stat
+from os.path import basename, dirname, join, realpath
 from typing import IO, List, Optional, Union
 import json
 
 from ltchiptool import SocInterface
-from ltchiptool.util.detection import Detection
 from ltchiptool.util.fileio import chext
-from os.path import basename, dirname, expanduser, isdir, isfile, join, realpath
 from ltchiptool.util.fwbinary import FirmwareBinary
-
 from ltchiptool.util.lvm import LVM
 
 from .util import MakeImageTool, OTATOOL
@@ -21,9 +19,8 @@ from .util import MakeImageTool, OTATOOL
 class LN882xBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
-        lvm = LVM.get()
 
-        bootfile = join(lvm.path(), f"cores", self.family.name, f"misc", self.board["build.bootfile"])
+        bootfile = join(LVM.get().path(), f"cores", self.family.name, f"misc", self.board["build.bootfile"])
         part_cfg = join(dirname(input), "flash_partition_cfg.json")
 
         self.gen_partcfg_json(part_cfg)
@@ -68,16 +65,13 @@ class LN882xBinary(SocInterface, ABC):
                 "public": True,
             }
         )
+        _, ota_size, _ = self.board.region("ota")
+        if stat(ota_tool.output_filepath) > ota_size:
+            warning(
+                f"OTA size too large: {ota_tool.output_filepath} > {ota_size} (0x{ota_size:X})"
+            )
 
         return output_fw.group()
-
-    def detect_file_type(
-        self,
-        file: IO[bytes],
-        length: int,
-    ) -> Optional[Detection]:
-
-        return None
 
     def gen_partcfg_json(self, output: str):
         flash_layout = self.board["flash"]
