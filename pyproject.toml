@@ -12,6 +12,8 @@ packages = [
 include = [
     "ltchiptool/platform.json",
     "ltchiptool/families.json",
+    "ltchiptool/boards/*",
+    "ltchiptool/boards/**/*",
 ]
 readme = "README.md"
 
