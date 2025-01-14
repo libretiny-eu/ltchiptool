@@ -10,10 +10,10 @@ packages = [
     { include = "uf2tool" },
 ]
 include = [
-    "ltchiptool/platform.json",
-    "ltchiptool/families.json",
-    "ltchiptool/boards/*",
-    "ltchiptool/boards/**/*",
+    { path = "ltchiptool/platform.json", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/families.json", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/boards/*", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/boards/**/*", format = ["sdist", "wheel"] } ,
 ]
 readme = "README.md"
 
