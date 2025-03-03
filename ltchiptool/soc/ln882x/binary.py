@@ -1,98 +1,118 @@
 # Copyright (c) Etienne Le Cousin 2025-01-02.
 
 from abc import ABC
-from datetime import datetime
 from logging import warning
 from os import stat
-from os.path import basename, dirname, join, realpath
-from typing import IO, List, Optional, Union
-import json
+from os.path import dirname, isfile
+from shutil import copyfile
+from typing import List
 
 from ltchiptool import SocInterface
-from ltchiptool.util.fileio import chext
+from ltchiptool.util.fileio import chext, chname
 from ltchiptool.util.fwbinary import FirmwareBinary
-from ltchiptool.util.lvm import LVM
 
 from .util import MakeImageTool, OTATOOL
+from .util.models import PartDescInfo, part_type_str2num
 
 
 class LN882xBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
+        flash_layout = self.board["flash"]
 
-        bootfile = join(LVM.get().path(), f"cores", self.family.name, f"misc", self.board["build.bootfile"])
-        part_cfg = join(dirname(input), "flash_partition_cfg.json")
-
-        self.gen_partcfg_json(part_cfg)
+        # find bootloader image
+        input_boot = chname(input, "boot.bin")
+        if not isfile(input_boot):
+            raise FileNotFoundError("Bootloader image not found")
 
         # build output names
-        output_fw = FirmwareBinary(
+        output = FirmwareBinary(
             location=input,
-            name=f"firmware",
-            subname="",
-            ext="bin",
+            name="firmware",
+            offset=0,
             title="Flash Image",
             description="Complete image with boot for flashing at offset 0",
             public=True,
         )
+        out_boot = FirmwareBinary(
+            location=input,
+            name="boot",
+            offset=self.board.region("boot")[0],
+            title="Bootloader Image",
+        )
+        out_ptab = FirmwareBinary(
+            location=input,
+            name="part_tab",
+            offset=self.board.region("part_tab")[0],
+            title="Partition Table",
+        )
+        out_app = FirmwareBinary(
+            location=input,
+            name="app",
+            offset=self.board.region("app")[0],
+            title="Application Image",
+            description="Firmware partition image for direct flashing",
+            public=True,
+        )
+        out_ota = FirmwareBinary(
+            location=input,
+            name="ota",
+            offset=self.board.region("ota")[0],
+            title="OTA Image",
+            description="Compressed App image for OTA flashing",
+            public=True,
+        )
+        # print graph element
+        output.graph(1)
 
-        fw_bin = chext(input, "bin")
+        input_bin = chext(input, "bin")
         # objcopy ELF -> raw BIN
-        toolchain.objcopy(input, fw_bin)
+        toolchain.objcopy(input, input_bin)
 
-        # Make firmware image
+        # Make Image Tool
+        # fmt: off
         mkimage = MakeImageTool()
-        mkimage.boot_filepath       = bootfile
-        mkimage.app_filepath        = fw_bin
-        mkimage.flashimage_filepath = output_fw.path
-        mkimage.part_cfg_filepath   = part_cfg
+        mkimage.boot_filepath       = input_boot
+        mkimage.app_filepath        = input_bin
+        mkimage.flashimage_filepath = output.path
         mkimage.ver_str             = "1.0"
         mkimage.swd_crp             = 0
-        mkimage.doAllWork()
+        mkimage.readPartCfg         = lambda : True
+        # fmt: off
+
+        # find all partitions
+        for name, layout in flash_layout.items():
+            (offset, _, length) = layout.partition("+")
+            part_info = PartDescInfo(
+                parttype = part_type_str2num(name.upper()),
+                startaddr = int(offset, 16),
+                partsize = int(length, 16)
+            )
+            mkimage._MakeImageTool__part_desc_info_list.append(part_info)
+
+        if not mkimage.doAllWork():
+            raise RuntimeError("MakeImageTool: Fail to generate image")
+
+        # write all parts to files
+        with out_boot.write() as f:
+            f.write(mkimage._MakeImageTool__partbuf_bootram)
+        with out_ptab.write() as f:
+            f.write(mkimage._MakeImageTool__partbuf_parttab)
+        with out_app.write() as f:
+            f.write(mkimage._MakeImageTool__partbuf_app)
 
         # Make ota image
         ota_tool = OTATOOL()
-        ota_tool.input_filepath = output_fw.path
+        ota_tool.input_filepath = output.path
         ota_tool.output_dir     = dirname(input)
-        ota_tool.doAllWork()
+        if not ota_tool.doAllWork():
+            raise RuntimeError("MakeImageTool: Fail to generate OTA image")
 
-        output_ota = FirmwareBinary.load(
-            location = ota_tool.output_filepath,
-            obj = {
-                "filename": basename(ota_tool.output_filepath),
-                "title": "Flash OTA Image",
-                "description": "Compressed App image for OTA flashing",
-                "public": True,
-            }
-        )
+        copyfile(ota_tool.output_filepath, out_ota.path)
         _, ota_size, _ = self.board.region("ota")
-        if stat(ota_tool.output_filepath).st_size > ota_size:
+        if stat(out_ota.path).st_size > ota_size:
             warning(
-                f"OTA size too large: {ota_tool.output_filepath} > {ota_size} (0x{ota_size:X})"
+                f"OTA size too large: {out_ota.filename} > {ota_size} (0x{ota_size:X})"
             )
 
-        return output_fw.group()
-
-    def gen_partcfg_json(self, output: str):
-        flash_layout = self.board["flash"]
-
-        # find all partitions
-        partitions = []
-        for name, layout in flash_layout.items():
-            part = {}
-            (offset, _, length) = layout.partition("+")
-            offset = int(offset, 16)
-            length = int(length, 16)
-            part["partition_type"] = name.upper()
-            part["start_addr"]     = f"0x{offset:08X}"
-            part["size_KB"]        = length // 1024
-            partitions.append(part)
-
-        partcfg: dict = {
-            "vendor_define": [],        # boot and part_tab should be there but it's not needed
-            "user_define": partitions   # so put all partitions in user define
-            }
-        # export file
-        with open(output, "w") as f:
-            json.dump(partcfg, f, indent="\t")
-
+        return output.group()
