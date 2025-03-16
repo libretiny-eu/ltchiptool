@@ -15,7 +15,7 @@ from .util import MakeImageTool, OTATOOL
 from .util.models import PartDescInfo, part_type_str2num
 
 
-class LN882xBinary(SocInterface, ABC):
+class LN882hBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
         flash_layout = self.board["flash"]

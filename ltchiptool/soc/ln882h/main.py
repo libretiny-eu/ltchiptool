@@ -8,13 +8,13 @@ from ltchiptool import Family
 from ltchiptool.models import OTAType
 from ltchiptool.soc import SocInterfaceCommon
 
-from .binary import LN882xBinary
-from .flash import LN882xFlash
+from .binary import LN882hBinary
+from .flash import LN882hFlash
 
 
-class LN882xMain(
-    LN882xBinary,
-    LN882xFlash,
+class LN882hMain(
+    LN882hBinary,
+    LN882hFlash,
     SocInterfaceCommon,
     ABC,
 ):
@@ -23,7 +23,7 @@ class LN882xMain(
         self.family = family
 
     def hello(self):
-        info("Hello from LN882x")
+        info("Hello from LN882h")
 
     @property
     def ota_type(self) -> Optional[OTAType]:

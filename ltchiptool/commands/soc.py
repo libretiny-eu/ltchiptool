@@ -9,6 +9,7 @@ COMMANDS = {
     "rtltool": "ltchiptool/soc/ambz/util/rtltool.py",
     "ambztool": "ltchiptool/soc/ambz/util/ambztool.py",
     "ambz2tool": "ltchiptool/soc/ambz2/util/ambz2tool.py",
+    "ln882htool": "ltchiptool/soc/ln882h/util/ln882htool.py",
 }
 
 

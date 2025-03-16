@@ -28,9 +28,9 @@ class SocInterface(ABC):
         if family.is_child_of("realtek-ambz2"):
             from .ambz2 import AmebaZ2Main
             return AmebaZ2Main(family)
-        if family.is_child_of("lightning-ln882x"):
-            from .ln882x import LN882xMain
-            return LN882xMain(family)
+        if family.is_child_of("lightning-ln882h"):
+            from .ln882h import LN882hMain
+            return LN882hMain(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
@@ -41,7 +41,7 @@ class SocInterface(ABC):
             "beken-72xx",
             "realtek-ambz",
             "realtek-ambz2",
-            "lightning-ln882x",
+            "lightning-ln882h",
         ]
 
     #########################
