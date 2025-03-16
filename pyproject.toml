@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ltchiptool"
-version = "4.11.4"
+version = "4.11.6"
 description = "Universal flashing and binary manipulation tool for IoT chips"
 authors = ["Kuba Szczodrzyński <kuba@szczodrzynski.pl>"]
 license = "MIT"
@@ -10,8 +10,10 @@ packages = [
     { include = "uf2tool" },
 ]
 include = [
-    "ltchiptool/platform.json",
-    "ltchiptool/families.json",
+    { path = "ltchiptool/platform.json", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/families.json", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/boards/*", format = ["sdist", "wheel"] },
+    { path = "ltchiptool/boards/**/*", format = ["sdist", "wheel"] } ,
 ]
 readme = "README.md"
 
