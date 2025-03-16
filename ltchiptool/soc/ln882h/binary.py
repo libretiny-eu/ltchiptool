@@ -11,7 +11,7 @@ from ltchiptool import SocInterface
 from ltchiptool.util.fileio import chext, chname
 from ltchiptool.util.fwbinary import FirmwareBinary
 
-from .util import MakeImageTool, OTATOOL
+from .util import OTATOOL, MakeImageTool
 from .util.models import PartDescInfo, part_type_str2num
 
 

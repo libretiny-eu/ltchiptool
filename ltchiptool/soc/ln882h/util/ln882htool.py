@@ -1,9 +1,9 @@
 #  Copyright (c) Etienne Le Cousin 2025-02-23.
 
-from tempfile import NamedTemporaryFile
-from os import path, stat
 from logging import debug, info
-from time import time, sleep
+from os import path, stat
+from tempfile import NamedTemporaryFile
+from time import sleep, time
 from typing import IO, Callable, Generator, Optional
 
 import click
