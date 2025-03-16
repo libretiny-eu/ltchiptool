@@ -1,15 +1,10 @@
 #  Copyright (c) Etienne Le Cousin 2025-02-23.
 
-import logging
-from enum import IntEnum
-from hashlib import sha256
-from io import BytesIO
 from tempfile import NamedTemporaryFile
 from os import path, stat
-from logging import debug, info, warning
-from math import ceil
+from logging import debug, info
 from time import time, sleep
-from typing import IO, Callable, Generator, List, Optional, Tuple
+from typing import IO, Callable, Generator, Optional
 
 import click
 from hexdump import hexdump, restore
@@ -28,7 +23,7 @@ LN882H_YM_BAUDRATE = 2000000
 LN882H_ROM_BAUDRATE = 115200
 LN882H_FLASH_ADDRESS = 0x0000000
 LN882H_RAM_ADDRESS = 0x20000000
-LN882H_BOOTRAM_FILE = 'ramcode.bin'
+LN882H_BOOTRAM_FILE = "ramcode.bin"
 
 
 class LN882hTool(SerialToolBase):
@@ -46,7 +41,7 @@ class LN882hTool(SerialToolBase):
         self.ym = ModemSocket(
             read=lambda size, timeout=2: self.read(size) or None,
             write=lambda data, timeout=2: self.write(data),
-            packet_size=128 # it seems that ramcode doesn't support 1k packets for filename...
+            packet_size=128,  # it seems that ramcode doesn't support 1k packets for filename...
         )
 
     #########################################
@@ -71,7 +66,7 @@ class LN882hTool(SerialToolBase):
                 yield line
                 response = b""
             response += read
-        if response: # add the last received "line" if any
+        if response:  # add the last received "line" if any
             yield response
         raise TimeoutError("Timeout in readlines() - no more data received")
 
@@ -105,7 +100,7 @@ class LN882hTool(SerialToolBase):
         resp = self.command("version")[-1]
         if resp == "RAMCODE":
             self.ramcode = True
-        elif len(resp) != 20 or resp[11] != '/':
+        elif len(resp) != 20 or resp[11] != "/":
             raise RuntimeError(f"Incorrect ping response: {resp!r}")
 
     def disconnect(self) -> None:
@@ -132,7 +127,6 @@ class LN882hTool(SerialToolBase):
         self.flush()
         self.set_baudrate(baudrate)
 
-
     ###############################################
     # Flash-related commands - for internal usage #
     ###############################################
@@ -148,7 +142,10 @@ class LN882hTool(SerialToolBase):
         ramcode_file = path.join(path.dirname(__file__), LN882H_BOOTRAM_FILE)
         ramcode_size = stat(ramcode_file).st_size
 
-        self.command(f"download [rambin] [0x{LN882H_RAM_ADDRESS:X}] [{ramcode_size}]", waitresp=False)
+        self.command(
+            f"download [rambin] [0x{LN882H_RAM_ADDRESS:X}] [{ramcode_size}]",
+            waitresp=False,
+        )
 
         self.push_timeout(3)
         debug(f"YMODEM: transmitting to 0x{LN882H_RAM_ADDRESS:X}")
@@ -174,14 +171,16 @@ class LN882hTool(SerialToolBase):
         offset: int,
         length: int,
         verify: bool = True,
-        chunk_size: int = 256, # maximum supported chunk size
+        chunk_size: int = 256,  # maximum supported chunk size
     ) -> Generator[bytes, None, None]:
         self.link()
         if not self.ramcode:
             self.ram_boot()
 
         if chunk_size > 256:
-            raise RuntimeError(f"Chunk size {chunk_size} exceeds the maximum allowed (256)")
+            raise RuntimeError(
+                f"Chunk size {chunk_size} exceeds the maximum allowed (256)"
+            )
 
         for start in range(offset, offset + length, chunk_size):
             count = min(start + chunk_size, offset + length) - start
@@ -214,7 +213,7 @@ class LN882hTool(SerialToolBase):
 
         # Convert stream to temporary file before sending with YMODEM
         tmp_file = NamedTemporaryFile()
-        with open(tmp_file.name, 'wb') as f:
+        with open(tmp_file.name, "wb") as f:
             f.write(stream.getbuffer())
 
             self.command(f"upgrade", waitresp=False)
@@ -231,6 +230,7 @@ class LN882hTool(SerialToolBase):
         self.change_baudrate(prev_baudrate)
         self.pop_timeout()
         info("Flash Successful.")
+
 
 @click.command(
     help="LN882H flashing tool",
@@ -255,7 +255,6 @@ def cli(device: str):
 
     info("Disconnecting...")
     ln882h.disconnect()
-
 
 
 if __name__ == "__main__":

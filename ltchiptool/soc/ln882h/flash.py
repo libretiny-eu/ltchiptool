@@ -1,10 +1,7 @@
 # Copyright (c) Etienne Le Cousin 2025-01-02.
 
-import logging
-import struct
 from abc import ABC
 from binascii import crc32
-from logging import DEBUG, debug, warning
 from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
@@ -83,8 +80,9 @@ class LN882hFlash(SocInterface, ABC):
         self.ln882h.link()
 
         def cb(i, n, t, sent):
-            callback.on_update(sent-cb.total_sent);
+            callback.on_update(sent - cb.total_sent)
             cb.total_sent = sent
+
         cb.total_sent = 0
 
         callback.on_message(f"Loading Ram Code")
@@ -105,11 +103,11 @@ class LN882hFlash(SocInterface, ABC):
         assert self.ln882h
 
         flash_info = self.ln882h.command("flash_info")[-1]
-        flash_info = dict(s.split(':') for s in flash_info.split(','))
+        flash_info = dict(s.split(":") for s in flash_info.split(","))
 
         self.info = [
-            ("Flash ID", flash_info['id']),
-            ("Flash Size", flash_info['flash size']),
+            ("Flash ID", flash_info["id"]),
+            ("Flash Size", flash_info["flash size"]),
             ("Flash UUID", self.ln882h.command("flash_uid")[-1][10:]),
             ("OTP MAC", self.ln882h.command("get_mac_in_flash_otp")[-2]),
         ]
@@ -129,8 +127,8 @@ class LN882hFlash(SocInterface, ABC):
             # It appears that flash size is coded in the low byte of flash ID as 2^X
             # Ex: LN882HKI id=0xEB6015 --> 0x15 = 21 --> flash_size = 2^21 = 2MB
             flash_info = self.ln882h.command("flash_info")[-1]
-            flash_info = dict(s.split(':') for s in flash_info.split(','))
-            flash_size = 1 << (int(flash_info['id'], 16) & 0xff)
+            flash_info = dict(s.split(":") for s in flash_info.split(","))
+            flash_size = 1 << (int(flash_info["id"], 16) & 0xFF)
             return flash_size
 
     def flash_read_raw(
@@ -163,9 +161,11 @@ class LN882hFlash(SocInterface, ABC):
     ) -> None:
         self.flash_connect()
         assert self.ln882h
+
         def cb(i, n, t, sent):
-            callback.on_update(sent-cb.total_sent);
+            callback.on_update(sent - cb.total_sent)
             cb.total_sent = sent
+
         cb.total_sent = 0
 
         self.ln882h.flash_write(
