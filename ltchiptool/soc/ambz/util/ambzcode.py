@@ -204,7 +204,7 @@ class AmbZCode:
         return (
             b"\x02\x48\x01\x4b"
             b"\x98\x47\x03\xe0"
-            b"\x21\x3C\x00\x00"  # EFUSE_OTP_Read32B()
+            b"\x21\x3c\x00\x00"  # EFUSE_OTP_Read32B()
         ) + inttole32(AMBZ_DATA_ADDRESS + offset)
 
     @staticmethod

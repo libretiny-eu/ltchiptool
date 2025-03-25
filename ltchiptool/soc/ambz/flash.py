@@ -105,7 +105,7 @@ class AmebaZFlash(SocInterface, ABC):
         port.baudrate = 115200
         sleep(0.1)
         # try software reset by writing the family ID, preceded by 55AA
-        magic_word = b"\x55\xAA" + self.family.id.to_bytes(length=4, byteorder="big")
+        magic_word = b"\x55\xaa" + self.family.id.to_bytes(length=4, byteorder="big")
         port.write(magic_word)
         sleep(0.5)
         port.baudrate = prev_baudrate
@@ -178,7 +178,7 @@ class AmebaZFlash(SocInterface, ABC):
         syscfg2 = letoint(data[256 + 512 + 16 + 8 : 256 + 512 + 16 + 8 + 4])
 
         system_data = data[256 + 512 + 16 + 16 : 256 + 512 + 16 + 16 + 128].ljust(
-            4096, b"\xFF"
+            4096, b"\xff"
         )
         system = SystemData.unpack(system_data)
 

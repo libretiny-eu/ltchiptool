@@ -44,7 +44,7 @@ class BekenBinary:
     def crc(self, data: ByteSource, type: DataType = None) -> DataGenerator:
         for block in geniter(data, 32):
             if len(block) < 32:
-                block += b"\xFF" * (32 - len(block))
+                block += b"\xff" * (32 - len(block))
             crc = CRC16.CMS.calc(block)
             block += inttobe16(crc)
             if type:
@@ -54,7 +54,7 @@ class BekenBinary:
 
     def uncrc(self, data: ByteSource, check: bool = True) -> ByteGenerator:
         for block in geniter(data, 34):
-            if check and block != b"\xFF" * 34:
+            if check and block != b"\xff" * 34:
                 crc = CRC16.CMS.calc(block[0:32])
                 crc_found = betoint(block[32:34])
                 if crc != crc_found:
