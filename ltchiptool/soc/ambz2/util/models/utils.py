@@ -4,9 +4,9 @@ from typing import Callable, Iterable, TypeVar
 
 from datastruct import Adapter, Context
 
-FF_48 = b"\xFF" * 48
-FF_32 = b"\xFF" * 32
-FF_16 = b"\xFF" * 16
+FF_48 = b"\xff" * 48
+FF_32 = b"\xff" * 32
+FF_16 = b"\xff" * 16
 
 T = TypeVar("T")
 

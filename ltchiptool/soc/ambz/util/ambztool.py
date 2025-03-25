@@ -108,7 +108,7 @@ class AmbZAddressHook(StreamHook):
         # increment saved address
         self.address += n
         # add padding to force sending N+4 packet size
-        data = data.ljust(n + 4, b"\xFF")
+        data = data.ljust(n + 4, b"\xff")
         return data
 
 

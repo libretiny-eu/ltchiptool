@@ -27,7 +27,7 @@ from .headers import ImageHeader, Keyblock, KeyblockOTA, header_is_last
 from .partitions import Bootloader, Firmware, PartitionTable
 from .utils import FF_32
 
-FLASH_CALIBRATION = b"\x99\x99\x96\x96\x3F\xCC\x66\xFC\xC0\x33\xCC\x03\xE5\xDC\x31\x62"
+FLASH_CALIBRATION = b"\x99\x99\x96\x96\x3f\xcc\x66\xfc\xc0\x33\xcc\x03\xe5\xdc\x31\x62"
 
 
 @dataclass

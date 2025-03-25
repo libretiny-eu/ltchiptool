@@ -7,14 +7,9 @@ from time import sleep, time
 from typing import IO, Callable, Generator, Optional
 
 import click
-from hexdump import hexdump, restore
-from serial import Serial
 from ymodem.Socket import ModemSocket
 
 from ltchiptool.util.cli import DevicePortParamType
-from ltchiptool.util.intbin import align_down, biniter, gen2bytes, letoint, pad_data
-from ltchiptool.util.logging import LoggingHandler, verbose
-from ltchiptool.util.misc import retry_catching, retry_generator
 from ltchiptool.util.serialtool import SerialToolBase
 
 _T_YmodemCB = Optional[Callable[[int, str, int, int], None]]

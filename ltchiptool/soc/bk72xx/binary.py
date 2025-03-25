@@ -29,7 +29,7 @@ def to_address(offs: int) -> int:
 def check_app_code_crc(data: bytes) -> Union[bool, None]:
     # b #0x40
     # ldr pc, [pc, #0x14]
-    if data[0:8] == b"\x2F\x07\xB5\x94\x35\xFF\x2A\x9B":
+    if data[0:8] == b"\x2f\x07\xb5\x94\x35\xff\x2a\x9b":
         crc = CRC16.CMS.calc(data[0:32])
         crc_found = betoint(data[32:34])
         if crc == crc_found:
@@ -183,13 +183,13 @@ class BK72XXBinary(SocInterface, ABC):
         with out_ug.write() as ug:
             hdr = BytesIO()
             ota_bin = ota_data.getvalue()
-            hdr.write(b"\x55\xAA\x55\xAA")
+            hdr.write(b"\x55\xaa\x55\xaa")
             hdr.write(pad_data(version.encode(), 12, 0x00))
             hdr.write(inttobe32(len(ota_bin)))
             hdr.write(inttobe32(sum(ota_bin)))
             ug.write(hdr.getvalue())
             ug.write(inttobe32(sum(hdr.getvalue())))
-            ug.write(b"\xAA\x55\xAA\x55")
+            ug.write(b"\xaa\x55\xaa\x55")
             ug.write(ota_bin)
 
         # close all files
@@ -218,7 +218,7 @@ class BK72XXBinary(SocInterface, ABC):
             return Detection.make_unsupported("Beken Encrypted App")
 
         # raw firmware binary
-        if data[0:8] == b"\x0E\x00\x00\xEA\x14\xF0\x9F\xE5":
+        if data[0:8] == b"\x0e\x00\x00\xea\x14\xf0\x9f\xe5":
             return Detection.make_unsupported("Raw ARM Binary")
 
         # RBL file for OTA - 'download' partition

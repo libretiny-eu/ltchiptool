@@ -24,14 +24,14 @@ def check_xip_binary(
 ) -> Optional[Tuple[int, int, bytes]]:
     if data[0:8] != header:
         return None
-    if data[16:32] != b"\xFF" * 16:
+    if data[16:32] != b"\xff" * 16:
         return None
     length, start = unpack("<II", data[8:16])
     return start, length, data[32:]
 
 
 def check_bootloader_binary(data: bytes) -> Optional[Tuple[int, int, bytes]]:
-    return check_xip_binary(data, header=b"\x99\x99\x96\x96\x3F\xCC\x66\xFC")
+    return check_xip_binary(data, header=b"\x99\x99\x96\x96\x3f\xcc\x66\xfc")
 
 
 class AmebaZBinary(SocInterface, ABC):

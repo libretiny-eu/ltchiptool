@@ -134,7 +134,7 @@ class AmebaZ2Binary(SocInterface, ABC):
         nmap_ota1 = self.board.toolchain.nm(input)
 
         # build the partition table
-        ptable = PartitionTable(user_data=b"\xFF" * 256)
+        ptable = PartitionTable(user_data=b"\xff" * 256)
         for region, type in config.ptable.items():
             offset, length, _ = self.board.region(region)
             hash_key = config.keys.hash_keys[region]
@@ -205,11 +205,11 @@ class AmebaZ2Binary(SocInterface, ABC):
         with output.write() as f:
             f.write(data)
         with out_ptab.write() as f:
-            ptab = data[ptab_offset:ptab_end].rstrip(b"\xFF")
+            ptab = data[ptab_offset:ptab_end].rstrip(b"\xff")
             ptab = pad_data(ptab, 0x20, 0xFF)
             f.write(ptab)
         with out_boot.write() as f:
-            boot = data[boot_offset:boot_end].rstrip(b"\xFF")
+            boot = data[boot_offset:boot_end].rstrip(b"\xff")
             boot = pad_data(boot, 0x20, 0xFF)
             f.write(boot)
         with out_ota1.write() as f:
@@ -230,15 +230,15 @@ class AmebaZ2Binary(SocInterface, ABC):
             return Detection.make("Realtek AmebaZ2 Flash Image", offset=0)
 
         if (
-            data[0x40:0x44] != b"\xFF\xFF\xFF\xFF"
+            data[0x40:0x44] != b"\xff\xff\xff\xff"
             and data[0x48] == ImageType.BOOT.value
         ):
             return Detection.make("Realtek AmebaZ2 Bootloader", offset=0x4000)
 
         if (
-            data[0xE0:0xE8].strip(b"\xFF")
+            data[0xE0:0xE8].strip(b"\xff")
             and data[0xE8] == ImageType.FWHS_S.value
-            and data[0x1A0:0x1A8].strip(b"\xFF")
+            and data[0x1A0:0x1A8].strip(b"\xff")
             and data[0x1A8] == SectionType.SRAM.value
         ):
             return Detection.make("Realtek AmebaZ2 Firmware", offset=None)

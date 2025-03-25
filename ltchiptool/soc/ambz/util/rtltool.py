@@ -29,7 +29,7 @@ CMD_USB = b"\x05"  # UART Set Baud
 CMD_XMD = b"\x07"  # Go xmodem mode (write RAM/Flash mode)
 CMD_EFS = b"\x17"  # Erase Flash Sectors
 CMD_RBF = b"\x19"  # Read Block Flash
-CMD_ABRT = b"\x1B"  # End xmodem mode (write RAM/Flash mode)
+CMD_ABRT = b"\x1b"  # End xmodem mode (write RAM/Flash mode)
 CMD_GFS = b"\x21"  # FLASH Get Status
 CMD_SFS = b"\x26"  # FLASH Set Status
 
@@ -283,7 +283,7 @@ class RTLXMD:
                 if not data:  # end of stream
                     print("send: at EOF")
                     return False
-                data = data.ljust(packet_size, b"\xFF")
+                data = data.ljust(packet_size, b"\xff")
                 pkt = (
                     struct.pack("<BBBI", ord(cmd), sequence, 0xFF - sequence, offset)
                     + data

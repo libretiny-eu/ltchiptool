@@ -1,14 +1,10 @@
 # Copyright (c) Etienne Le Cousin 2025-01-02.
 
 from abc import ABC
-from binascii import crc32
 from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
 from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
-from ltchiptool.util.intbin import gen2bytes, inttole32
-from ltchiptool.util.logging import VERBOSE, verbose
-from ltchiptool.util.misc import sizeof
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 

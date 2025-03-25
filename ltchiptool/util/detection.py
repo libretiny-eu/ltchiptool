@@ -13,16 +13,16 @@ from .fileio import peek
 
 FILE_TYPES = {
     "UF2": [
-        (0x000, b"UF2\x0A"),
-        (0x004, b"\x57\x51\x5D\x9E"),
-        (0x1FC, b"\x30\x6F\xB1\x0A"),
+        (0x000, b"UF2\x0a"),
+        (0x004, b"\x57\x51\x5d\x9e"),
+        (0x1FC, b"\x30\x6f\xb1\x0a"),
     ],
     "ELF": [
-        (0x00, b"\x7FELF"),
+        (0x00, b"\x7fELF"),
     ],
     "Tuya UG": [
-        (0x00, b"\x55\xAA\x55\xAA"),
-        (0x1C, b"\xAA\x55\xAA\x55"),
+        (0x00, b"\x55\xaa\x55\xaa"),
+        (0x1C, b"\xaa\x55\xaa\x55"),
     ],
 }
 

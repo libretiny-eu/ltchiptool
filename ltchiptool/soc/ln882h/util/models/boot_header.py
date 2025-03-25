@@ -19,7 +19,6 @@
 
 import zlib
 import struct
-from .ln_tools import *
 
 
 class BootHeader:

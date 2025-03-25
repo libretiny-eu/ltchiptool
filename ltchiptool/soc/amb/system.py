@@ -6,7 +6,7 @@ from enum import IntEnum
 from datastruct import DataStruct
 from datastruct.fields import adapter, alignto, bitfield, field
 
-FF_16 = b"\xFF" * 16
+FF_16 = b"\xff" * 16
 
 
 class FlashSpeed(IntEnum):

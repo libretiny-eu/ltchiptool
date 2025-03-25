@@ -37,7 +37,7 @@ class Block:
         self.flags.has_tags = not not self.tags
         self.length = self.data and len(self.data) or 0
         # UF2 magic 1 and 2
-        data = b"\x55\x46\x32\x0A\x57\x51\x5D\x9E"
+        data = b"\x55\x46\x32\x0a\x57\x51\x5d\x9e"
         # encode integer variables
         data += inttole32(self.flags.encode())
         data += inttole32(self.address)
@@ -71,7 +71,7 @@ class Block:
                 raise ValueError("Padding too long")
             data += self.padding
         data += b"\x00" * (512 - 4 - len(data))
-        data += b"\x30\x6F\xB1\x0A"  # magic 3
+        data += b"\x30\x6f\xb1\x0a"  # magic 3
         return data
 
     def decode(self, data: bytes):
