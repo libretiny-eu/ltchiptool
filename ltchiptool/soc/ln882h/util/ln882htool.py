@@ -14,7 +14,7 @@ from ltchiptool.util.serialtool import SerialToolBase
 
 _T_YmodemCB = Optional[Callable[[int, str, int, int], None]]
 
-LN882H_YM_BAUDRATE = 2000000
+LN882H_YM_BAUDRATE = 1000000
 LN882H_ROM_BAUDRATE = 115200
 LN882H_FLASH_ADDRESS = 0x0000000
 LN882H_RAM_ADDRESS = 0x20000000
