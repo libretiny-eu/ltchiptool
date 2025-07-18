@@ -33,7 +33,7 @@ AMEBAZ2_GUIDE = [
     "or bad/loose wires.",
     "The UART adapter's 3.3V power regulator is usually not enough. Instead,\n"
     "a regulated bench power supply, or a linear 1117-type regulator is recommended.",
-    "In order to flash the chip, you need to enable download mode.\n"
+    "In order to flash the chip (read or write), you need to enable download mode.\n"
     "This is similar to ESP8266/ESP32, but the strapping pin (GPIO 0 / PA00)\n"
     "has to be pulled *to 3.3V*, not GND.",
     "Additionally, make sure that pin PA13 (RX0) is NOT pulled to GND.",
