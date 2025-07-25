@@ -215,9 +215,9 @@ class LN882hTool(SerialToolBase):
         self.push_timeout(3)
         debug(f"YMODEM: transmitting to 0x{offset:X}")
         if not self.ym.send([f.name], callback=callback):
-           self.change_baudrate(prev_baudrate)
-           self.pop_timeout()
-           raise RuntimeError("YMODEM transmission failed")
+            self.change_baudrate(prev_baudrate)
+            self.pop_timeout()
+            raise RuntimeError("YMODEM transmission failed")
 
         self.link()
 
