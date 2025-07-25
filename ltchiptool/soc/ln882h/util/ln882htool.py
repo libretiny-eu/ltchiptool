@@ -207,18 +207,17 @@ class LN882hTool(SerialToolBase):
         self.command(f"startaddr 0x{offset:X}")
 
         # Convert stream to temporary file before sending with YMODEM
-        tmp_file = NamedTemporaryFile()
-        with open(tmp_file.name, "wb") as f:
+        with NamedTemporaryFile(delete=False) as f:
             f.write(stream.getbuffer())
 
-            self.command(f"upgrade", waitresp=False)
+        self.command(f"upgrade", waitresp=False)
 
-            self.push_timeout(3)
-            debug(f"YMODEM: transmitting to 0x{offset:X}")
-            if not self.ym.send([f.name], callback=callback):
-                self.change_baudrate(prev_baudrate)
-                self.pop_timeout()
-                raise RuntimeError("YMODEM transmission failed")
+        self.push_timeout(3)
+        debug(f"YMODEM: transmitting to 0x{offset:X}")
+        if not self.ym.send([f.name], callback=callback):
+           self.change_baudrate(prev_baudrate)
+           self.pop_timeout()
+           raise RuntimeError("YMODEM transmission failed")
 
         self.link()
 
