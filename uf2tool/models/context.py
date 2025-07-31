@@ -91,6 +91,9 @@ class UploadContext:
             return None
         return start + offs
 
+    def rewind(self) -> None:
+        self.seq = 0
+
     def read_next(self, scheme: OTAScheme) -> Optional[Tuple[str, int, bytes]]:
         """
         Read next available data block for the specified OTA scheme.
@@ -151,6 +154,10 @@ class UploadContext:
 
         if not self.board_name:
             raise ValueError("This UF2 is not readable, since no board name is present")
+
+        # rewind to the beginning of the UF2 so collect_data can be called
+        # multiple times
+        self.rewind()
 
         out: Dict[int, BytesIO] = {}
         while True:
