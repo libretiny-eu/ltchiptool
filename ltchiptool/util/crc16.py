@@ -83,12 +83,14 @@ class CRC16(Enum):
             out |= ((num & (1 << i)) >> i) << (15 - i)
         return out
 
-    def calc(self, data: bytes) -> int:
+    def calc(self, data: bytes, init: int = None) -> int:
+        if init is None:
+            init = self.init
         if self.ref:
             self._init_ref()
-            return self._calc_ref(data)
+            return self._calc_ref(data, init)
         self._init_std()
-        return self._calc_std(data)
+        return self._calc_std(data, init)
 
     def _init_std(self):
         if self.table:
@@ -118,15 +120,15 @@ class CRC16(Enum):
                     crc >>= 1
             self.table.append(crc)
 
-    def _calc_std(self, data: bytes) -> int:
-        crc = self.init
+    def _calc_std(self, data: bytes, init: int) -> int:
+        crc = init
         for b in data:
             b ^= crc // 256
             crc = self.table[b] ^ (crc * 256 % 0x10000)
         return crc ^ self.out
 
-    def _calc_ref(self, data: bytes) -> int:
-        crc = self.init
+    def _calc_ref(self, data: bytes, init: int) -> int:
+        crc = init
         for b in data:
             b ^= crc % 256
             crc = self.table[b] ^ (crc // 256)
