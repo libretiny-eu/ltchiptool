@@ -263,8 +263,11 @@ class MainFrame(wx.Frame):
         settings = self._settings
         self.SetSettings(**settings.get("main", {}))
         for name, window in self.Windows.items():
-            window.SetSettings(**settings.get(name, {}))
-            window.SetInitParams(**self.init_params)
+            try:
+                window.SetSettings(**settings.get(name, {}))
+                window.SetInitParams(**self.init_params)
+            except Exception as e:
+                exception(f"Couldn't load plugin settings '{name}'", exc_info=e)
         if settings:
             info(f"Loaded settings from {self.config_file}")
         for name, window in self.Windows.items():
