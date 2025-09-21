@@ -29,6 +29,9 @@ from .utils import FF_32
 
 FLASH_CALIBRATION = b"\x99\x99\x96\x96\x3f\xcc\x66\xfc\xc0\x33\xcc\x03\xe5\xdc\x31\x62"
 
+IMAGE_SIGNATURE_OFFSET = 0
+IMAGE_PUBLIC_KEY_OFFSET = 32
+
 
 @dataclass
 class Image(DataStruct):
