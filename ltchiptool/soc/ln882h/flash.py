@@ -14,8 +14,9 @@ LN882H_GUIDE = [
     "Connect UART1 of the LN882h to the USB-TTL adapter:",
     [
         ("PC", "LN882h"),
-        ("RX", "TX1 (GPIOA2 / P2)"),
-        ("TX", "RX1 (GPIOA3 / P3)"),
+        ("RX", "TX0 (GPIOA2 / P2)"),
+        ("TX", "RX0 (GPIOA3 / P3)"),
+        ("GND", "BOOT (GPIOA9 / P9)"),
         ("", ""),
         ("GND", "GND"),
     ],

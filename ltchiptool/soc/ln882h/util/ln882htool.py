@@ -169,6 +169,7 @@ class LN882hTool(SerialToolBase):
         chunk_size: int = 256,  # maximum supported chunk size
     ) -> Generator[bytes, None, None]:
         self.link()
+        prev_baudrate = self.s.baudrate
         if not self.ramcode:
             self.ram_boot()
 
@@ -176,6 +177,10 @@ class LN882hTool(SerialToolBase):
             raise RuntimeError(
                 f"Chunk size {chunk_size} exceeds the maximum allowed (256)"
             )
+
+        self.change_baudrate(LN882H_YM_BAUDRATE)
+        self.link()
+        self.push_timeout(0.02)
 
         for start in range(offset, offset + length, chunk_size):
             count = min(start + chunk_size, offset + length) - start
@@ -186,9 +191,15 @@ class LN882hTool(SerialToolBase):
 
             valid, data = self.ym._verify_recv_checksum(True, data)
             if verify and not valid:
+                self.change_baudrate(prev_baudrate)
+                self.pop_timeout()
                 raise RuntimeError(f"Invalid checksum")
 
             yield data
+
+        self.change_baudrate(prev_baudrate)
+        self.pop_timeout()
+        info("Flash Read Successful.")
 
     def flash_write(
         self,
