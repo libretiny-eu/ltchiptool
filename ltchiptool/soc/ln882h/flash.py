@@ -11,7 +11,7 @@ from uf2tool import OTAScheme, UploadContext
 from .util.ln882htool import LN882hTool
 
 LN882H_GUIDE = [
-    "Connect UART1 of the LN882h to the USB-TTL adapter:",
+    "Connect UART0 of the LN882h to the USB-TTL adapter:",
     [
         ("PC", "LN882h"),
         ("RX", "TX0 (GPIOA2 / P2)"),
