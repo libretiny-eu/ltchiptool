@@ -208,7 +208,7 @@ class LN882hTool(SerialToolBase):
 
         # Convert stream to temporary file before sending with YMODEM
         with NamedTemporaryFile(delete=False) as f:
-            f.write(stream.getbuffer())
+            f.write(stream.read())
 
         self.command(f"upgrade", waitresp=False)
 
