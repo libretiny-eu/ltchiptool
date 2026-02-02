@@ -156,7 +156,7 @@ class AmebaZ2Flash(SocInterface, ABC):
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
         if memory == FlashMemoryType.FLASH:
-            return 0x200000
+            return 0x400000
         if memory == FlashMemoryType.ROM:
             return 384 * 1024
         if memory == FlashMemoryType.EFUSE:
