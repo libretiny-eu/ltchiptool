@@ -18,6 +18,7 @@ class FirmwareBinary:
     subname: Optional[str] = None
     offset: Optional[int] = None
     ext: str = "bin"
+    prefix: str = "image"
 
     title: Optional[str] = None
     description: Optional[str] = None
@@ -37,7 +38,7 @@ class FirmwareBinary:
             self.ext,
         ]
         suffix = ".".join(s for s in spec if s)
-        self.filename = f"image_{self.name}.{suffix}".rstrip(".")
+        self.filename = f"{self.prefix}_{self.name}.{suffix}".rstrip(".")
 
         if self.location not in GROUPS:
             GROUPS[self.location] = []
@@ -48,7 +49,7 @@ class FirmwareBinary:
         filename = obj["filename"]
         filename = filename.split(".")
 
-        name = filename[0][6:]  # strip "image_"
+        name = filename[0][len(self.prefix) :]  # strip the prefix
         subname = None
         offset = None
         ext = filename[-1]

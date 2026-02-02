@@ -216,16 +216,7 @@ class AmebaZ2Flash(SocInterface, ABC):
         callback: ProgressCallback = ProgressCallback(),
     ) -> None:
         # We're always flashing to OTA1/FW1 image.
-        # Firmware 'serial' is set to 0xFFFFFFFF at build-time,
-        # so that the FW2 image will not be chosen instead of FW1.
-        #
-        # The flasher (and the on-device OTA code) will try to remove
-        # the OTA signature of the 2nd image, so that it doesn't boot anymore.
-        # TODO actually remove the signature
-        #
-        # Recalculating serial numbers would involve recalculating hashes,
-        # which is not as simple as writing 32x 0xFF and clearing the bits.
-        # In reality, there's not much sense in keeping two FW images anyway.
+        # The OTA2 image is automatically invalidated by erasing its header.
 
         # collect continuous blocks of data
         parts = ctx.collect_data(OTAScheme.FLASHER_DUAL_1)

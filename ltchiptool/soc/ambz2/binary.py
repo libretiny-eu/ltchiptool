@@ -111,6 +111,20 @@ class AmebaZ2Binary(SocInterface, ABC):
             description="Firmware partition image for direct flashing",
             public=True,
         )
+        out_ota1_header = FirmwareBinary(
+            location=input,
+            name="firmware_is",
+            offset=ota1_offset,
+            subname="header",
+            prefix="part",
+        )
+        out_ota1_data = FirmwareBinary(
+            location=input,
+            name="firmware_is",
+            offset=ota1_offset,
+            subname="data",
+            prefix="part",
+        )
         out_ptab = FirmwareBinary(
             location=input,
             name="part_table",
@@ -216,6 +230,13 @@ class AmebaZ2Binary(SocInterface, ABC):
         with out_ota1.write() as f:
             ota1 = data[ota1_offset:ota1_end]
             f.write(ota1)
+        with out_ota1_header.write() as f:
+            ota1_header = data[ota1_offset : ota1_offset + 0x1000]
+            f.write(ota1_header)
+        with out_ota1_data.write() as f:
+            ota1_data = data[ota1_offset + 0x1000 : ota1_end]
+            ota1_data = (b"\xff" * 0x1000) + ota1_data
+            f.write(ota1_data)
         return output.group()
 
     def detect_file_type(
