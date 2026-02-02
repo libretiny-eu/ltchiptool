@@ -16,6 +16,7 @@ from .util.ambz2tool import (
     AMBZ2_CODE_ADDR,
     AMBZ2_DATA_ADDR,
     AMBZ2_EFUSE_PHYSICAL_SIZE,
+    AmbZ2FlashMode,
     AmbZ2Tool,
 )
 
@@ -156,7 +157,14 @@ class AmebaZ2Flash(SocInterface, ABC):
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
         if memory == FlashMemoryType.FLASH:
-            return 0x400000
+            self.flash_connect()
+            assert self.amb
+            self.amb.flash_init(configure=False)
+            return (
+                0x200_000
+                if self.amb.flash_mode == AmbZ2FlashMode.RTL8720CF
+                else 0x400_000
+            )
         if memory == FlashMemoryType.ROM:
             return 384 * 1024
         if memory == FlashMemoryType.EFUSE:
