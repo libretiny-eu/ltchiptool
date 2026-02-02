@@ -2,6 +2,7 @@
 
 from abc import ABC
 from os.path import isfile
+from time import time
 from typing import IO, Dict, List, Optional
 
 from ltchiptool import SocInterface
@@ -168,8 +169,8 @@ class AmebaZ2Binary(SocInterface, ABC):
                 keyblock=self._build_keyblock(config, region),
                 header=ImageHeader(
                     type=image.type,
-                    # use FF to allow recalculating by OTA code
-                    serial=0xFFFFFFFF if idx == 0 else 0,
+                    # use a custom epoch (beginning of 2025)
+                    serial=int(time() - 1735689600) if idx == 0 else 0,
                     user_keys=(
                         [FF_32, config.keys.user_keys[region]]
                         if idx == 0
