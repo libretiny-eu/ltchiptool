@@ -165,17 +165,22 @@ class UploadContext:
             # find BytesIO in the dict
             did_append = False
             for io_offs, io_data in out.items():
-                if io_offs + len(io_data.getvalue()) == offs:
+                if io_offs + io_data.tell() == offs:
                     io_data.write(data)
                     did_append = True
                     break
             if did_append:
                 continue
 
-            # create BytesIO at specified offset
-            io = BytesIO()
+            # create or reuse BytesIO at specified offset
+            if offs in out:
+                io = out[offs]
+                io.seek(0)
+            else:
+                io = BytesIO()
+                out[offs] = io
+            # write data at the current position
             io.write(data)
-            out[offs] = io
         # rewind BytesIO back to start
         for io in out.values():
             io.seek(0)
