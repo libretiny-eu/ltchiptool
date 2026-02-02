@@ -92,6 +92,10 @@ class CRC16(Enum):
         self._init_std()
         return self._calc_std(data, init)
 
+    def update(self, data: bytes, init: int = None) -> "CRC16":
+        self.init = self.calc(data, init)
+        return self
+
     def _init_std(self):
         if self.table:
             return
