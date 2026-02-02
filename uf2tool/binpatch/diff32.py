@@ -17,7 +17,7 @@ def diff32_write(block1: bytes, block2: bytes) -> bytes:
 
     # gather all repeating differences (i.e. memory offsets for OTA1/OTA2)
     for offs, diff in diffs.items():
-        (diff1, diff2) = diff
+        diff1, diff2 = diff
         diff1 = letoint(diff1)
         diff2 = letoint(diff2)
         diff = diff2 - diff1

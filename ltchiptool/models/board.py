@@ -94,7 +94,7 @@ class Board(RecursiveDict):
             raise ValueError(
                 f"The flash region '{name}' does not exist for board '{self.name}'."
             )
-        (start, length) = region.split("+")
+        start, length = region.split("+")
         start = int(start, 0)
         length = int(length, 0)
         return start, length, start + length

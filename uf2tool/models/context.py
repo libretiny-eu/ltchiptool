@@ -84,7 +84,7 @@ class UploadContext:
             start = partition.offset
             length = partition.length
         else:
-            (start, length, _) = self.board.region(part)
+            start, length, _ = self.board.region(part)
 
         if offs >= length:
             error(f"Partition '{part}' rel. offset 0x{offs:X} larger than 0x{length:X}")
@@ -157,7 +157,7 @@ class UploadContext:
             ret = self.read_next(scheme)
             if not ret:
                 break
-            (part, offs, data) = ret
+            part, offs, data = ret
             offs = self.get_offset(part, offs)
             if offs is None:
                 return None

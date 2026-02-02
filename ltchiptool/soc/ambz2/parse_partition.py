@@ -246,11 +246,9 @@ def parse_fw(file: typer.FileBinaryRead, hash_key: bytes = None) -> None:
             digest = mac(hash_key, raw)
 
             if digest != img.hash:
-                print(
-                    f"""\
+                print(f"""\
     {img_idx=} {file.tell()=:#x} {len(raw)=}
-    MISMATCH: computed={digest.hex()}"""
-                )
+    MISMATCH: computed={digest.hex()}""")
 
 
 def main(file: typer.FileBinaryRead, fw: bool = False, hash_key_hex: str = None):
@@ -267,11 +265,9 @@ def main(file: typer.FileBinaryRead, fw: bool = False, hash_key_hex: str = None)
     raw_pt = file.read(0x40 + 0x60 + parsed_pt.hdr.segment_size)
     pt_digest = mac(default_hash_key, raw_pt)
     if pt_digest != parsed_pt.hash:
-        print(
-            f"""\
+        print(f"""\
 {file.tell()=:#x} {len(raw_pt)=}
-MISMATCH: computed={pt_digest.hex()}"""
-        )
+MISMATCH: computed={pt_digest.hex()}""")
 
     file.seek(parsed_pt.data.boot_record.start_address)
     parsed_bootimg = BootImg.parse_stream(file)
@@ -283,11 +279,9 @@ MISMATCH: computed={pt_digest.hex()}"""
     raw_bootimg = file.read(0x20 + 0x20 + 0x60 + parsed_bootimg.hdr.segment_size)
     bootimg_digest = mac(default_hash_key, raw_bootimg)
     if bootimg_digest != parsed_bootimg.hash:
-        print(
-            f"""\
+        print(f"""\
 {file.tell()=:#x} {len(raw_bootimg)=}
-MISMATCH: computed={bootimg_digest.hex()}"""
-        )
+MISMATCH: computed={bootimg_digest.hex()}""")
 
     for part_idx, rec in enumerate(parsed_pt.data.part_records):
         file.seek(rec.start_address)

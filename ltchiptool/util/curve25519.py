@@ -33,9 +33,9 @@ _A = 486662
 
 def _point_add(point_n, point_m, point_diff):
     """Given the projection of two points and their difference, return their sum"""
-    (xn, zn) = point_n
-    (xm, zm) = point_m
-    (x_diff, z_diff) = point_diff
+    xn, zn = point_n
+    xm, zm = point_m
+    x_diff, z_diff = point_diff
     x = (z_diff << 2) * (xm * xn - zm * zn) ** 2
     z = (x_diff << 2) * (xm * zn - zm * xn) ** 2
     return x % P, z % P
@@ -43,7 +43,7 @@ def _point_add(point_n, point_m, point_diff):
 
 def _point_double(point_n):
     """Double a point provided in projective coordinates"""
-    (xn, zn) = point_n
+    xn, zn = point_n
     xn2 = xn**2
     zn2 = zn**2
     x = (xn2 - zn2) ** 2

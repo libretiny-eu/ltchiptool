@@ -37,7 +37,7 @@ class UF2Writer:
 
     def set_firmware(self, fw: str):
         if ":" in fw:
-            (fw_name, fw_ver) = fw.split(":")
+            fw_name, fw_ver = fw.split(":")
             self.uf2.put_str(Tag.FIRMWARE, fw_name)
             self.uf2.put_str(Tag.VERSION, fw_ver)
         else:

@@ -52,7 +52,7 @@ def cli(board: Board, input: IO[bytes], output: str, trim: bool, checksum: bool)
     dump = input.read()
 
     for name in board["flash"].keys():
-        (start, length, end) = board.region(name)
+        start, length, end = board.region(name)
         if end > len(dump):
             error(f"Partition '{name}' is out of bounds!")
             error(f" - Dump size: {hex(len(dump))}")

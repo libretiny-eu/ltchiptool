@@ -12,7 +12,7 @@ def bitcat(*vars: Tuple[Union["BitInt", int], SliceLike]) -> int:
     for val, sl in vars:
         if not isinstance(val, BitInt):
             val = BitInt(val)
-        (start, stop) = slice2int(sl)
+        start, stop = slice2int(sl)
         out <<= start - stop + 1
         out |= val[start:stop]
     return out
@@ -50,7 +50,7 @@ class BitInt(int):
     def __setitem__(self, key, value):
         if self.value is None:
             self.value = self
-        (start, stop) = slice2int(key)
+        start, stop = slice2int(key)
 
         if value > uintmax(start - stop + 1):
             raise ValueError("value is too big")
@@ -71,7 +71,7 @@ class BitInt(int):
         """Construct a bitstring from this BitInt's parts denoted by 'slices'."""
         out = 0
         for sl in slices:
-            (start, stop) = slice2int(sl)
+            start, stop = slice2int(sl)
             out <<= start - stop + 1
             out |= self[start:stop]
         return out

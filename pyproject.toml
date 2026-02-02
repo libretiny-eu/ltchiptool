@@ -49,7 +49,7 @@ markers = "platform_machine in 'armv6l,armv7l,armv8l,armv8b,aarch64'"
 gui = ["wxPython", "pywin32", "zeroconf", "pyuac", "pylnk3"]
 
 [tool.poetry.dev-dependencies]
-black = {version = "^24.1.0", markers = "python_version >= '3.8'"}
+black = {version = "^26.1.0", markers = "python_version >= '3.10'"}
 isort = "^5.10.1"
 autoflake = "^1.4"
 

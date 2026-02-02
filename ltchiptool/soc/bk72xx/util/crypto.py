@@ -46,7 +46,7 @@ class BekenCrypto:
     random: int = 0
 
     def __init__(self, coeffs: List[BitInt]) -> None:
-        (self.coef0, coef1, coef2, coef3) = coeffs
+        self.coef0, coef1, coef2, coef3 = coeffs
 
         # wire g_bypass = (coef3[31:24] == 8'hFF) | (coef3[31:24] == 8'h00);
         self.bypass = coef3[31:24] in [0x00, 0xFF]
