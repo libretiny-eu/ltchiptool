@@ -14,11 +14,12 @@ from ltchiptool.util.serialtool import SerialToolBase
 
 _T_YmodemCB = Optional[Callable[[int, str, int, int], None]]
 
-LN882H_YM_BAUDRATE = 1000000
+LN882H_YM_BAUDRATE = 230400
 LN882H_ROM_BAUDRATE = 115200
 LN882H_FLASH_ADDRESS = 0x0000000
 LN882H_RAM_ADDRESS = 0x20000000
 LN882H_BOOTRAM_FILE = "ramcode.bin"
+MAX_RETRIES = 8
 
 
 class LN882hTool(SerialToolBase):
@@ -186,16 +187,32 @@ class LN882hTool(SerialToolBase):
             count = min(start + chunk_size, offset + length) - start
             debug(f"Dumping bytes: start=0x{start:X}, count=0x{count:X}")
 
-            resp = self.command(f"flash_read 0x{start:X} 0x{count:X}")[-1]
-            data = bytearray.fromhex(resp.decode())
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    resp = self.command(f"flash_read 0x{start:X} 0x{count:X}")[-1]
+                    data = bytearray.fromhex(resp.decode())
 
-            valid, data = self.ym._verify_recv_checksum(True, data)
-            if verify and not valid:
-                self.change_baudrate(prev_baudrate)
-                self.pop_timeout()
-                raise RuntimeError(f"Invalid checksum")
+                    valid, data = self.ym._verify_recv_checksum(True, data)
 
-            yield data
+                    if verify and not valid:
+                        raise ValueError("Invalid checksum. Retrying...")
+
+                    # success → break retry loop
+                    yield data
+                    break
+
+                except Exception as e:
+                    debug(f"Chunk failed (start=0x{start:X}, attempt={attempt}/{MAX_RETRIES}): {e}")
+
+                    if attempt == MAX_RETRIES:
+                        self.change_baudrate(prev_baudrate)
+                        self.pop_timeout()
+                        raise RuntimeError(
+                            f"Failed reading chunk at 0x{start:X} after {MAX_RETRIES} attempts"
+                        )
+
+                    # small delay to improve UART link stability
+                    sleep(0.05*attempt)
 
         self.change_baudrate(prev_baudrate)
         self.pop_timeout()
