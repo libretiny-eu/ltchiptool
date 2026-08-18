@@ -14,6 +14,7 @@ include = [
     { path = "ltchiptool/families.json", format = ["sdist", "wheel"] },
     { path = "ltchiptool/boards/*", format = ["sdist", "wheel"] },
     { path = "ltchiptool/boards/**/*", format = ["sdist", "wheel"] } ,
+    { path = "ltchiptool/soc/ambd/stub/*.bin", format = ["sdist", "wheel"] },
 ]
 readme = "README.md"
 
