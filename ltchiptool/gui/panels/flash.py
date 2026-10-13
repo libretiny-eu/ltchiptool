@@ -50,13 +50,7 @@ class FlashPanel(FileDumpBase, DevicesBase):
         self.Start = self.BindCommandButton("button_start", self.OnStartClick)
         self.Cancel = self.BindCommandButton("button_cancel", self.OnCancelClick)
 
-        self.Baudrate = {
-            None: self.BindRadioButton("radio_baudrate_auto"),
-            115200: self.BindRadioButton("radio_baudrate_115200"),
-            230400: self.BindRadioButton("radio_baudrate_230400"),
-            460800: self.BindRadioButton("radio_baudrate_460800"),
-            921600: self.BindRadioButton("radio_baudrate_921600"),
-        }
+        self.Baudrate = self.BindComboBox("combo_baudrate")
 
         self.FileTypeText = self.FindStaticText("text_file_type")
         self.FileType = self.BindTextCtrl("input_file_type")
@@ -203,6 +197,9 @@ class FlashPanel(FileDumpBase, DevicesBase):
 
         errors = []
         warnings = []
+
+        if not self.is_baudrate_valid:
+            errors.append("Enter a valid baud rate (or Auto)")
 
         if writing:
             self.FileText.SetLabel("Input file")
@@ -362,18 +359,22 @@ class FlashPanel(FileDumpBase, DevicesBase):
         self.DoUpdate(self.Port)
 
     @property
-    def baudrate(self):
-        for baudrate, radio in self.Baudrate.items():
-            if radio.GetValue():
-                return baudrate
-        return None
+    def baudrate(self) -> int | None:
+        """Entered baud rate; None for Auto (or an invalid value)."""
+        try:
+            value = int(self.Baudrate.GetValue().strip())
+        except ValueError:
+            return None
+        return value if value > 0 else None
+
+    @property
+    def is_baudrate_valid(self) -> bool:
+        text = self.Baudrate.GetValue().strip()
+        return text.lower() == "auto" or self.baudrate is not None
 
     @baudrate.setter
-    def baudrate(self, value: int):
-        for baudrate, radio in self.Baudrate.items():
-            if baudrate == value:
-                radio.SetValue(True)
-                return
+    def baudrate(self, value: int | None):
+        self.Baudrate.SetValue("Auto" if value is None else str(value))
 
     @property
     def operation(self):

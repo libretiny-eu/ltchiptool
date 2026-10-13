@@ -232,31 +232,16 @@
         <node
           class="wxBoxSizer"
           var_name="sizer_baudrate"
+          borders="wxTOP"
           column="1"
           flags="wxEXPAND"
           row="1">
           <node
-            class="wxRadioButton"
-            checked="1"
-            label="Auto"
-            style="wxRB_GROUP"
-            var_name="radio_baudrate_auto" />
-          <node
-            class="wxRadioButton"
-            label="115200"
-            var_name="radio_baudrate_115200" />
-          <node
-            class="wxRadioButton"
-            label="230400"
-            var_name="radio_baudrate_230400" />
-          <node
-            class="wxRadioButton"
-            label="460800"
-            var_name="radio_baudrate_460800" />
-          <node
-            class="wxRadioButton"
-            label="921600"
-            var_name="radio_baudrate_921600" />
+            class="wxComboBox"
+            contents="&quot;Auto&quot; &quot;115200&quot; &quot;230400&quot; &quot;460800&quot; &quot;921600&quot; &quot;1000000&quot; &quot;1500000&quot; &quot;2000000&quot;"
+            selection_int="0"
+            var_name="combo_baudrate"
+            proportion="1" />
         </node>
         <node
           class="wxGridSizer"

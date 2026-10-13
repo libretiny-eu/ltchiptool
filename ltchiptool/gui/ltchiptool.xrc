@@ -234,45 +234,26 @@
 			<object class="sizeritem">
 				<cellpos>1,1</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL|wxEXPAND</flag>
+				<flag>wxTOP|wxEXPAND</flag>
 				<border>5</border>
 				<object class="wxBoxSizer" name="sizer_baudrate">
 					<orient>wxHORIZONTAL</orient>
 					<object class="sizeritem">
 						<flag>wxALL</flag>
 						<border>5</border>
-						<object class="wxRadioButton" name="radio_baudrate_auto">
-							<label>Auto</label>
-							<value>1</value>
-							<style>wxRB_GROUP</style>
-						</object>
-					</object>
-					<object class="sizeritem">
-						<flag>wxALL</flag>
-						<border>5</border>
-						<object class="wxRadioButton" name="radio_baudrate_115200">
-							<label>115200</label>
-						</object>
-					</object>
-					<object class="sizeritem">
-						<flag>wxALL</flag>
-						<border>5</border>
-						<object class="wxRadioButton" name="radio_baudrate_230400">
-							<label>230400</label>
-						</object>
-					</object>
-					<object class="sizeritem">
-						<flag>wxALL</flag>
-						<border>5</border>
-						<object class="wxRadioButton" name="radio_baudrate_460800">
-							<label>460800</label>
-						</object>
-					</object>
-					<object class="sizeritem">
-						<flag>wxALL</flag>
-						<border>5</border>
-						<object class="wxRadioButton" name="radio_baudrate_921600">
-							<label>921600</label>
+						<option>1</option>
+						<object class="wxComboBox" name="combo_baudrate">
+							<content>
+								<item>Auto</item>
+								<item>115200</item>
+								<item>230400</item>
+								<item>460800</item>
+								<item>921600</item>
+								<item>1000000</item>
+								<item>1500000</item>
+								<item>2000000</item>
+							</content>
+							<selection>0</selection>
 						</object>
 					</object>
 				</object>
