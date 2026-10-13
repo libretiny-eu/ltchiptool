@@ -234,15 +234,15 @@
 			<object class="sizeritem">
 				<cellpos>1,1</cellpos>
 				<cellspan>1,1</cellspan>
-				<flag>wxALL|wxEXPAND</flag>
+				<flag>wxTOP|wxEXPAND</flag>
 				<border>5</border>
 				<object class="wxBoxSizer" name="sizer_baudrate">
 					<orient>wxHORIZONTAL</orient>
 					<object class="sizeritem">
 						<flag>wxALL</flag>
 						<border>5</border>
+						<option>1</option>
 						<object class="wxComboBox" name="combo_baudrate">
-							<selection>0</selection>
 							<content>
 								<item>Auto</item>
 								<item>115200</item>
@@ -253,6 +253,7 @@
 								<item>1500000</item>
 								<item>2000000</item>
 							</content>
+							<selection>0</selection>
 						</object>
 					</object>
 				</object>

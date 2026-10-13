@@ -232,38 +232,16 @@
         <node
           class="wxBoxSizer"
           var_name="sizer_baudrate"
+          borders="wxTOP"
           column="1"
           flags="wxEXPAND"
           row="1">
           <node
             class="wxComboBox"
+            contents="&quot;Auto&quot; &quot;115200&quot; &quot;230400&quot; &quot;460800&quot; &quot;921600&quot; &quot;1000000&quot; &quot;1500000&quot; &quot;2000000&quot;"
+            selection_int="0"
             var_name="combo_baudrate"
-            selection_string="Auto">
-            <node
-              class="ComboBoxItem"
-              label="Auto" />
-            <node
-              class="ComboBoxItem"
-              label="115200" />
-            <node
-              class="ComboBoxItem"
-              label="230400" />
-            <node
-              class="ComboBoxItem"
-              label="460800" />
-            <node
-              class="ComboBoxItem"
-              label="921600" />
-            <node
-              class="ComboBoxItem"
-              label="1000000" />
-            <node
-              class="ComboBoxItem"
-              label="1500000" />
-            <node
-              class="ComboBoxItem"
-              label="2000000" />
-          </node>
+            proportion="1" />
         </node>
         <node
           class="wxGridSizer"
