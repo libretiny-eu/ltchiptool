@@ -1,5 +1,7 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-11-28.
 
+import wx
+
 from ltchiptool.gui.base.window import BaseWindow
 from ltchiptool.gui.main import MainFrame
 from ltchiptool.gui.work.devices import DeviceWatcher
@@ -44,7 +46,17 @@ class DevicesBase(BaseWindow):
         DevicesBase.WATCHER = None
 
     def OnDevicesUpdated(self) -> None:
-        self.OnPortsUpdated(list_serial_ports())
+        # may run on the DeviceWatcher thread; enumerate here, update GUI on main thread
+        ports = list_serial_ports()
+        if wx.IsMainThread():
+            self.OnPortsUpdated(ports)
+        else:
+            wx.CallAfter(self._DeliverPorts, ports)
+
+    def _DeliverPorts(self, ports: list[tuple[str, bool, str]]) -> None:
+        if self.is_closing:
+            return
+        self.OnPortsUpdated(ports)
 
     def OnPortsUpdated(self, ports: list[tuple[str, bool, str]]) -> None:
         pass

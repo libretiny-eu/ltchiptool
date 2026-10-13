@@ -5,9 +5,8 @@ import sys
 import threading
 import time
 from logging import INFO, info, log, warning
-from multiprocessing import Queue
 from os.path import dirname, join
-from queue import Empty
+from queue import Empty, Queue
 
 import wx
 import wx.xrc

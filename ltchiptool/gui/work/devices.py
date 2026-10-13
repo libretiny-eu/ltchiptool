@@ -1,8 +1,8 @@
 #  Copyright (c) Kuba Szczodrzyński 2023-1-9.
 
 from logging import debug, error
-from multiprocessing import Lock
 from queue import Empty, Queue
+from threading import Lock
 from typing import Callable
 
 from ltchiptool.util.logging import verbose
@@ -16,6 +16,8 @@ class DeviceWatcher(BaseThread):
     call_queue: Queue[Callable[[], None]] = None
     in_message: bool = False
     lock: Lock = None
+    _class_atom: int | None = None
+    _windows: dict[int, "DeviceWatcher"] = {}
 
     def __init__(self):
         super().__init__()
@@ -23,18 +25,51 @@ class DeviceWatcher(BaseThread):
         self.call_queue = Queue()
         self.lock = Lock()
 
+    @classmethod
+    def _wnd_proc(cls, hwnd: int, msg: int, wparam: int, lparam: int):
+        # the window class is shared by all watchers in the process,
+        # so dispatch to the watcher owning this window
+        watcher = cls._windows.get(hwnd)
+        if watcher is None:
+            return 0
+        return watcher._on_message(hwnd, msg, wparam, lparam)
+
     def _create_window(self):
         import win32api
         import win32gui
 
-        wc = win32gui.WNDCLASS()
-        wc.lpfnWndProc = self._on_message
-        wc.lpszClassName = self.__class__.__name__
-        wc.hInstance = win32api.GetModuleHandle(None)
-        class_atom = win32gui.RegisterClass(wc)
-        return win32gui.CreateWindow(
-            class_atom, self.__class__.__name__, 0, 0, 0, 0, 0, 0, 0, wc.hInstance, None
+        hinstance = win32api.GetModuleHandle(None)
+        if DeviceWatcher._class_atom is None:
+            # Win32 window classes live as long as the process, so register only once
+            wc = win32gui.WNDCLASS()
+            wc.lpfnWndProc = DeviceWatcher._wnd_proc
+            wc.lpszClassName = DeviceWatcher.__name__
+            wc.hInstance = hinstance
+            DeviceWatcher._class_atom = win32gui.RegisterClass(wc)
+        hwnd = win32gui.CreateWindow(
+            DeviceWatcher._class_atom,
+            DeviceWatcher.__name__,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            hinstance,
+            None,
         )
+        DeviceWatcher._windows[hwnd] = self
+        return hwnd
+
+    def _destroy_window(self, hwnd: int) -> None:
+        import win32gui
+
+        DeviceWatcher._windows.pop(hwnd, None)
+        try:
+            win32gui.DestroyWindow(hwnd)
+        except Exception as e:
+            verbose(f"Couldn't destroy listener window: {e}")
 
     def _on_message(self, hwnd: int, msg: int, wparam: int, lparam: int):
         from win32con import (
@@ -72,9 +107,12 @@ class DeviceWatcher(BaseThread):
         hwnd = self._create_window()
         verbose(f"Created listener window with hwnd={hwnd:x}")
         verbose("Listening to messages")
-        while self.should_run():
-            win32gui.PumpWaitingMessages()
-            self._call_queued()
+        try:
+            while self.should_run():
+                win32gui.PumpWaitingMessages()
+                self._call_queued()
+        finally:
+            self._destroy_window(hwnd)
         verbose("Listener stopped")
 
     def _call_all(self) -> None:
@@ -108,5 +146,5 @@ class DeviceWatcher(BaseThread):
                 self.run_impl_win32()
             case _:
                 verbose("Running dummy PortWatcher impl")
-                while True:
+                while self.should_run():
                     self._call_queued()
