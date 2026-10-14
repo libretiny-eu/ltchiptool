@@ -28,9 +28,15 @@ from ._utils import flash_link_interactive
     default=(),
 )
 @click.option(
+    "-B",
+    "--link-baudrate",
+    help="UART baud rate for linking (default: auto choose)",
+    type=int,
+)
+@click.option(
     "-b",
     "--baudrate",
-    help="UART baud rate (default: auto choose)",
+    help="UART baud rate for flashing (default: auto choose)",
     type=int,
 )
 @click.option(
@@ -79,6 +85,7 @@ def cli(
     family: Family,
     file: IO[bytes],
     device: str,
+    link_baudrate: int,
     baudrate: int,
     offset: int,
     length: int,
@@ -91,8 +98,9 @@ def cli(
 
     By default, read the entire flash chip, starting at offset 0x0.
 
-    When not specified (-d), the first UART port is used. The baud rate (-b)
-    is chosen automatically, depending on the chip capabilities.
+    When not specified (-d), the first UART port is used. The linking (-B)
+    and flashing (-b) baud rate is chosen automatically, depending on the chip's
+    capabilities.
 
     \b
     Arguments:
@@ -101,7 +109,7 @@ def cli(
     """
     time_start = time()
     soc = SocInterface.get(family)
-    soc.flash_set_connection(FlashConnection(device, baudrate))
+    soc.flash_set_connection(FlashConnection(device, baudrate, link_baudrate))
     flash_link_interactive(soc, timeout)
 
     memory = memory or FlashMemoryType.FLASH

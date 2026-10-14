@@ -25,6 +25,18 @@ from ._utils import flash_link_interactive
     default=(),
 )
 @click.option(
+    "-B",
+    "--link-baudrate",
+    help="UART baud rate for linking (default: auto choose)",
+    type=int,
+)
+@click.option(
+    "-b",
+    "--baudrate",
+    help="UART baud rate for flashing (default: auto choose)",
+    type=int,
+)
+@click.option(
     "-t",
     "--timeout",
     help="Chip connection timeout in seconds (default: 20.0)",
@@ -34,12 +46,16 @@ from ._utils import flash_link_interactive
 def cli(
     family: Family,
     device: str,
+    link_baudrate: int,
+    baudrate: int,
     timeout: float,
 ):
     """
     Read information about the connected chip.
 
-    When not specified (-d), the first UART port is used.
+    When not specified (-d), the first UART port is used. The linking (-B)
+    and flashing (-b) baud rate is chosen automatically, depending on the chip's
+    capabilities.
 
     \b
     Arguments:
@@ -47,7 +63,7 @@ def cli(
     """
     time_start = time()
     soc = SocInterface.get(family)
-    soc.flash_set_connection(FlashConnection(device, None))
+    soc.flash_set_connection(FlashConnection(device, baudrate, link_baudrate))
     flash_link_interactive(soc, timeout)
 
     graph(0, f"Reading chip info...")
