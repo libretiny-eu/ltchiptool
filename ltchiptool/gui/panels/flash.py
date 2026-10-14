@@ -50,7 +50,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
         self.Start = self.BindCommandButton("button_start", self.OnStartClick)
         self.Cancel = self.BindCommandButton("button_cancel", self.OnCancelClick)
 
-        self.Baudrate = self.BindComboBox("combo_baudrate")
+        self.BaudrateLink = self.BindComboBox("combo_baudrate_link")
+        self.BaudrateFlash = self.BindComboBox("combo_baudrate_flash")
 
         self.FileTypeText = self.FindStaticText("text_file_type")
         self.FileType = self.BindTextCtrl("input_file_type")
@@ -78,7 +79,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
     def GetSettings(self) -> dict:
         return dict(
             port=self.port or self.last_port,
-            baudrate=self.baudrate,
+            baudrate_link=self.baudrate_link,
+            baudrate_flash=self.baudrate_flash,
             operation=self.operation.value,
             auto_detect=self.auto_detect,
             family=self.family and self.family.name,
@@ -91,7 +93,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
     def SetSettings(
         self,
         port: str = None,
-        baudrate: int = None,
+        baudrate_link: int = None,
+        baudrate_flash: int = None,
         operation: str = FlashOp.WRITE.value,
         auto_detect: bool = True,
         family: str = None,
@@ -101,7 +104,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
         **kwargs,
     ):
         self.port = port
-        self.baudrate = baudrate
+        self.baudrate_link = baudrate_link
+        self.baudrate_flash = baudrate_flash or kwargs.get("baudrate")
         self.operation = FlashOp(operation)
         self.auto_detect = auto_detect
         try:
@@ -198,8 +202,12 @@ class FlashPanel(FileDumpBase, DevicesBase):
         errors = []
         warnings = []
 
-        if not self.is_baudrate_valid:
-            errors.append("Enter a valid baud rate (or Auto)")
+        baudrate_link = self.BaudrateLink.GetValue().lower()
+        baudrate_flash = self.BaudrateFlash.GetValue().lower()
+        if not (self.baudrate_link or baudrate_link == "default"):
+            errors.append("Enter a valid linking baud rate (or choose Default)")
+        if not (self.baudrate_flash or baudrate_flash == "default"):
+            errors.append("Enter a valid flashing baud rate (or choose Default)")
 
         if writing:
             self.FileText.SetLabel("Input file")
@@ -359,22 +367,28 @@ class FlashPanel(FileDumpBase, DevicesBase):
         self.DoUpdate(self.Port)
 
     @property
-    def baudrate(self) -> int | None:
-        """Entered baud rate; None for Auto (or an invalid value)."""
+    def baudrate_link(self) -> int | None:
         try:
-            value = int(self.Baudrate.GetValue().strip())
+            value = int(self.BaudrateLink.GetValue().strip())
         except ValueError:
             return None
         return value if value > 0 else None
 
-    @property
-    def is_baudrate_valid(self) -> bool:
-        text = self.Baudrate.GetValue().strip()
-        return text.lower() == "auto" or self.baudrate is not None
+    @baudrate_link.setter
+    def baudrate_link(self, value: int | None):
+        self.BaudrateLink.SetValue("Default" if value is None else str(value))
 
-    @baudrate.setter
-    def baudrate(self, value: int | None):
-        self.Baudrate.SetValue("Auto" if value is None else str(value))
+    @property
+    def baudrate_flash(self) -> int | None:
+        try:
+            value = int(self.BaudrateFlash.GetValue().strip())
+        except ValueError:
+            return None
+        return value if value > 0 else None
+
+    @baudrate_flash.setter
+    def baudrate_flash(self, value: int | None):
+        self.BaudrateFlash.SetValue("Default" if value is None else str(value))
 
     @property
     def operation(self):
@@ -551,7 +565,8 @@ class FlashPanel(FileDumpBase, DevicesBase):
 
         work = FlashThread(
             port=self.port,
-            baudrate=self.baudrate,
+            baudrate_link=self.baudrate_link,
+            baudrate_flash=self.baudrate_flash,
             operation=self.operation,
             file=self.file and str(self.file) or "",
             soc=soc,

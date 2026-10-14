@@ -236,15 +236,50 @@
 				<cellspan>1,1</cellspan>
 				<flag>wxTOP|wxEXPAND</flag>
 				<border>5</border>
-				<object class="wxBoxSizer" name="sizer_baudrate">
-					<orient>wxHORIZONTAL</orient>
+				<object class="wxGridSizer" name="sizer_baudrate">
+					<rows>0</rows>
+					<cols>2</cols>
+					<vgap>0</vgap>
+					<hgap>0</hgap>
 					<object class="sizeritem">
 						<flag>wxALL</flag>
 						<border>5</border>
-						<option>1</option>
-						<object class="wxComboBox" name="combo_baudrate">
+						<object class="wxStaticText" name="text_baudrate_link">
+							<label>Linking</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxALL|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxStaticText" name="text_baudrate_flash">
+							<label>Flashing (read/write)</label>
+							<wrap>-1</wrap>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxComboBox" name="combo_baudrate_link">
 							<content>
-								<item>Auto</item>
+								<item>Default</item>
+								<item>115200</item>
+								<item>230400</item>
+								<item>460800</item>
+								<item>921600</item>
+								<item>1000000</item>
+								<item>1500000</item>
+								<item>2000000</item>
+							</content>
+							<selection>0</selection>
+						</object>
+					</object>
+					<object class="sizeritem">
+						<flag>wxBOTTOM|wxRIGHT|wxLEFT|wxEXPAND</flag>
+						<border>5</border>
+						<object class="wxComboBox" name="combo_baudrate_flash">
+							<content>
+								<item>Default</item>
 								<item>115200</item>
 								<item>230400</item>
 								<item>460800</item>

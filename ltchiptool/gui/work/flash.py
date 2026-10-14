@@ -32,7 +32,8 @@ class FlashThread(BaseThread):
     def __init__(
         self,
         port: str,
-        baudrate: int | None,
+        baudrate_link: int | None,
+        baudrate_flash: int | None,
         operation: FlashOp,
         file: str,
         soc: SocInterface,
@@ -46,7 +47,8 @@ class FlashThread(BaseThread):
     ):
         super().__init__()
         self.port = port
-        self.baudrate = baudrate
+        self.baudrate_link = baudrate_link
+        self.baudrate_flash = baudrate_flash
         self.operation = operation
         self.file = file
         self.soc = soc
@@ -62,7 +64,9 @@ class FlashThread(BaseThread):
         debug(
             f"Starting {self.operation.name} operation; "
             f"file = {self.file}, "
-            f"port = {self.port} @ {self.baudrate or 'Auto'}"
+            f"port = {self.port} @ "
+            f"{self.baudrate_link or 'Default'}->"
+            f"{self.baudrate_flash or 'Default'}"
         )
         self.callback = ClickProgressCallback()
         with self.callback:
@@ -83,7 +87,13 @@ class FlashThread(BaseThread):
         self.soc.flash_disconnect()
 
     def _link(self):
-        self.soc.flash_set_connection(FlashConnection(self.port, self.baudrate))
+        self.soc.flash_set_connection(
+            FlashConnection(
+                port=self.port,
+                baudrate=self.baudrate_flash,
+                link_baudrate=self.baudrate_link,
+            )
+        )
         self.soc.flash_change_timeout(link_timeout=0.5)
         elapsed = 0
         while self.should_run():

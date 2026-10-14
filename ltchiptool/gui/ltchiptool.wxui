@@ -230,18 +230,42 @@
           alignment="wxALIGN_CENTER_VERTICAL"
           row="1" />
         <node
-          class="wxBoxSizer"
+          class="wxGridSizer"
           var_name="sizer_baudrate"
           borders="wxTOP"
           column="1"
           flags="wxEXPAND"
           row="1">
           <node
+            class="wxStaticText"
+            label="Linking"
+            var_name="text_baudrate_link"
+            colspan="3"
+            column="3" />
+          <node
+            class="wxStaticText"
+            label="Flashing (read/write)"
+            var_name="text_baudrate_flash"
+            colspan="3"
+            flags="wxEXPAND" />
+          <node
             class="wxComboBox"
-            contents="&quot;Auto&quot; &quot;115200&quot; &quot;230400&quot; &quot;460800&quot; &quot;921600&quot; &quot;1000000&quot; &quot;1500000&quot; &quot;2000000&quot;"
+            contents="&quot;Default&quot; &quot;115200&quot; &quot;230400&quot; &quot;460800&quot; &quot;921600&quot; &quot;1000000&quot; &quot;1500000&quot; &quot;2000000&quot;"
             selection_int="0"
-            var_name="combo_baudrate"
-            proportion="1" />
+            var_name="combo_baudrate_link"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="3"
+            flags="wxEXPAND"
+            row="1" />
+          <node
+            class="wxComboBox"
+            contents="&quot;Default&quot; &quot;115200&quot; &quot;230400&quot; &quot;460800&quot; &quot;921600&quot; &quot;1000000&quot; &quot;1500000&quot; &quot;2000000&quot;"
+            selection_int="0"
+            var_name="combo_baudrate_flash"
+            borders="wxBOTTOM|wxRIGHT|wxLEFT"
+            colspan="3"
+            flags="wxEXPAND"
+            row="1" />
         </node>
         <node
           class="wxGridSizer"
