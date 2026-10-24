@@ -255,7 +255,8 @@ class PluginsPanel(BasePanel):
         self.Tree.Expand(self.model.Download)
         if t.install:
             if t.success:
-                wx.MessageBox(
+                wx.CallAfter(
+                    wx.MessageBox,
                     message=(
                         "Plugin installation succeeded.\n"
                         "Restart the app to apply changes."
@@ -263,7 +264,8 @@ class PluginsPanel(BasePanel):
                     caption="Success",
                 )
             else:
-                wx.MessageBox(
+                wx.CallAfter(
+                    wx.MessageBox,
                     message=(
                         "Plugin installation failed.\n"
                         "Consult the log window for more details."
@@ -345,7 +347,7 @@ class PluginsPanel(BasePanel):
                     )
 
                 message = "\n".join(line for line in lines if line is not None)
-                wx.MessageBox(message, caption=obj.title)
+                wx.CallAfter(wx.MessageBox, message, caption=obj.title)
 
     @on_event
     def OnDownloadClick(self):
@@ -355,7 +357,8 @@ class PluginsPanel(BasePanel):
     def OnInstallClick(self):
         distribution = self.InstallInput.GetValue()
         if not distribution:
-            wx.MessageBox(
+            wx.CallAfter(
+                wx.MessageBox,
                 message="Enter plugin name first",
                 caption="Missing name",
                 style=wx.OK | wx.ICON_WARNING | wx.CENTRE,

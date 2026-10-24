@@ -48,7 +48,8 @@ class InstallFrame(wx.Frame, BaseWindow):
     def ShowExceptionMessage(self, e, msg):
         self.failed = True
         self.finished = True
-        wx.MessageBox(
+        wx.CallAfter(
+            wx.MessageBox,
             message="Installation failed!\n\nRefer to the log window for details.",
             caption="Error",
             style=wx.ICON_ERROR,
