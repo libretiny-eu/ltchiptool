@@ -47,6 +47,11 @@ class GUIProgressBar(ProgressBar):
         return f"{hours:02}:{minutes:02}:{seconds:02}"
 
     def render_progress(self) -> None:
+        if not wx.IsMainThread():
+            # called from worker threads via the click progress callback;
+            # all widget access must happen on the main thread
+            wx.CallAfter(self.render_progress)
+            return
         if self.parent.is_closing:
             return
         self.elapsed.Show()
@@ -79,6 +84,11 @@ class GUIProgressBar(ProgressBar):
             self.scrolled = True
 
     def render_finish(self) -> None:
+        if not wx.IsMainThread():
+            # called from worker threads via the click progress callback;
+            # all widget access must happen on the main thread
+            wx.CallAfter(self.render_finish)
+            return
         if self.parent.is_closing:
             return
         self.elapsed.Hide()

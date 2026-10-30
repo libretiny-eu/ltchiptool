@@ -127,7 +127,9 @@ class FlashPanel(FileDumpBase, DevicesBase):
         if self.chip_info:
             chip_info = self.chip_info
             self.chip_info = None
-            self.ShowChipInfo(chip_info)
+            # OnUpdate may run while handling the thread-stop event (via EnableAll);
+            # defer the modal dialog to avoid wx recursion guard errors
+            wx.CallAfter(self.ShowChipInfo, chip_info)
 
         if self.IsAnyWorkRunning():
             return
@@ -515,6 +517,10 @@ class FlashPanel(FileDumpBase, DevicesBase):
             self.ports = []
             self.DoUpdate(self.Port)
 
+    def OnChipInfoSummary(self, summary: str):
+        # called from the FlashThread worker; update the button on the main thread
+        wx.CallAfter(self.Start.SetNote, summary)
+
     def OnChipInfoFull(self, chip_info: list[tuple[str, str]]):
         self.chip_info = chip_info
 
@@ -575,7 +581,7 @@ class FlashPanel(FileDumpBase, DevicesBase):
             length=self.length,
             verify=True,
             ctx=self.detection and self.detection.get_uf2_ctx(),
-            on_chip_info_summary=self.Start.SetNote,
+            on_chip_info_summary=self.OnChipInfoSummary,
             on_chip_info_full=self.OnChipInfoFull,
         )
         self.StartWork(work)

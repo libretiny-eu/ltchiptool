@@ -252,7 +252,10 @@ class MainFrame(wx.Frame):
                 lines.append(f"{type(e).__name__}: {e}")
             e = e.__context__
         lines.insert(1, "")
-        wx.MessageBox(
+        # may be called from worker threads or from within an event handler;
+        # show the dialog from the main loop to avoid wx recursion guard errors
+        wx.CallAfter(
+            wx.MessageBox,
             message="\n".join(lines),
             caption="Error",
             style=wx.ICON_ERROR,
