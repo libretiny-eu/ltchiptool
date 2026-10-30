@@ -64,6 +64,11 @@ class InstallFrame(wx.Frame, BaseWindow):
     def OnWorkStopped(self, t: BaseThread):
         if self.failed:
             return
+        # OnWorkStopped runs while handling the thread-stop event; defer the modal
+        # dialog (and the subsequent close) to avoid wx recursion guard errors
+        wx.CallAfter(self._ShowFinishedAndClose)
+
+    def _ShowFinishedAndClose(self):
         wx.MessageBox(
             message="Installation finished\n\nClick OK to close the installer",
             caption="Success",
