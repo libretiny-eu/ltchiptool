@@ -198,20 +198,43 @@ class BekenBinary:
             iv = iv.encode("utf-8")
         data = f.read()
 
+        legacy_padding = False
         if rbl.encryption == OTAEncryption.AES256:
             aes = make_aes_crypto(key=key, iv=iv)
             data = aes.decrypt(data)
+            # Old PyAES added a full block after ota_package's own padding.
+            legacy_padding = data.endswith(b"\x10" * 16)
             # trim AES padding
             padding_bytes = data[-1:]
-            padding_size = padding_bytes[0]
-            if padding_size and padding_bytes * padding_size == data[-padding_size:]:
+            padding_size = padding_bytes[0] if padding_bytes else 0
+            if (
+                1 <= padding_size <= 16
+                and padding_bytes * padding_size == data[-padding_size:]
+            ):
                 data = data[0:-padding_size]
         elif rbl.encryption != OTAEncryption.NONE:
             raise ValueError("Unsupported encryption algorithm")
 
         if rbl.compression == OTACompression.GZIP:
-            data = gzip.decompress(data)
+            try:
+                data = gzip.decompress(data)
+            except OSError:
+                # Try one remaining padding layer only for the old PyAES format.
+                padding_size = data[-1] if data else 0
+                if not legacy_padding or not 1 <= padding_size <= 16:
+                    raise
+                if data[-padding_size:] != bytes([padding_size]) * padding_size:
+                    raise
+                data = gzip.decompress(data[:-padding_size])
         elif rbl.compression != OTACompression.NONE:
             raise ValueError("Unsupported compression algorithm")
+        elif legacy_padding and len(data) > rbl.raw_size:
+            # The declared raw size distinguishes padding from plaintext bytes.
+            padding_size = len(data) - rbl.raw_size
+            if not 1 <= padding_size <= 16:
+                raise ValueError("Invalid legacy AES padding")
+            if data[-padding_size:] != bytes([padding_size]) * padding_size:
+                raise ValueError("Invalid legacy AES padding")
+            data = data[:-padding_size]
 
         yield data
