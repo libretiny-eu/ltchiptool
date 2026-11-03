@@ -60,20 +60,24 @@ def _make_aes_cryptography(key: bytes, iv: bytes):
 
 
 def _make_aes_pyaes(key: bytes, iv: bytes):
-    from pyaes import AESModeOfOperationCBC, Decrypter, Encrypter
+    from pyaes import PADDING_NONE, AESModeOfOperationCBC, Decrypter, Encrypter
 
     debug("Using PyAES for AES encryption")
     aes = AESModeOfOperationCBC(key=key, iv=iv)
-    encrypter = Encrypter(aes)
-    decrypter = Decrypter(aes)
+    encrypter = Encrypter(aes, padding=PADDING_NONE)
+    decrypter = Decrypter(aes, padding=PADDING_NONE)
 
     class Wrap:
         @staticmethod
         def encrypt(data: bytes) -> bytes:
+            if not data:
+                return b""
             return encrypter.feed(data) + encrypter.feed()
 
         @staticmethod
         def decrypt(data: bytes) -> bytes:
+            if not data:
+                return b""
             return decrypter.feed(data) + decrypter.feed()
 
     return Wrap()
