@@ -31,6 +31,9 @@ class SocInterface(ABC):
         if family.is_child_of("lightning-ln882h"):
             from .ln882h import LN882hMain
             return LN882hMain(family)
+        if family.is_child_of("silabs-efm32gg11"):
+            from .efm32gg11 import EFM32GG11Main
+            return EFM32GG11Main(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
@@ -42,6 +45,7 @@ class SocInterface(ABC):
             "realtek-ambz",
             "realtek-ambz2",
             "lightning-ln882h",
+            "silabs-efm32gg11",
         ]
 
     #########################
