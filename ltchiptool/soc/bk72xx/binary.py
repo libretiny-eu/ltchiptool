@@ -25,6 +25,9 @@ from .util import (
     diff2ya_package_info,
 )
 
+# XIP base address of the flash memory on BK7236 (beken-72xx-gen2)
+GEN2_FLASH_BASE = 0x02000000
+
 
 def to_offset(addr: int) -> int:
     return int(addr + (addr // 32) * 2)
@@ -49,6 +52,9 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 
 class BK72XXBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
+        if self.family.is_child_of("beken-72xx-gen2"):
+            return self.elf2bin_gen2(input)
+
         toolchain = self.board.toolchain
 
         mcu = self.board["build.mcu"]
@@ -237,6 +243,53 @@ class BK72XXBinary(SocInterface, ABC):
         crc.close()
         rblh.close()
         return out_rbl.group()
+
+    def elf2bin_gen2(self, input: str) -> List[FirmwareBinary]:
+        toolchain = self.board.toolchain
+        mcu = self.board["build.mcu"]
+
+        nmap = toolchain.nm(input)
+        app_addr = nmap["__vector_table"] - GEN2_FLASH_BASE
+        app_offs = to_offset(app_addr)
+        app_part_offs, app_part_size, _ = self.board.region("app")
+        if app_offs != app_part_offs:
+            raise ValueError(
+                f"App partition offset (0x{app_part_offs:06X}) doesn't match "
+                f"the generated binary offset (0x{app_offs:06X})"
+            )
+
+        # build output names
+        out_crc = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            offset=app_offs,
+            ext="crc",
+            title="Beken CRC App",
+            description="For flashing to the app partition",
+            public=True,
+        )
+        fw_bin = chext(input, "bin")
+        # print graph element
+        out_crc.graph(1)
+        # objcopy ELF -> raw BIN
+        toolchain.objcopy(input, fw_bin)
+        # return if all outputs are up-to-date
+        if all(binary.isnewer(than=fw_bin) for binary in out_crc.group_get()):
+            return out_crc.group()
+
+        # the app image is not encrypted, only CRC16 is added every 32 bytes
+        bk = BekenBinary()
+        with open(fw_bin, "rb") as raw, out_crc.write() as crc:
+            for block in bk.crc(raw):
+                crc.write(block)
+
+        crc_size = stat(out_crc.path).st_size
+        if crc_size > app_part_size:
+            raise ValueError(
+                f"App image too large: {crc_size} > {app_part_size} "
+                f"(0x{app_part_size:X})"
+            )
+        return out_crc.group()
 
     def detect_file_type(
         self,
