@@ -268,6 +268,28 @@ class BK72XXBinary(SocInterface, ABC):
             description="For flashing to the app partition",
             public=True,
         )
+        # Tuya diff2ya OTA package (used by the BK7236 bootloader)
+        ota_format = self.board["build.bkota.format"]
+        if ota_format == "diff2ya":
+            ota_offs, ota_size, _ = self.board.region("download")
+            flh_len = int(self.board["build.bkota.flh_len"] or "0x1D2000", 16)
+            d2i_offs, _, _ = self.board.region("diff2ya")
+            out_ug = FirmwareBinary(
+                location=input,
+                name=f"{mcu}_app",
+                subname="ota.ug",
+                ext="bin",
+                title="Tuya diff2ya OTA Image",
+                description="For flashing using OTA",
+                public=True,
+            )
+            out_d2info = FirmwareBinary(
+                location=input,
+                name=f"{mcu}_app",
+                subname="diff2ya",
+                ext="dat",
+                title="Tuya diff2ya OTA info",
+            )
         fw_bin = chext(input, "bin")
         # print graph element
         out_crc.graph(1)
@@ -289,6 +311,30 @@ class BK72XXBinary(SocInterface, ABC):
                 f"App image too large: {crc_size} > {app_part_size} "
                 f"(0x{app_part_size:X})"
             )
+
+        # write diff2ya OTA package (UG) and its "manage info" partition
+        if ota_format == "diff2ya":
+            out_ug.graph(1)
+            ota_len = 0
+            with open(fw_bin, "rb") as raw, out_ug.write() as ug:
+                for data in diff2ya_package(raw):
+                    ug.write(data)
+                    ota_len += len(data)
+            if ota_len > ota_size:
+                raise ValueError(
+                    f"OTA image too large: {ota_len} > {ota_size} (0x{ota_size:X})"
+                )
+            out_d2info.graph(2)
+            with out_d2info.write() as d2i:
+                d2i.write(
+                    diff2ya_package_info(
+                        ota_offs,
+                        ota_len,
+                        flh_len,
+                        # second manage info block, erased by the bootloader anyway
+                        backup_offs=d2i_offs + 0x1000,
+                    )
+                )
         return out_crc.group()
 
     def detect_file_type(

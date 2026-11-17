@@ -127,12 +127,20 @@ def diff2ya_package(f: IO[bytes]) -> ByteGenerator:
     yield xz_data
 
 
-def diff2ya_package_info(ota_offs: int, ota_len: int) -> bytes:
+def diff2ya_package_info(
+    ota_offs: int,
+    ota_len: int,
+    flh_len: int = 0x1D2000,
+    backup_offs: int = 0,
+) -> bytes:
+    # flh_len is only used by the bootloader's size check;
+    # the backup address is not used for compressed (full image) packages
     return Diff2yaManage(
         patchsz=ota_len,
         is_confirm_addr=True,
         flh_start_addr=0x10000,
-        flh_len=0x1D2000,
+        flh_len=flh_len,
+        backup_confirm_addr=backup_offs,
         patch_confirm_addr=ota_offs,
         part_b_crc=0x0,
     ).pack()
