@@ -131,17 +131,15 @@ def diff2ya_package_info(
     ota_offs: int,
     ota_len: int,
     flh_len: int = 0x1D2000,
-    backup_offs: int = 0,
     flh_start: int = 0x10000,
 ) -> bytes:
-    # flh_len is only used by the bootloader's size check;
-    # the backup address is not used for compressed (full image) packages
+    # flh_start: logical app address (without CRC16), where the bootloader writes it
+    # flh_len: Tuya's application area size, only used by the bootloader's size check
     return Diff2yaManage(
         patchsz=ota_len,
         is_confirm_addr=True,
         flh_start_addr=flh_start,
         flh_len=flh_len,
-        backup_confirm_addr=backup_offs,
         patch_confirm_addr=ota_offs,
         part_b_crc=0x0,
     ).pack()

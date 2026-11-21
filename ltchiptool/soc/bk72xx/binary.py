@@ -281,7 +281,6 @@ class BK72XXBinary(SocInterface, ABC):
             if not self.board["build.bkota.flh_len"]:
                 raise ValueError("diff2ya OTA needs 'build.bkota.flh_len' in the board")
             flh_len = int(self.board["build.bkota.flh_len"], 16)
-            d2i_offs, _, _ = self.board.region("diff2ya")
             out_ug = FirmwareBinary(
                 location=input,
                 name=f"{mcu}_app",
@@ -342,10 +341,8 @@ class BK72XXBinary(SocInterface, ABC):
                     diff2ya_package_info(
                         ota_offs,
                         ota_len,
-                        flh_len,
+                        flh_len=flh_len,
                         flh_start=app_addr,
-                        # second manage info block, erased by the bootloader anyway
-                        backup_offs=d2i_offs + 0x1000,
                     )
                 )
         return out_crc.group()
