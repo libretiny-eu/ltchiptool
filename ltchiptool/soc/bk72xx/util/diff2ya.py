@@ -132,13 +132,14 @@ def diff2ya_package_info(
     ota_len: int,
     flh_len: int = 0x1D2000,
     backup_offs: int = 0,
+    flh_start: int = 0x10000,
 ) -> bytes:
     # flh_len is only used by the bootloader's size check;
     # the backup address is not used for compressed (full image) packages
     return Diff2yaManage(
         patchsz=ota_len,
         is_confirm_addr=True,
-        flh_start_addr=0x10000,
+        flh_start_addr=flh_start,
         flh_len=flh_len,
         backup_confirm_addr=backup_offs,
         patch_confirm_addr=ota_offs,

@@ -25,9 +25,6 @@ from .util import (
     diff2ya_package_info,
 )
 
-# XIP base address of the flash memory on BK7236 (beken-72xx-gen2)
-GEN2_FLASH_BASE = 0x02000000
-
 
 def to_offset(addr: int) -> int:
     return int(addr + (addr // 32) * 2)
@@ -247,11 +244,16 @@ class BK72XXBinary(SocInterface, ABC):
     def elf2bin_gen2(self, input: str) -> List[FirmwareBinary]:
         toolchain = self.board.toolchain
         mcu = self.board["build.mcu"]
+        # address at which the CPU sees the flash (without CRC bytes)
+        xip_base = self.board["build.bkxip_base"]
+        if not xip_base:
+            raise ValueError("The board needs 'build.bkxip_base'")
+        xip_base = int(xip_base, 16)
 
         nmap = toolchain.nm(input)
         if "__vector_table" not in nmap:
             raise ValueError("Symbol '__vector_table' not found in the ELF file")
-        app_addr = nmap["__vector_table"] - GEN2_FLASH_BASE
+        app_addr = nmap["__vector_table"] - xip_base
         app_offs = to_offset(app_addr)
         app_part_offs, app_part_size, _ = self.board.region("app")
         if app_offs != app_part_offs:
@@ -341,6 +343,7 @@ class BK72XXBinary(SocInterface, ABC):
                         ota_offs,
                         ota_len,
                         flh_len,
+                        flh_start=app_addr,
                         # second manage info block, erased by the bootloader anyway
                         backup_offs=d2i_offs + 0x1000,
                     )
