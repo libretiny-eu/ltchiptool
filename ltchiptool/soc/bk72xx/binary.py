@@ -270,9 +270,13 @@ class BK72XXBinary(SocInterface, ABC):
         )
         # Tuya diff2ya OTA package (used by the BK7236 bootloader)
         ota_format = self.board["build.bkota.format"]
+        if ota_format not in (None, "diff2ya"):
+            raise ValueError(f"OTA format '{ota_format}' is not supported on {mcu}")
         if ota_format == "diff2ya":
             ota_offs, ota_size, _ = self.board.region("download")
-            flh_len = int(self.board["build.bkota.flh_len"] or "0x1D2000", 16)
+            if not self.board["build.bkota.flh_len"]:
+                raise ValueError("diff2ya OTA needs 'build.bkota.flh_len' in the board")
+            flh_len = int(self.board["build.bkota.flh_len"], 16)
             d2i_offs, _, _ = self.board.region("diff2ya")
             out_ug = FirmwareBinary(
                 location=input,
