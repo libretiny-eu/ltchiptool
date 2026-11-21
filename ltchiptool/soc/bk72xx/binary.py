@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from io import SEEK_SET, BytesIO
 from logging import warning
-from os import stat
+from os import stat, unlink
 from typing import IO, List, Optional, Union
 
 from ltchiptool import SocInterface
@@ -249,6 +249,8 @@ class BK72XXBinary(SocInterface, ABC):
         mcu = self.board["build.mcu"]
 
         nmap = toolchain.nm(input)
+        if "__vector_table" not in nmap:
+            raise ValueError("Symbol '__vector_table' not found in the ELF file")
         app_addr = nmap["__vector_table"] - GEN2_FLASH_BASE
         app_offs = to_offset(app_addr)
         app_part_offs, app_part_size, _ = self.board.region("app")
@@ -311,6 +313,8 @@ class BK72XXBinary(SocInterface, ABC):
 
         crc_size = stat(out_crc.path).st_size
         if crc_size > app_part_size:
+            # remove it, so that the next build doesn't consider it up-to-date
+            unlink(out_crc.path)
             raise ValueError(
                 f"App image too large: {crc_size} > {app_part_size} "
                 f"(0x{app_part_size:X})"
@@ -325,6 +329,8 @@ class BK72XXBinary(SocInterface, ABC):
                     ug.write(data)
                     ota_len += len(data)
             if ota_len > ota_size:
+                unlink(out_ug.path)
+                unlink(out_crc.path)
                 raise ValueError(
                     f"OTA image too large: {ota_len} > {ota_size} (0x{ota_size:X})"
                 )
