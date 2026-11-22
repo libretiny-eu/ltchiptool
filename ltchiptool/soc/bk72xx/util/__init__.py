@@ -7,6 +7,7 @@ from .diff2ya import (
     Diff2yaExtend,
     Diff2yaHeader,
     Diff2yaManage,
+    diff2ya_flash_needed,
     diff2ya_package,
     diff2ya_package_info,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "OTACompression",
     "OTAEncryption",
     "RBL",
+    "diff2ya_flash_needed",
     "diff2ya_package",
     "diff2ya_package_info",
 ]

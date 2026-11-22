@@ -18,6 +18,8 @@ from datastruct.fields import (
 
 from ltchiptool.util.intbin import ByteGenerator
 
+DIFF2YA_BUF_SIZE = 0x10000
+
 
 class Diff2yaBinType(IntEnum):
     SINGLE = 0x53494E47
@@ -42,7 +44,7 @@ class Diff2yaHeader(DataStruct):
     compress_len: int = field("I")
     compress_crc32: int = field("I")
     step: int = field("I", default=0)
-    buf_size: int = field("I", default=0x10000)
+    buf_size: int = field("I", default=DIFF2YA_BUF_SIZE)
     mode: int = field("B", default=0)
     file_index: int = field("B", default=0)
     min_supp_ver: int = field("H", default=2)
@@ -143,3 +145,13 @@ def diff2ya_package_info(
         patch_confirm_addr=ota_offs,
         part_b_crc=0x0,
     ).pack()
+
+
+def diff2ya_flash_needed(app_len: int, package_len: int) -> int:
+    """Flash space the bootloader requires for a compressed package
+    (its size check against flh_len); package_len includes the 64-byte header."""
+
+    def roundup4k(n: int) -> int:
+        return (n + 0xFFF) & ~0xFFF
+
+    return roundup4k(roundup4k(app_len) + package_len - 64 + DIFF2YA_BUF_SIZE + 0x2000)

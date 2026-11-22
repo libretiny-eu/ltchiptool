@@ -21,6 +21,7 @@ from .util import (
     DataType,
     OTACompression,
     OTAEncryption,
+    diff2ya_flash_needed,
     diff2ya_package,
     diff2ya_package_info,
 )
@@ -274,13 +275,19 @@ class BK72XXBinary(SocInterface, ABC):
         )
         # Tuya diff2ya OTA package (used by the BK7236 bootloader)
         ota_format = self.board["build.bkota.format"]
-        if ota_format not in (None, "diff2ya"):
+        if ota_format and ota_format != "diff2ya":
             raise ValueError(f"OTA format '{ota_format}' is not supported on {mcu}")
         if ota_format == "diff2ya":
             ota_offs, ota_size, _ = self.board.region("download")
             if not self.board["build.bkota.flh_len"]:
                 raise ValueError("diff2ya OTA needs 'build.bkota.flh_len' in the board")
             flh_len = int(self.board["build.bkota.flh_len"], 16)
+            # the bootloader drops the update request otherwise
+            if flh_len % 0x1000 or app_addr % 0x1000:
+                raise ValueError(
+                    f"diff2ya OTA needs 'flh_len' (0x{flh_len:X}) and the app "
+                    f"address (0x{app_addr:X}) aligned to 4 KiB"
+                )
             out_ug = FirmwareBinary(
                 location=input,
                 name=f"{mcu}_app",
@@ -297,6 +304,18 @@ class BK72XXBinary(SocInterface, ABC):
                 ext="dat",
                 title="Tuya diff2ya OTA info",
             )
+
+            def write_d2info(ota_len: int) -> None:
+                with out_d2info.write() as d2i:
+                    d2i.write(
+                        diff2ya_package_info(
+                            ota_offs,
+                            ota_len,
+                            flh_len=flh_len,
+                            flh_start=app_addr,
+                        )
+                    )
+
         fw_bin = chext(input, "bin")
         # print graph element
         out_crc.graph(1)
@@ -304,6 +323,9 @@ class BK72XXBinary(SocInterface, ABC):
         toolchain.objcopy(input, fw_bin)
         # return if all outputs are up-to-date
         if all(binary.isnewer(than=fw_bin) for binary in out_crc.group_get()):
+            if ota_format == "diff2ya":
+                # depends on board keys, which don't make the ELF newer
+                write_d2info(stat(out_ug.path).st_size)
             return out_crc.group()
 
         # the app image is not encrypted, only CRC16 is added every 32 bytes
@@ -335,16 +357,16 @@ class BK72XXBinary(SocInterface, ABC):
                 raise ValueError(
                     f"OTA image too large: {ota_len} > {ota_size} (0x{ota_size:X})"
                 )
-            out_d2info.graph(2)
-            with out_d2info.write() as d2i:
-                d2i.write(
-                    diff2ya_package_info(
-                        ota_offs,
-                        ota_len,
-                        flh_len=flh_len,
-                        flh_start=app_addr,
-                    )
+            flash_needed = diff2ya_flash_needed(stat(fw_bin).st_size, ota_len)
+            if flash_needed > flh_len:
+                unlink(out_ug.path)
+                unlink(out_crc.path)
+                raise ValueError(
+                    f"The bootloader would reject this OTA image: it needs "
+                    f"0x{flash_needed:X} bytes, 'flh_len' is 0x{flh_len:X}"
                 )
+            out_d2info.graph(2)
+            write_d2info(ota_len)
         return out_crc.group()
 
     def detect_file_type(
