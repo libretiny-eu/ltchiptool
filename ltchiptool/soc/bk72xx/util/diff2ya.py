@@ -18,6 +18,8 @@ from datastruct.fields import (
 
 from ltchiptool.util.intbin import ByteGenerator
 
+DIFF2YA_BUF_SIZE = 0x10000
+
 
 class Diff2yaBinType(IntEnum):
     SINGLE = 0x53494E47
@@ -42,7 +44,7 @@ class Diff2yaHeader(DataStruct):
     compress_len: int = field("I")
     compress_crc32: int = field("I")
     step: int = field("I", default=0)
-    buf_size: int = field("I", default=0x10000)
+    buf_size: int = field("I", default=DIFF2YA_BUF_SIZE)
     mode: int = field("B", default=0)
     file_index: int = field("B", default=0)
     min_supp_ver: int = field("H", default=2)
@@ -127,12 +129,29 @@ def diff2ya_package(f: IO[bytes]) -> ByteGenerator:
     yield xz_data
 
 
-def diff2ya_package_info(ota_offs: int, ota_len: int) -> bytes:
+def diff2ya_package_info(
+    ota_offs: int,
+    ota_len: int,
+    flh_len: int = 0x1D2000,
+    flh_start: int = 0x10000,
+) -> bytes:
+    # flh_start: logical app address (without CRC16), where the bootloader writes it
+    # flh_len: Tuya's application area size, only used by the bootloader's size check
     return Diff2yaManage(
         patchsz=ota_len,
         is_confirm_addr=True,
-        flh_start_addr=0x10000,
-        flh_len=0x1D2000,
+        flh_start_addr=flh_start,
+        flh_len=flh_len,
         patch_confirm_addr=ota_offs,
         part_b_crc=0x0,
     ).pack()
+
+
+def diff2ya_flash_needed(app_len: int, package_len: int) -> int:
+    """Flash space the bootloader requires for a compressed package
+    (its size check against flh_len); package_len includes the 64-byte header."""
+
+    def roundup4k(n: int) -> int:
+        return (n + 0xFFF) & ~0xFFF
+
+    return roundup4k(roundup4k(app_len) + package_len - 64 + DIFF2YA_BUF_SIZE + 0x2000)

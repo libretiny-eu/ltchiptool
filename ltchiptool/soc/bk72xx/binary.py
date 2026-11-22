@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from io import SEEK_SET, BytesIO
 from logging import warning
-from os import stat
+from os import stat, unlink
 from typing import IO, List, Optional, Union
 
 from ltchiptool import SocInterface
@@ -21,6 +21,7 @@ from .util import (
     DataType,
     OTACompression,
     OTAEncryption,
+    diff2ya_flash_needed,
     diff2ya_package,
     diff2ya_package_info,
 )
@@ -49,6 +50,9 @@ def check_app_code_crc(data: bytes) -> Union[bool, None]:
 
 class BK72XXBinary(SocInterface, ABC):
     def elf2bin(self, input: str, ota_idx: int) -> List[FirmwareBinary]:
+        if self.family.is_child_of("beken-72xx-gen2"):
+            return self.elf2bin_gen2(input)
+
         toolchain = self.board.toolchain
 
         mcu = self.board["build.mcu"]
@@ -237,6 +241,133 @@ class BK72XXBinary(SocInterface, ABC):
         crc.close()
         rblh.close()
         return out_rbl.group()
+
+    def elf2bin_gen2(self, input: str) -> List[FirmwareBinary]:
+        toolchain = self.board.toolchain
+        mcu = self.board["build.mcu"]
+        # address at which the CPU sees the flash (without CRC bytes)
+        xip_base = self.board["build.bkxip_base"]
+        if not xip_base:
+            raise ValueError("The board needs 'build.bkxip_base'")
+        xip_base = int(xip_base, 16)
+
+        nmap = toolchain.nm(input)
+        if "__vector_table" not in nmap:
+            raise ValueError("Symbol '__vector_table' not found in the ELF file")
+        app_addr = nmap["__vector_table"] - xip_base
+        app_offs = to_offset(app_addr)
+        app_part_offs, app_part_size, _ = self.board.region("app")
+        if app_offs != app_part_offs:
+            raise ValueError(
+                f"App partition offset (0x{app_part_offs:06X}) doesn't match "
+                f"the generated binary offset (0x{app_offs:06X})"
+            )
+
+        # build output names
+        out_crc = FirmwareBinary(
+            location=input,
+            name=f"{mcu}_app",
+            offset=app_offs,
+            ext="crc",
+            title="Beken CRC App",
+            description="For flashing to the app partition",
+            public=True,
+        )
+        # Tuya diff2ya OTA package (used by the BK7236 bootloader)
+        ota_format = self.board["build.bkota.format"]
+        if ota_format and ota_format != "diff2ya":
+            raise ValueError(f"OTA format '{ota_format}' is not supported on {mcu}")
+        if ota_format == "diff2ya":
+            ota_offs, ota_size, _ = self.board.region("download")
+            if not self.board["build.bkota.flh_len"]:
+                raise ValueError("diff2ya OTA needs 'build.bkota.flh_len' in the board")
+            flh_len = int(self.board["build.bkota.flh_len"], 16)
+            # the bootloader drops the update request otherwise
+            if flh_len % 0x1000 or app_addr % 0x1000:
+                raise ValueError(
+                    f"diff2ya OTA needs 'flh_len' (0x{flh_len:X}) and the app "
+                    f"address (0x{app_addr:X}) aligned to 4 KiB"
+                )
+            out_ug = FirmwareBinary(
+                location=input,
+                name=f"{mcu}_app",
+                subname="ota.ug",
+                ext="bin",
+                title="Tuya diff2ya OTA Image",
+                description="For flashing using OTA",
+                public=True,
+            )
+            out_d2info = FirmwareBinary(
+                location=input,
+                name=f"{mcu}_app",
+                subname="diff2ya",
+                ext="dat",
+                title="Tuya diff2ya OTA info",
+            )
+
+            def write_d2info(ota_len: int) -> None:
+                with out_d2info.write() as d2i:
+                    d2i.write(
+                        diff2ya_package_info(
+                            ota_offs,
+                            ota_len,
+                            flh_len=flh_len,
+                            flh_start=app_addr,
+                        )
+                    )
+
+        fw_bin = chext(input, "bin")
+        # print graph element
+        out_crc.graph(1)
+        # objcopy ELF -> raw BIN
+        toolchain.objcopy(input, fw_bin)
+        # return if all outputs are up-to-date
+        if all(binary.isnewer(than=fw_bin) for binary in out_crc.group_get()):
+            if ota_format == "diff2ya":
+                # depends on board keys, which don't make the ELF newer
+                write_d2info(stat(out_ug.path).st_size)
+            return out_crc.group()
+
+        # the app image is not encrypted, only CRC16 is added every 32 bytes
+        bk = BekenBinary()
+        with open(fw_bin, "rb") as raw, out_crc.write() as crc:
+            for block in bk.crc(raw):
+                crc.write(block)
+
+        crc_size = stat(out_crc.path).st_size
+        if crc_size > app_part_size:
+            # remove it, so that the next build doesn't consider it up-to-date
+            unlink(out_crc.path)
+            raise ValueError(
+                f"App image too large: {crc_size} > {app_part_size} "
+                f"(0x{app_part_size:X})"
+            )
+
+        # write diff2ya OTA package (UG) and its "manage info" partition
+        if ota_format == "diff2ya":
+            out_ug.graph(1)
+            ota_len = 0
+            with open(fw_bin, "rb") as raw, out_ug.write() as ug:
+                for data in diff2ya_package(raw):
+                    ug.write(data)
+                    ota_len += len(data)
+            if ota_len > ota_size:
+                unlink(out_ug.path)
+                unlink(out_crc.path)
+                raise ValueError(
+                    f"OTA image too large: {ota_len} > {ota_size} (0x{ota_size:X})"
+                )
+            flash_needed = diff2ya_flash_needed(stat(fw_bin).st_size, ota_len)
+            if flash_needed > flh_len:
+                unlink(out_ug.path)
+                unlink(out_crc.path)
+                raise ValueError(
+                    f"The bootloader would reject this OTA image: it needs "
+                    f"0x{flash_needed:X} bytes, 'flh_len' is 0x{flh_len:X}"
+                )
+            out_d2info.graph(2)
+            write_d2info(ota_len)
+        return out_crc.group()
 
     def detect_file_type(
         self,
