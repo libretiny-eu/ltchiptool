@@ -1,6 +1,6 @@
 # ltchiptool
 
-Universal, easy-to-use GUI flashing/dumping tool for BK7231, LN882H, RTL8710B and RTL8720C. Also contains some CLI utilities for binary firmware manipulation.
+Universal, easy-to-use GUI flashing/dumping tool for BK7231, LN882H, RTL8710B, RTL8720C and XR806. Also contains some CLI utilities for binary firmware manipulation.
 
 <div align="center">
 
