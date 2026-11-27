@@ -5,12 +5,19 @@ from logging import warning
 from typing import IO, Generator, List, Optional, Tuple, Union
 
 from ltchiptool import SocInterface
-from ltchiptool.util.flash import FlashConnection, FlashFeatures, FlashMemoryType
+from ltchiptool.util.flash import FlashConnection, FlashMemoryType
 from ltchiptool.util.streams import ProgressCallback
 from uf2tool import OTAScheme, UploadContext
 
 from .util import awih
-from .util.xr806tool import XR806_MAX_BAUDRATE, XR806_ROM_BAUDRATE, XR806Tool
+from .util.xr806tool import (
+    XR806_EFUSE_ADDRESS,
+    XR806_EFUSE_SIZE,
+    XR806_MAX_BAUDRATE,
+    XR806_ROM_BAUDRATE,
+    XR806_ROM_SIZE,
+    XR806Tool,
+)
 
 XR806_DEFAULT_FLASH_SIZE = 0x200000
 
@@ -47,12 +54,6 @@ XR806_GUIDE = [
 class XR806Flash(SocInterface, ABC):
     xr806: Optional[XR806Tool] = None
     info: List[Tuple[str, str]] = None
-
-    def flash_get_features(self) -> FlashFeatures:
-        return FlashFeatures(
-            can_read_rom=False,
-            can_read_efuse=False,
-        )
 
     def flash_get_guide(self) -> List[Union[str, list]]:
         return XR806_GUIDE
@@ -177,8 +178,10 @@ class XR806Flash(SocInterface, ABC):
         return f"XR806 (BROM v{self.xr806.brom_version})"
 
     def flash_get_size(self, memory: FlashMemoryType = FlashMemoryType.FLASH) -> int:
-        if memory != FlashMemoryType.FLASH:
-            raise NotImplementedError("Memory type not readable via UART")
+        if memory == FlashMemoryType.ROM:
+            return XR806_ROM_SIZE
+        if memory == FlashMemoryType.EFUSE:
+            return XR806_EFUSE_SIZE
         self.flash_connect()
         assert self.xr806
         size = self.xr806.get_flash_size()
@@ -198,10 +201,16 @@ class XR806Flash(SocInterface, ABC):
         memory: FlashMemoryType = FlashMemoryType.FLASH,
         callback: ProgressCallback = ProgressCallback(),
     ) -> Generator[bytes, None, None]:
-        if memory != FlashMemoryType.FLASH:
-            raise NotImplementedError("Memory type not readable via UART")
         self.flash_connect()
         assert self.xr806
+        if memory != FlashMemoryType.FLASH:
+            base = 0 if memory == FlashMemoryType.ROM else XR806_EFUSE_ADDRESS
+            yield from self.xr806.memory_read(
+                address=base + offset,
+                length=length,
+                callback=callback.on_update,
+            )
+            return
         yield from self.xr806.flash_read(
             offset=offset,
             length=length,

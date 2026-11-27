@@ -45,12 +45,18 @@ XR806_BLOCK_SIZE = 0x10000
 XR806_WRITE_CHUNK = 0x4000
 # Boot ROM versions 1 and older need PhoenixMC's proprietary RAM flash helper, which is not included
 XR806_MIN_BROM_VERSION = 2
+# the boot ROM ends below 0x28000 (rom_symbol.ld of the SDK)
+XR806_ROM_SIZE = 0x28000
+# the eFuse controller mirrors the 1024 eFuse bits in its VALUE registers (hal_efuse.h of the SDK)
+XR806_EFUSE_ADDRESS = 0x40043D00
+XR806_EFUSE_SIZE = 128
 
 FRAME_MAGIC = b"BROM"
 FLAG_ERROR = 0x01
 FLAG_ACK = 0x02
 FLAG_CHECKSUM = 0x04
 
+CMD_READ_MEMORY = 0x08
 CMD_WRITE_MEMORY = 0x09
 CMD_CHANGE_BAUD = 0x10
 CMD_REBOOT = 0x12
@@ -212,6 +218,12 @@ class XR806Tool(SerialToolBase):
         sleep(0.01)
         self.sync(timeout=2.0)
 
+    def read_memory(self, address: int, length: int) -> bytes:
+        data = self.command(CMD_READ_MEMORY, [("I", address), ("I", length)])
+        if len(data) != length:
+            raise ValueError(f"Read {len(data)} bytes, expected {length}")
+        return data
+
     def write_memory(self, address: int, data: bytes) -> None:
         self.command(
             CMD_WRITE_MEMORY,
@@ -289,6 +301,21 @@ class XR806Tool(SerialToolBase):
                 callback(len(part))
             yield part
             addr += count * XR806_SECTOR_SIZE
+
+    def memory_read(
+        self,
+        address: int,
+        length: int,
+        callback: _T_ProgressCB = None,
+    ) -> Generator[bytes, None, None]:
+        chunk = 0x800 if self.s.baudrate >= XR806_MAX_BAUDRATE else 0x200
+        end = address + length
+        while address < end:
+            data = self.read_memory(address, min(chunk, end - address))
+            if callback:
+                callback(len(data))
+            yield data
+            address += len(data)
 
     def flash_write(
         self,
