@@ -10,6 +10,24 @@ from ltchiptool.util.lvm import LVM
 
 LT_FAMILIES: List["Family"] = []
 
+# Families that ltchiptool supports but the LibreTiny families.json does not list.
+# The XR806 ID is not registered in the UF2 family list.
+BUILTIN_FAMILIES = {
+    "xradio-xr80x": dict(
+        parent=None,
+        code="xr80x",
+        description="XRadio XR80x",
+    ),
+    "xradio-xr806": dict(
+        parent="xradio-xr80x",
+        code="xr806",
+        description="XRadio XR806",
+        id="0x2A9F8E6C",
+        short_name="XR806",
+        mcus=["XR806"],
+    ),
+}
+
 
 @dataclass
 class Family:
@@ -35,9 +53,10 @@ class Family:
         if LT_FAMILIES:
             return LT_FAMILIES
         families = LVM.get().load_json("families.json", version=True)
-        LT_FAMILIES = [
-            cls(name=k, **v) for k, v in families.items() if isinstance(v, dict)
-        ]
+        families = {k: v for k, v in families.items() if isinstance(v, dict)}
+        for name, family in BUILTIN_FAMILIES.items():
+            families.setdefault(name, family)
+        LT_FAMILIES = [cls(name=k, **v) for k, v in families.items()]
         # attach parents and children to all families
         for family in LT_FAMILIES:
             if family.parent is None:

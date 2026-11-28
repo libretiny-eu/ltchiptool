@@ -31,6 +31,9 @@ class SocInterface(ABC):
         if family.is_child_of("lightning-ln882h"):
             from .ln882h import LN882hMain
             return LN882hMain(family)
+        if family.is_child_of("xradio-xr80x"):
+            from .xr806 import XR806Main
+            return XR806Main(family)
         # fmt: on
         raise NotImplementedError(f"Unsupported family - {family.name}")
 
@@ -42,6 +45,7 @@ class SocInterface(ABC):
             "realtek-ambz",
             "realtek-ambz2",
             "lightning-ln882h",
+            "xradio-xr80x",
         ]
 
     #########################
